@@ -25,17 +25,104 @@
 // libjoin.
 #include <join/value.hpp>
 #include <join/error.hpp>
+#include <join/json.hpp>
+#include <join/pack.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 // C++.
+#include <string_view>
+#include <stdexcept>
+#include <sstream>
+#include <fstream>
 #include <limits>
 
 using join::Array;
 using join::Member;
 using join::Object;
 using join::Value;
+using join::JsonReader;
+using join::JsonReadMode;
+using join::JsonWriter;
+using join::JsonCanonicalizer;
+using join::PackReader;
+using join::PackWriter;
+using join::SaxErrc;
+
+/**
+ * @brief stream buffer failing on its first write.
+ */
+struct FailingBuffer : public std::streambuf
+{
+    std::streamsize xsputn (const char* data, std::streamsize size) override
+    {
+        if (!failed)
+        {
+            failed = true;
+            throw std::runtime_error ("write failed");
+        }
+        written.append (data, size);
+        return size;
+    }
+
+    bool failed = false;
+    std::string written;
+};
+
+/**
+ * @brief handler counting the values it receives.
+ */
+struct Counter : public join::SaxHandler
+{
+    int setNull ()
+    {
+        return count ();
+    }
+
+    int setBool (bool)
+    {
+        return count ();
+    }
+
+    int setInt (int32_t)
+    {
+        return count ();
+    }
+
+    int setUint (uint32_t)
+    {
+        return count ();
+    }
+
+    int setInt64 (int64_t)
+    {
+        return count ();
+    }
+
+    int setUint64 (uint64_t)
+    {
+        return count ();
+    }
+
+    int setDouble (double)
+    {
+        return count ();
+    }
+
+    int setString (std::string_view)
+    {
+        return count ();
+    }
+
+    int count ()
+    {
+        ++values;
+        return 0;
+    }
+
+    size_t values = 0;
+};
 
 /**
  * @brief Test create method.
@@ -5119,6 +5206,450 @@ TEST (Value, swap)
     value.swap (other);
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (other.isArray ());
+}
+
+/**
+ * @brief Test serialize method.
+ */
+TEST (Value, serialize)
+{
+    Value value;
+    value.pushBack (1);
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack ("test");
+    value.pushBack (1.23456789e-13);
+
+    std::stringstream out;
+    JsonWriter jsonWriter (out);
+    ASSERT_EQ (value.serialize (jsonWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonWriter> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
+
+    std::stringstream indented;
+    JsonWriter indentedWriter (indented, 4);
+    ASSERT_EQ (value.serialize (indentedWriter), 0) << join::lastError.message ();
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonWriter> (out, 4), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), indented.str ());
+
+    out.str ("");
+    PackWriter packWriter (out);
+    ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<PackWriter> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+
+    Counter counter;
+    ASSERT_EQ (value.serialize (counter), 0) << join::lastError.message ();
+    EXPECT_EQ (counter.values, 5U);
+
+    value = Object{};
+    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["literals"] = Array{nullptr, true, false};
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonCanonicalizer> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (),
+               "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
+               "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
+
+    value = Object{{Array{1}, 1}};
+    out.str ("");
+    ASSERT_EQ (value.serialize (packWriter), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidKey);
+    ASSERT_EQ (out.str (), "");
+
+    value = Array{7};
+    ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    ASSERT_EQ (out.str (), std::string ({'\x91', '\x07'}));
+
+    FailingBuffer buffer;
+    std::ostream failing (&buffer);
+    JsonWriter failingWriter (failing);
+    value = Array{std::string (2000, 'a')};
+    ASSERT_THROW (value.serialize (failingWriter), std::runtime_error);
+    value = Array{1, 2};
+    ASSERT_EQ (value.serialize (failingWriter), 0) << join::lastError.message ();
+    ASSERT_EQ (buffer.written, "[1,2]");
+}
+
+/**
+ * @brief Test deserialize method.
+ */
+TEST (Value, deserialize)
+{
+    Value value;
+    ASSERT_EQ (value.deserialize<JsonReader> (std::string ("[1,{\"a\":\"b\"}]")), 0) << join::lastError.message ();
+    ASSERT_EQ (value, (Array{1, Object{{"a", "b"}}}));
+
+    const char json[] = "{\"c\":[true,null]}";
+    ASSERT_EQ (value.deserialize<JsonReader> (json, sizeof (json) - 1), 0) << join::lastError.message ();
+    ASSERT_EQ (value, (Object{{"c", Array{true, nullptr}}}));
+
+    ASSERT_EQ (value.deserialize<JsonReader> (&json[5], &json[sizeof (json) - 2]), 0) << join::lastError.message ();
+    ASSERT_EQ (value, (Array{true, nullptr}));
+
+    std::stringstream stream ("42");
+    ASSERT_EQ (value.deserialize<JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 42);
+
+    ASSERT_EQ (value.deserialize<join::BasicJsonReader<JsonReadMode::ParseComments>> (std::string ("/* c */ 1.5")), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (value, 1.5);
+
+    ASSERT_EQ (value.deserialize<JsonReader> (std::string ("[1, [2, ")), -1);
+    ASSERT_EQ (value, 1.5);
+
+    ASSERT_EQ (value.deserialize<PackReader> (std::string ({'\x92', '\x01', '\xa1', '\x61'})), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (value, (Array{1, "a"}));
+
+    ASSERT_EQ (value.deserialize<PackReader> (std::string ({'\x92', '\x01'})), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (value, (Array{1, "a"}));
+}
+
+/**
+ * @brief packRead method.
+ */
+TEST (Value, packRead)
+{
+    Value value;
+
+    std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb', '\x3d', '\x41',
+                      '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'});
+
+    ASSERT_NE (value.packRead (str), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.packRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.packRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringstream sstream (str);
+    ASSERT_NE (value.packRead (sstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::istringstream isstream (str);
+    ASSERT_NE (value.packRead (isstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::ofstream out ("/tmp/fstream.pack", std::ios::binary);
+    out << str;
+    out.close ();
+
+    std::fstream fstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    ASSERT_NE (value.packRead (fstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    fstream.close ();
+
+    std::ifstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    ifstream.close ();
+
+    std::stringbuf iosbuf (str, std::ios::in);
+    std::iostream iostream (&iosbuf);
+    ASSERT_NE (value.packRead (iostream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringbuf isbuf (str);
+    std::istream istream (&isbuf);
+    ASSERT_NE (value.packRead (istream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+}
+
+/**
+ * @brief packWrite method.
+ */
+TEST (Value, packWrite)
+{
+    Value value;
+    value.pushBack (1);
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack ("test");
+    value.pushBack (1.23456789e-13);
+
+    std::stringstream out;
+    ASSERT_NE (value.packWrite (out), -1) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+}
+
+/**
+ * @brief jsonRead method.
+ */
+TEST (Value, jsonRead)
+{
+    Value value;
+
+    std::string str = "[1,null,true,\"test\",1.23456789e-13]";
+    ASSERT_NE (value.jsonRead (str), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.jsonRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.jsonRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringstream sstream (str);
+    ASSERT_NE (value.jsonRead (sstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::istringstream isstream (str);
+    ASSERT_NE (value.jsonRead (isstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::ofstream out ("/tmp/fstream.json");
+    out << str;
+    out.close ();
+
+    std::fstream fstream ("/tmp/fstream.json", std::ios::in);
+    ASSERT_NE (value.jsonRead (fstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    fstream.close ();
+
+    std::ifstream ifstream ("/tmp/fstream.json");
+    ASSERT_NE (value.jsonRead (ifstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    ifstream.close ();
+
+    std::stringbuf iosbuf (str, std::ios::in);
+    std::iostream iostream (&iosbuf);
+    ASSERT_NE (value.jsonRead (iostream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringbuf isbuf (str);
+    std::istream istream (&isbuf);
+    ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+}
+
+/**
+ * @brief jsonWrite method.
+ */
+TEST (Value, jsonWrite)
+{
+    Value value;
+    value.pushBack (1);
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack ("test");
+    value.pushBack (1.23456789e-13);
+
+    std::stringstream out;
+    ASSERT_NE (value.jsonWrite (out), -1) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
+}
+
+/**
+ * @brief jsonCanonicalize method.
+ */
+TEST (Value, jsonCanonicalize)
+{
+    Value value;
+    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["literals"] = Array{nullptr, true, false};
+
+    std::stringstream out;
+    ASSERT_NE (value.jsonCanonicalize (out), -1) << join::lastError.message ();
+    EXPECT_EQ (out.str (),
+               "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
+               "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
 }
 
 /**

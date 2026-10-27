@@ -27,11 +27,14 @@
 
 // libjoin.
 #include <join/variant.hpp>
+#include <join/utils.hpp>
 #include <join/error.hpp>
 
 // C++.
 #include <string_view>
 #include <compare>
+#include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <limits>
@@ -1356,6 +1359,207 @@ namespace join
             other = std::move (temp);
         }
 
+        /**
+         * @brief serialize the value, resetting the handler on failure.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        int serialize (Handler& handler) const
+        {
+            try
+            {
+                if (JOIN_LIKELY (setValue (*this, handler) == 0))
+                {
+                    return 0;
+                }
+            }
+            catch (...)
+            {
+                handler.reset ();
+                throw;
+            }
+            handler.reset ();
+            return -1;
+        }
+
+        /**
+         * @brief deserialize a document into the value.
+         * @param args document to deserialize, followed by any reader argument.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Reader, typename... Args>
+        int deserialize (Args&&... args)
+        {
+            Reader reader;
+            return reader.deserialize (std::forward<Args> (args)..., *this);
+        }
+
+        /**
+         * @brief serialize the value to a stream.
+         * @param document stream receiving the value.
+         * @param args writer arguments.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Writer, typename... Args>
+        int serialize (std::ostream& document, Args&&... args) const
+        {
+            Writer writer (document, std::forward<Args> (args)...);
+            return serialize (writer);
+        }
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @param length the length of the json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const char* document, size_t length);
+
+        /**
+         * @brief deserialize a json document.
+         * @param first the first character of the json document to deserialize.
+         * @param last the last character of the document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const char* first, const char* last);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const std::string& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::stringstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::istringstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::fstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::ifstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::iostream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::istream& document);
+
+        /**
+         * @brief serialize json data.
+         * @param document Document where to serialize json data.
+         * @param indentation number of spaces per indentation level.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonWrite (std::ostream& document, size_t indentation = 0) const;
+
+        /**
+         * @brief serialize canonicalized json data.
+         * @param document Document where to serialize canonicalized json data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonCanonicalize (std::ostream& document) const;
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @param length the length of the msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const char* document, size_t length);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param first the first character of the msgpack document to deserialize.
+         * @param last the last character of the document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const char* first, const char* last);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const std::string& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::stringstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::istringstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::fstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::ifstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::iostream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::istream& document);
+
+        /**
+         * @brief serialize msgpack data.
+         * @param document Document where to serialize msgpack data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packWrite (std::ostream& document) const;
+
         // friendship with equal operator.
         friend constexpr bool operator== (const Value& lhs, const Value& rhs);
 
@@ -1363,6 +1567,104 @@ namespace join
         friend constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs);
 
     private:
+        /**
+         * @brief set value.
+         * @param value value to write.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        static int setValue (const Value& value, Handler& handler)
+        {
+            switch (value.index ())
+            {
+                case Value::BooleanValue:
+                    return handler.setBool (value.getBool ());
+
+                case Value::IntegerValue:
+                    return handler.setInt (value.getInt ());
+
+                case Value::UnsignedValue:
+                    return handler.setUint (value.getUint ());
+
+                case Value::Integer64Value:
+                    return handler.setInt64 (value.getInt64 ());
+
+                case Value::Unsigned64Value:
+                    return handler.setUint64 (value.getUint64 ());
+
+                case Value::RealValue:
+                    return handler.setDouble (value.getDouble ());
+
+                case Value::StringValue:
+                    return handler.setString (value.getString ());
+
+                case Value::ArrayValue:
+                    return setArray (value.getArray (), handler);
+
+                case Value::ObjectValue:
+                    return setObject (value.getObject (), handler);
+
+                default:
+                    return handler.setNull ();
+            }
+        }
+
+        /**
+         * @brief set array value.
+         * @param array array value to set.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        static int setArray (const Array& array, Handler& handler)
+        {
+            if (handler.startArray (array.size ()) == -1)
+            {
+                return -1;
+            }
+
+            for (auto const& element : array)
+            {
+                if (setValue (element, handler) == -1)
+                {
+                    return -1;
+                }
+            }
+
+            return handler.stopArray ();
+        }
+
+        /**
+         * @brief set object value.
+         * @param object object value to set.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        static int setObject (const Object& object, Handler& handler)
+        {
+            if (handler.startObject (object.size ()) == -1)
+            {
+                return -1;
+            }
+
+            for (const Member& member : handler.members (object))
+            {
+                if (handler.setKey (member.first) == -1)
+                {
+                    return -1;
+                }
+
+                if (setValue (member.second, handler) == -1)
+                {
+                    return -1;
+                }
+            }
+
+            return handler.stopObject ();
+        }
+
         /**
          * @brief convert the value held by the variant to float.
          * @return converted value.

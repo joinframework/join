@@ -26,6 +26,7 @@
 #define JOIN_DATA_JSON_HPP
 
 // libjoin.
+#include <join/value_builder.hpp>
 #include <join/atodpow.hpp>
 #include <join/value.hpp>
 #include <join/utf16.hpp>
@@ -964,7 +965,7 @@ namespace join
     /// JSON default writer.
     using JsonWriter = BasicJsonWriter<JsonWriteMode::None>;
 
-    /// JSON canonicalizer, sorting object members when used with Document::serialize.
+    /// JSON canonicalizer, sorting object members when used with Value::serialize.
     using JsonCanonicalizer = BasicJsonWriter<JsonWriteMode::Canonical>;
 
     /**
@@ -1186,13 +1187,25 @@ namespace join
 
     protected:
         /**
+         * @brief parse a document into a value.
+         * @param document document to parse.
+         * @param value value receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ProbeType>
+        int read (ProbeType& document, Value& value)
+        {
+            return read (document, ValueBuilder (value));
+        }
+
+        /**
          * @brief parse a document, resetting the handler on failure.
          * @param document document to parse.
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int read (ProbeType& document, Handler& handler)
+        int read (ProbeType& document, Handler&& handler)
         {
             try
             {

@@ -26,6 +26,7 @@
 #define JOIN_DATA_PACK_HPP
 
 // libjoin.
+#include <join/value_builder.hpp>
 #include <join/value.hpp>
 #include <join/utils.hpp>
 #include <join/probe.hpp>
@@ -728,13 +729,25 @@ namespace join
 
     protected:
         /**
+         * @brief parse a document into a value.
+         * @param document document to parse.
+         * @param value value receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ProbeType>
+        int read (ProbeType& document, Value& value)
+        {
+            return read (document, ValueBuilder (value));
+        }
+
+        /**
          * @brief parse a document, resetting the handler on failure.
          * @param document document to parse.
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int read (ProbeType& document, Handler& handler)
+        int read (ProbeType& document, Handler&& handler)
         {
             try
             {

@@ -23,7 +23,6 @@
  */
 
 // libjoin.
-#include <join/document.hpp>
 #include <join/json.hpp>
 
 // libraries.
@@ -35,7 +34,6 @@ using join::Object;
 using join::JsonCanonicalizer;
 using join::JsonErrc;
 using join::SaxErrc;
-using join::Document;
 
 /**
  * @brief Test members method.
@@ -53,12 +51,12 @@ TEST (JsonCanonicalizer, members)
     EXPECT_EQ (sorted[2].get ().first, "\u20ac");
     EXPECT_EQ (sorted[3].get ().first, "\U0001F600");
 
-    Document document;
-    document.root () = Object{{"b", 1}, {"a", 2}};
-    ASSERT_EQ (document.serialize (writer), 0) << join::lastError.message ();
+    Value value;
+    value = Object{{"b", 1}, {"a", 2}};
+    ASSERT_EQ (value.serialize (writer), 0) << join::lastError.message ();
     EXPECT_EQ (out.str (), "{\"a\":2,\"b\":1}");
-    EXPECT_EQ (document.root ().getObject ()[0].first, "b");
-    EXPECT_EQ (document.root ().getObject ()[1].first, "a");
+    EXPECT_EQ (value.getObject ()[0].first, "b");
+    EXPECT_EQ (value.getObject ()[1].first, "a");
 }
 
 /**
@@ -100,14 +98,13 @@ TEST (JsonCanonicalizer, reset)
  */
 TEST (JsonCanonicalizer, nan)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value.pushBack (std::numeric_limits<double>::quiet_NaN ());
     value.pushBack (-std::numeric_limits<double>::quiet_NaN ());
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (), "[null,null]");
 }
 
@@ -116,14 +113,13 @@ TEST (JsonCanonicalizer, nan)
  */
 TEST (JsonCanonicalizer, infinity)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value.pushBack (std::numeric_limits<double>::infinity ());
     value.pushBack (-std::numeric_limits<double>::infinity ());
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (), "[null,null]");
 }
 
@@ -132,15 +128,14 @@ TEST (JsonCanonicalizer, infinity)
  */
 TEST (JsonCanonicalizer, array)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value.pushBack (56);
     value.pushBack (Object{{"d", true}, {"10", nullptr}, {"1", Array{}}});
     value.pushBack (-53.0);
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (), "[56,{\"1\":[],\"10\":null,\"d\":true},-53]");
 }
 
@@ -149,8 +144,7 @@ TEST (JsonCanonicalizer, array)
  */
 TEST (JsonCanonicalizer, french)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value["peach"] = "This sorting order";
     value["péché"] = "is wrong according to French";
     value["pêche"] = "but canonicalization MUST";
@@ -158,7 +152,7 @@ TEST (JsonCanonicalizer, french)
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (),
                "{\"peach\":\"This sorting order\",\"péché\":\"is wrong according to French\",\"pêche\":\"but "
                "canonicalization MUST\",\"sin\":\"ignore locale\"}");
@@ -169,8 +163,7 @@ TEST (JsonCanonicalizer, french)
  */
 TEST (JsonCanonicalizer, structures)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value["1"] = Object{{"f", Object{{"f", "hi"}, {"F", 5}}}, {"\n", 56.0}};
     value["10"] = Object{};
     value[""] = "empty";
@@ -180,7 +173,7 @@ TEST (JsonCanonicalizer, structures)
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (),
                "{\"\":\"empty\",\"1\":{\"\\n\":56,\"f\":{\"F\":5,\"f\":\"hi\"}},\"10\":{},\"111\":[{\"E\":\"no\",\"e\":"
                "\"yes\"}],\"A\":{},\"a\":{}}");
@@ -191,13 +184,12 @@ TEST (JsonCanonicalizer, structures)
  */
 TEST (JsonCanonicalizer, unicode)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value["Unnormalized Unicode"] = "A\u030a";
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (), "{\"Unnormalized Unicode\":\"Å\"}");
 }
 
@@ -206,15 +198,14 @@ TEST (JsonCanonicalizer, unicode)
  */
 TEST (JsonCanonicalizer, values)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
     value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
     value["literals"] = Array{nullptr, true, false};
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (),
                "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
                "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
@@ -225,8 +216,7 @@ TEST (JsonCanonicalizer, values)
  */
 TEST (JsonCanonicalizer, weird)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value["\u20ac"] = "Euro Sign";
     value["\r"] = "Carriage Return";
     value["\u000a"] = "Newline";
@@ -239,7 +229,7 @@ TEST (JsonCanonicalizer, weird)
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (document.serialize (writer), -1) << join::lastError.message ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (out.str (),
                "{\"\\n\":\"Newline\",\"\\r\":\"Carriage Return\",\"1\":\"One\",\"</script>\":\"Browser "
                "Challenge\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro "
@@ -251,24 +241,23 @@ TEST (JsonCanonicalizer, weird)
  */
 TEST (JsonCanonicalizer, invalid)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value["\xFF"] = "Invalid";
     value["a"] = "Ascii";
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_EQ (document.serialize (writer), -1);
+    ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 
     value = Object{{"a", "\xF0"}};
     out.str ("");
-    ASSERT_EQ (document.serialize (writer), -1);
+    ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 
     value = Array{"\xFF"};
     out.str ("");
-    ASSERT_EQ (document.serialize (writer), -1);
+    ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 }
 
@@ -277,13 +266,12 @@ TEST (JsonCanonicalizer, invalid)
  */
 TEST (JsonCanonicalizer, document)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value = Object{{Value (1), "One"}, {"a", "Ascii"}};
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    EXPECT_EQ (document.serialize (writer), -1);
+    EXPECT_EQ (value.serialize (writer), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (out.str (), "");
 
@@ -294,7 +282,7 @@ TEST (JsonCanonicalizer, document)
     value = Object{{"b", 1}, {"a", Array{1}}};
     out.str ("");
     JsonCanonicalizer indented (out, 2);
-    EXPECT_EQ (document.serialize (indented), 0) << join::lastError.message ();
+    EXPECT_EQ (value.serialize (indented), 0) << join::lastError.message ();
     EXPECT_EQ (out.str (), "{\"a\":[1],\"b\":1}");
 }
 

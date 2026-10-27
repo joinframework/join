@@ -22,8 +22,8 @@
  * SOFTWARE.
  */
 
-#ifndef JOIN_DATA_DOCUMENT_HPP
-#define JOIN_DATA_DOCUMENT_HPP
+#ifndef JOIN_DATA_VALUE_BUILDER_HPP
+#define JOIN_DATA_VALUE_BUILDER_HPP
 
 // libjoin.
 #include <join/value.hpp>
@@ -32,7 +32,6 @@
 
 // C++.
 #include <string_view>
-#include <algorithm>
 #include <iterator>
 #include <utility>
 #include <string>
@@ -44,102 +43,54 @@
 namespace join
 {
     /**
-     * @brief document class, filled by balanced SAX calls.
+     * @brief value builder class, filled by balanced SAX calls.
      */
-    class Document
+    class ValueBuilder
     {
     public:
         /**
-         * @brief default constructor.
+         * @brief create instance.
+         * @param root value receiving the document.
          */
-        Document () = default;
+        explicit ValueBuilder (Value& root)
+        : _stack (std::move (cache ()))
+        , _root (root)
+        {
+        }
 
         /**
          * @brief copy constructor.
          * @param other object to copy.
          */
-        Document (const Document& other) = delete;
+        ValueBuilder (const ValueBuilder& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        Document& operator= (const Document& other) = delete;
+        ValueBuilder& operator= (const ValueBuilder& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        Document (Document&& other) noexcept
-        : _depth (other._depth)
-        , _stack (std::move (other._stack))
-        , _root (std::move (other._root))
-        {
-            std::copy_n (other._starts, _depth, _starts);
-            other._depth = 0;
-        }
+        ValueBuilder (ValueBuilder&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        Document& operator= (Document&& other) noexcept
-        {
-            std::copy_n (other._starts, other._depth, _starts);
-            _depth = other._depth;
-            _stack = std::move (other._stack);
-            _root = std::move (other._root);
-            other._depth = 0;
-            return *this;
-        }
+        ValueBuilder& operator= (ValueBuilder&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        ~Document () = default;
-
-        /**
-         * @brief get the root value.
-         * @return root value.
-         */
-        Value& root () noexcept
+        ~ValueBuilder ()
         {
-            return _root;
-        }
-
-        /**
-         * @brief get the root value.
-         * @return root value.
-         */
-        const Value& root () const noexcept
-        {
-            return _root;
-        }
-
-        /**
-         * @brief serialize the document, resetting the handler on failure.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int serialize (Handler& handler) const
-        {
-            try
-            {
-                if (JOIN_LIKELY (setValue (_root, handler) == 0))
-                {
-                    return 0;
-                }
-            }
-            catch (...)
-            {
-                handler.reset ();
-                throw;
-            }
-            handler.reset ();
-            return -1;
+            _stack.clear ();
+            cache () = std::move (_stack);
         }
 
         /**
@@ -385,104 +336,6 @@ namespace join
 
     private:
         /**
-         * @brief set value.
-         * @param value value to write.
-         * @param handler handler receiving the value.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        static int setValue (const Value& value, Handler& handler)
-        {
-            switch (value.index ())
-            {
-                case Value::BooleanValue:
-                    return handler.setBool (value.getBool ());
-
-                case Value::IntegerValue:
-                    return handler.setInt (value.getInt ());
-
-                case Value::UnsignedValue:
-                    return handler.setUint (value.getUint ());
-
-                case Value::Integer64Value:
-                    return handler.setInt64 (value.getInt64 ());
-
-                case Value::Unsigned64Value:
-                    return handler.setUint64 (value.getUint64 ());
-
-                case Value::RealValue:
-                    return handler.setDouble (value.getDouble ());
-
-                case Value::StringValue:
-                    return handler.setString (value.getString ());
-
-                case Value::ArrayValue:
-                    return setArray (value.getArray (), handler);
-
-                case Value::ObjectValue:
-                    return setObject (value.getObject (), handler);
-
-                default:
-                    return handler.setNull ();
-            }
-        }
-
-        /**
-         * @brief set array value.
-         * @param array array value to set.
-         * @param handler handler receiving the value.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        static int setArray (const Array& array, Handler& handler)
-        {
-            if (handler.startArray (array.size ()) == -1)
-            {
-                return -1;
-            }
-
-            for (auto const& element : array)
-            {
-                if (setValue (element, handler) == -1)
-                {
-                    return -1;
-                }
-            }
-
-            return handler.stopArray ();
-        }
-
-        /**
-         * @brief set object value.
-         * @param object object value to set.
-         * @param handler handler receiving the value.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        static int setObject (const Object& object, Handler& handler)
-        {
-            if (handler.startObject (object.size ()) == -1)
-            {
-                return -1;
-            }
-
-            for (const Member& member : handler.members (object))
-            {
-                if (handler.setKey (member.first) == -1)
-                {
-                    return -1;
-                }
-
-                if (setValue (member.second, handler) == -1)
-                {
-                    return -1;
-                }
-            }
-
-            return handler.stopObject ();
-        }
-
-        /**
          * @brief construct a value in place in the current container, or as root.
          * @param value value of the alternative to construct.
          * @return 0 on success, -1 otherwise.
@@ -501,6 +354,16 @@ namespace join
             return 0;
         }
 
+        /**
+         * @brief get the stack kept by the calling thread between documents.
+         * @return stack.
+         */
+        static std::vector<Value>& cache () noexcept
+        {
+            thread_local std::vector<Value> stack;
+            return stack;
+        }
+
         /// start of each open container in _stack.
         size_t _starts[saxMaxDepth] = {};
 
@@ -510,8 +373,8 @@ namespace join
         /// stack of the values of the open containers.
         std::vector<Value> _stack;
 
-        /// root.
-        Value _root;
+        /// value receiving the document.
+        Value& _root;
     };
 }
 
