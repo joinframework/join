@@ -203,6 +203,18 @@ TEST (JsonWriter, setDouble)
     stream.str ("");
     EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::quiet_NaN ()), 0);
     EXPECT_EQ (stream.str (), "NaN");
+
+    stream.str ("");
+    std::string expected ("[98.6");
+    EXPECT_EQ (jsonWriter.startArray (), 0);
+    EXPECT_EQ (jsonWriter.setDouble (98.6), 0);
+    for (int i = 1; i < 300; ++i)
+    {
+        EXPECT_EQ (jsonWriter.setDouble (98.6), 0);
+        expected += ",98.6";
+    }
+    EXPECT_EQ (jsonWriter.stopArray (), 0);
+    EXPECT_EQ (stream.str (), expected + "]");
 }
 
 /**

@@ -332,6 +332,20 @@ TEST (ValueBuilder, setKey)
     ValueBuilder builder (value);
     ASSERT_EQ (builder.setKey ("a"), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (nullptr), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (true), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (int32_t (-2)), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (uint32_t (3)), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (int64_t (-4)), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (uint64_t (5)), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (6.5), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
 
     ASSERT_EQ (builder.startObject (), 0);
     ASSERT_EQ (builder.setKey (nullptr), 0);

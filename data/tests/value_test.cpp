@@ -4174,6 +4174,20 @@ TEST (Value, at)
     ASSERT_THROW (constant.at (8), std::out_of_range);
     ASSERT_THROW (constant.at ("eight"), std::out_of_range);
 
+    value = Object{{"seven", 7}};
+    ASSERT_THROW (value.at (nullptr), std::out_of_range);
+    ASSERT_THROW (constant.at (nullptr), std::out_of_range);
+    ASSERT_THROW (value.at (true), std::out_of_range);
+    ASSERT_THROW (constant.at (true), std::out_of_range);
+    ASSERT_THROW (value.at (uint32_t (3)), std::out_of_range);
+    ASSERT_THROW (constant.at (uint32_t (3)), std::out_of_range);
+    ASSERT_THROW (value.at (int64_t (-4)), std::out_of_range);
+    ASSERT_THROW (constant.at (int64_t (-4)), std::out_of_range);
+    ASSERT_THROW (value.at (uint64_t (5)), std::out_of_range);
+    ASSERT_THROW (constant.at (uint64_t (5)), std::out_of_range);
+    ASSERT_THROW (value.at (6.5), std::out_of_range);
+    ASSERT_THROW (constant.at (6.5), std::out_of_range);
+
     value = Array{0, 1, 2, 3};
     ASSERT_EQ (value.at (int32_t (0)), 0);
     ASSERT_EQ (constant.at (int32_t (0)), 0);
@@ -4225,6 +4239,25 @@ TEST (Value, subscript)
     ASSERT_EQ (value["eight"], 8);
     ASSERT_EQ (value[std::string ("nine")], 9);
     ASSERT_EQ (value.size (), 10U);
+
+    value = nullptr;
+    value[true] = 1;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[int32_t (-2)] = 2;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[uint32_t (3)] = 3;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[int64_t (-4)] = 4;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[uint64_t (5)] = 5;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[6.5] = 6;
+    ASSERT_TRUE (value.isObject ());
 
     value = Array{0, 1, 2, 3};
     ASSERT_EQ (value[int32_t (0)], 0);
@@ -4688,94 +4721,94 @@ TEST (Value, clear)
 TEST (Value, insert)
 {
     Value value;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = nullptr;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = true;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = false;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<float>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<float>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<double>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<double>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "foo";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "127.0.0.1";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = Array{1};
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = Object{{"i", 1}};
-    ASSERT_NO_THROW (value.insert (std::make_pair ("i", 1)));
+    ASSERT_NO_THROW (value.insert (Member{"i", 1}));
 }
 
 /**
@@ -5254,6 +5287,13 @@ TEST (Value, contains)
     ASSERT_FALSE (value.contains (false));
     ASSERT_FALSE (value.contains (std::string_view ("eight")));
 
+    value = Object{{"seven", 7}};
+    ASSERT_FALSE (value.contains (nullptr));
+    ASSERT_FALSE (value.contains (uint32_t (3)));
+    ASSERT_FALSE (value.contains (int64_t (-4)));
+    ASSERT_FALSE (value.contains (uint64_t (5)));
+    ASSERT_FALSE (value.contains (6.5));
+
     value = Array{0, 1};
     ASSERT_TRUE (value.contains (int32_t (1)));
     ASSERT_FALSE (value.contains (int32_t (2)));
@@ -5360,6 +5400,13 @@ TEST (Value, swap)
  */
 TEST (Value, serialize)
 {
+    Value keys = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
+                        {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    Value copy;
+    join::ValueBuilder builder (copy);
+    ASSERT_EQ (keys.serialize (builder), 0) << join::lastError.message ();
+    EXPECT_EQ (copy, keys);
+
     Value value;
     value.pushBack (1);
     value.pushBack (nullptr);

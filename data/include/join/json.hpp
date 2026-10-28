@@ -785,10 +785,10 @@ namespace join
          */
         void writeDouble (double value)
         {
-            char buf[25];
-            char* end = join::dtoa (buf, value);
             if constexpr (WriteMode == JsonWriteMode::Canonical)
             {
+                char buf[25];
+                char* end = join::dtoa (buf, value);
                 for (char* pos = buf; pos < end; ++pos)
                 {
                     append (*pos);
@@ -800,7 +800,11 @@ namespace join
             }
             else
             {
-                append (buf, end - buf);
+                if (JOIN_UNLIKELY (sizeof (_buffer) - _size < 25))
+                {
+                    flush ();
+                }
+                _size = join::dtoa (_buffer + _size, value) - _buffer;
             }
         }
 

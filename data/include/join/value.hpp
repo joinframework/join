@@ -52,8 +52,35 @@ namespace join
     /// array.
     using Array = std::vector<Value>;
 
+    /**
+     * @brief member.
+     */
+    template <typename Type>
+    struct BasicMember
+    {
+        /**
+         * @brief compare members.
+         * @param other member to compare to.
+         * @return true if equal.
+         */
+        constexpr bool operator== (const BasicMember& other) const = default;
+
+        /**
+         * @brief three-way compare members.
+         * @param other member to compare to.
+         * @return ordering of this member relative to other.
+         */
+        constexpr std::partial_ordering operator<=> (const BasicMember& other) const = default;
+
+        /// member key.
+        Type first;
+
+        /// member value.
+        Type second;
+    };
+
     /// object member.
-    using Member = std::pair<Value, Value>;
+    using Member = BasicMember<Value>;
 
     /// object.
     using Object = std::vector<Member>;
@@ -2502,44 +2529,47 @@ namespace join
             {
                 int result = -1;
 
-                switch (member.first.index ())
+                if (JOIN_LIKELY (member.first.isString ()))
                 {
-                    case Value::BooleanValue:
-                        result = handler.setKey (member.first.getBool ());
-                        break;
+                    result = handler.setKey (member.first.getString ());
+                }
+                else
+                {
+                    switch (member.first.index ())
+                    {
+                        case Value::BooleanValue:
+                            result = handler.setKey (member.first.getBool ());
+                            break;
 
-                    case Value::IntegerValue:
-                        result = handler.setKey (member.first.getInt ());
-                        break;
+                        case Value::IntegerValue:
+                            result = handler.setKey (member.first.getInt ());
+                            break;
 
-                    case Value::UnsignedValue:
-                        result = handler.setKey (member.first.getUint ());
-                        break;
+                        case Value::UnsignedValue:
+                            result = handler.setKey (member.first.getUint ());
+                            break;
 
-                    case Value::Integer64Value:
-                        result = handler.setKey (member.first.getInt64 ());
-                        break;
+                        case Value::Integer64Value:
+                            result = handler.setKey (member.first.getInt64 ());
+                            break;
 
-                    case Value::Unsigned64Value:
-                        result = handler.setKey (member.first.getUint64 ());
-                        break;
+                        case Value::Unsigned64Value:
+                            result = handler.setKey (member.first.getUint64 ());
+                            break;
 
-                    case Value::RealValue:
-                        result = handler.setKey (member.first.getDouble ());
-                        break;
+                        case Value::RealValue:
+                            result = handler.setKey (member.first.getDouble ());
+                            break;
 
-                    case Value::StringValue:
-                        result = handler.setKey (member.first.getString ());
-                        break;
+                        case Value::ArrayValue:
+                        case Value::ObjectValue:
+                            join::lastError = make_error_code (SaxErrc::InvalidKey);
+                            break;
 
-                    case Value::ArrayValue:
-                    case Value::ObjectValue:
-                        join::lastError = make_error_code (SaxErrc::InvalidKey);
-                        break;
-
-                    default:
-                        result = handler.setKey (nullptr);
-                        break;
+                        default:
+                            result = handler.setKey (nullptr);
+                            break;
+                    }
                 }
 
                 if (result == -1)
