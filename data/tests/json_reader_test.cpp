@@ -317,7 +317,7 @@ TEST (JsonReader, pass)
     ASSERT_TRUE (value[9].isDouble ());
     ASSERT_DOUBLE_EQ (value[9].getDouble (), 2e-00);
     ASSERT_TRUE (value[10].isString ());
-    ASSERT_STREQ (value[10].getString ().c_str (), "rosebud");
+    ASSERT_EQ (value[10].getString (), "rosebud");
 
     stream.clear ();
     stream.str ("[[[[[[[[[[[[[[[[[[[\"Not too deep\"]]]]]]]]]]]]]]]]]]]");
@@ -1393,7 +1393,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "");
+    EXPECT_EQ (value[0].getString (), "");
 
     stream.clear ();
     stream.str ("[\"Hello\"]");
@@ -1401,7 +1401,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello");
+    EXPECT_EQ (value[0].getString (), "Hello");
 
     stream.clear ();
     stream.str ("[\"Hello\\nWorld\"]");
@@ -1409,7 +1409,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello\nWorld");
+    EXPECT_EQ (value[0].getString (), "Hello\nWorld");
 
     stream.clear ();
     stream.str ("[\"Hello\\u0000World\"]");
@@ -1417,7 +1417,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello\0World");
+    EXPECT_EQ (value[0].getString (), std::string_view ("Hello\0World", 11));
 
     stream.clear ();
     stream.str ("[\"\\\"\\\\/\\b\\f\\n\\r\\t\"]");
@@ -1425,7 +1425,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\"\\/\b\f\n\r\t");
+    EXPECT_EQ (value[0].getString (), "\"\\/\b\f\n\r\t");
 
     stream.clear ();
     stream.str ("[\"\\u0024\"]");
@@ -1433,7 +1433,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\x24");
+    EXPECT_EQ (value[0].getString (), "\x24");
 
     stream.clear ();
     stream.str ("[\"\\u00A2\"]");
@@ -1441,7 +1441,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xC2\xA2");
+    EXPECT_EQ (value[0].getString (), "\xC2\xA2");
 
     stream.clear ();
     stream.str ("[\"\\u20AC\"]");
@@ -1449,7 +1449,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xE2\x82\xAC");
+    EXPECT_EQ (value[0].getString (), "\xE2\x82\xAC");
 
     stream.clear ();
     stream.str ("[\"\\uD834\\uDD1E\"]");
@@ -1457,7 +1457,7 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+    EXPECT_EQ (value[0].getString (), "\xF0\x9D\x84\x9E");
 
     stream.clear ();
     stream.str ("[\"\\/\"]");
@@ -1465,14 +1465,14 @@ TEST (JsonReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "/");
+    EXPECT_EQ (value[0].getString (), "/");
 
     ASSERT_EQ (JsonReader ().deserialize (std::string ("[\"Hello\"]"), value), 0) << join::lastError.message ();
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello");
+    EXPECT_EQ (value[0].getString (), "Hello");
 
     ASSERT_EQ (JsonReader ().deserialize (std::string ("{\"key\":\"Hello\\nWorld\"}"), value), 0)
         << join::lastError.message ();
-    EXPECT_STREQ (value["key"].getString ().c_str (), "Hello\nWorld");
+    EXPECT_EQ (value["key"].getString (), "Hello\nWorld");
 
     ASSERT_EQ (JsonReader ().deserialize (std::string ("[\"Hello"), value), -1);
 
@@ -1565,14 +1565,14 @@ TEST (JsonReader, encoding)
     ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), 0)
         << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "caf\xC3\xA9 \xE2\x82\xAC \xF0\x9F\x98\x82");
+    EXPECT_EQ (value[0].getString (), "caf\xC3\xA9 \xE2\x82\xAC \xF0\x9F\x98\x82");
 
     stream.clear ();
     stream.str ("{\"\xC3\xB6\\u00e9\xC3\xB6\":\"\xE2\x82\xAC\\n\xE2\x82\xAC\"}");
     ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), 0)
         << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
-    EXPECT_STREQ (value["\xC3\xB6\xC3\xA9\xC3\xB6"].getString ().c_str (), "\xE2\x82\xAC\n\xE2\x82\xAC");
+    EXPECT_EQ (value["\xC3\xB6\xC3\xA9\xC3\xB6"].getString (), "\xE2\x82\xAC\n\xE2\x82\xAC");
 
     for (auto const& doc : {"[\"\xC0\xAF\"]", "[\"\xED\xA0\x80\"]", "[\"\xF5\x80\x80\x80\"]", "[\"\xE2\x28\xA1\"]",
                             "[\"\xE2\x82\"]", "[\"\xE2\x82\\n\"]", "{\"\xFF\":1}"})

@@ -3648,128 +3648,128 @@ TEST (Value, getDouble)
  */
 TEST (Value, getString)
 {
-    const char* tmp = nullptr;
+    std::string_view tmp;
     (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = "";
     ASSERT_EQ (value.getString (), "");
-    ASSERT_STREQ (static_cast<const char*> (value), "");
+    ASSERT_EQ (static_cast<std::string_view> (value), "");
 
     value = "foo";
     ASSERT_EQ (value.getString (), "foo");
-    ASSERT_STREQ (static_cast<const char*> (value), "foo");
+    ASSERT_EQ (static_cast<std::string_view> (value), "foo");
 
     value = "02:42:64:2f:6a:d0";
-    ASSERT_STREQ (value.getString ().c_str (), "02:42:64:2f:6a:d0");
-    ASSERT_STREQ (static_cast<const char*> (value), "02:42:64:2f:6a:d0");
+    ASSERT_EQ (value.getString (), "02:42:64:2f:6a:d0");
+    ASSERT_EQ (static_cast<std::string_view> (value), "02:42:64:2f:6a:d0");
 
     value = "127.0.0.1";
-    ASSERT_STREQ (value.getString ().c_str (), "127.0.0.1");
-    ASSERT_STREQ (static_cast<const char*> (value), "127.0.0.1");
+    ASSERT_EQ (value.getString (), "127.0.0.1");
+    ASSERT_EQ (static_cast<std::string_view> (value), "127.0.0.1");
 
     value = Array{1};
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = Object{{"i", 1}};
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 }
 
 /**

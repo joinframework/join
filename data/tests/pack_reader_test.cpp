@@ -1254,7 +1254,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "");
+    EXPECT_EQ (value[0].getString (), "");
 
     stream.clear ();
     stream.str (std::string (
@@ -1263,7 +1263,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello");
+    EXPECT_EQ (value[0].getString (), "Hello");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdb', '\x00', '\x00', '\x00', '\x0b', '\x48',
@@ -1272,7 +1272,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello\nWorld");
+    EXPECT_EQ (value[0].getString (), "Hello\nWorld");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xab', '\x48', '\x65', '\x6c', '\x6c', '\x6f',
@@ -1281,7 +1281,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello\0World");
+    EXPECT_EQ (value[0].getString (), std::string_view ("Hello\0World", 11));
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x08', '\x22', '\x5c', '\x2f',
@@ -1290,7 +1290,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\"\\/\b\f\n\r\t");
+    EXPECT_EQ (value[0].getString (), "\"\\/\b\f\n\r\t");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdb', '\x00', '\x00', '\x00', '\x01', '\x24'}));
@@ -1298,7 +1298,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\x24");
+    EXPECT_EQ (value[0].getString (), "\x24");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xa2', '\xc2', '\xa2'}));
@@ -1306,7 +1306,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xC2\xA2");
+    EXPECT_EQ (value[0].getString (), "\xC2\xA2");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xda', '\x00', '\x03', '\xe2', '\x82', '\xac'}));
@@ -1314,7 +1314,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xE2\x82\xAC");
+    EXPECT_EQ (value[0].getString (), "\xE2\x82\xAC");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xdb', '\x00', '\x00', '\x00', '\x04', '\xf0',
@@ -1323,7 +1323,7 @@ TEST (PackReader, str)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+    EXPECT_EQ (value[0].getString (), "\xF0\x9D\x84\x9E");
 
     Nested nested;
     ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xa4', '\x91', '\xa2', 'a', 'b'}), nested), 0)
@@ -1347,7 +1347,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "");
+    EXPECT_EQ (value[0].getString (), "");
 
     stream.clear ();
     stream.str (std::string (
@@ -1356,7 +1356,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello");
+    EXPECT_EQ (value[0].getString (), "Hello");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x0b', '\x48',
@@ -1365,7 +1365,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello\nWorld");
+    EXPECT_EQ (value[0].getString (), "Hello\nWorld");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x0b', '\x48', '\x65', '\x6c', '\x6c',
@@ -1374,7 +1374,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "Hello\0World");
+    EXPECT_EQ (value[0].getString (), std::string_view ("Hello\0World", 11));
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x08', '\x22', '\x5c', '\x2f',
@@ -1383,7 +1383,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\"\\/\b\f\n\r\t");
+    EXPECT_EQ (value[0].getString (), "\"\\/\b\f\n\r\t");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x01', '\x24'}));
@@ -1391,7 +1391,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\x24");
+    EXPECT_EQ (value[0].getString (), "\x24");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x02', '\xc2', '\xa2'}));
@@ -1399,7 +1399,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xC2\xA2");
+    EXPECT_EQ (value[0].getString (), "\xC2\xA2");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x03', '\xe2', '\x82', '\xac'}));
@@ -1407,7 +1407,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xE2\x82\xAC");
+    EXPECT_EQ (value[0].getString (), "\xE2\x82\xAC");
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x04', '\xf0',
@@ -1416,7 +1416,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isString ());
-    EXPECT_STREQ (value[0].getString ().c_str (), "\xF0\x9D\x84\x9E");
+    EXPECT_EQ (value[0].getString (), "\xF0\x9D\x84\x9E");
 
     Nested nested;
     ASSERT_EQ (

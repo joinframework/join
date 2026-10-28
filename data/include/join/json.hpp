@@ -386,13 +386,18 @@ namespace join
          */
         int setString (std::string_view value)
         {
+            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+                {
+                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                    reset ();
+                    return -1;
+                }
+            }
             array ();
             append ('"');
-            if (writeEscaped (value) == -1)
-            {
-                reset ();
-                return -1;
-            }
+            writeEscaped (value);
             append ('"');
             endValue ();
             return 0;
@@ -594,14 +599,19 @@ namespace join
                 reset ();
                 return -1;
             }
+            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (key.data (), key.data () + key.size ()) == -1))
+                {
+                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                    reset ();
+                    return -1;
+                }
+            }
             comma ();
             newLine ();
             append ('"');
-            if (writeEscaped (key) == -1)
-            {
-                reset ();
-                return -1;
-            }
+            writeEscaped (key);
             append ('"');
             append (':');
             space ();
@@ -797,11 +807,8 @@ namespace join
         /**
          * @brief escape string value.
          * @param value string value to escape.
-         * @return 0 on success, -1 otherwise.
          */
-        template <JsonWriteMode Mode = WriteMode>
-        int writeEscaped (std::string_view value)
-            requires (Mode == JsonWriteMode::None)
+        void writeEscaped (std::string_view value)
         {
             const char* cur = value.data ();
             const char* end = cur + value.size ();
@@ -858,25 +865,6 @@ namespace join
 
                 ++cur;
             }
-
-            return 0;
-        }
-
-        /**
-         * @brief validate and escape string value.
-         * @param value string value to escape.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonWriteMode Mode = WriteMode>
-        int writeEscaped (std::string_view value)
-            requires (Mode == JsonWriteMode::Canonical)
-        {
-            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
-            }
-            return writeEscaped<JsonWriteMode::None> (value);
         }
 
         /**
