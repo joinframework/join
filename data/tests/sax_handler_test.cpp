@@ -178,7 +178,15 @@ TEST (SaxHandler, members)
 TEST (SaxHandler, setKey)
 {
     SaxHandler handler;
-    EXPECT_EQ (handler.setKey (Value ("a")), 0);
+    EXPECT_EQ (handler.setKey (nullptr), 0);
+    EXPECT_EQ (handler.setKey (true), 0);
+    EXPECT_EQ (handler.setKey (int32_t (-2)), 0);
+    EXPECT_EQ (handler.setKey (uint32_t (3)), 0);
+    EXPECT_EQ (handler.setKey (int64_t (-4)), 0);
+    EXPECT_EQ (handler.setKey (uint64_t (5)), 0);
+    EXPECT_EQ (handler.setKey (6.5), 0);
+    EXPECT_EQ (handler.setKey (std::string_view ("seven")), 0);
+    EXPECT_EQ (handler.setKey ("eight"), 0);
 }
 
 /**

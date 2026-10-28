@@ -260,8 +260,10 @@ namespace join
 
             if (::sendmsg (_socket.handle (), &message, 0) == -1)
             {
-                lastError = std::error_code (errno, std::generic_category ());  // LCOV_EXCL_LINE
-                return -1;                                                      // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+                // LCOV_EXCL_STOP
             }
 
             return 0;
@@ -292,14 +294,18 @@ namespace join
             ssize_t size = ::recvmsg (_socket.handle (), &message, 0);
             if (size == -1)
             {
-                lastError = std::error_code (errno, std::generic_category ());  // LCOV_EXCL_LINE
-                return -1;                                                      // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (message.msg_flags & MSG_TRUNC)
             {
-                lastError = make_error_code (Errc::MessageTooLong);  // LCOV_EXCL_LINE
-                return -1;                                           // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                lastError = make_error_code (Errc::MessageTooLong);
+                return -1;
+                // LCOV_EXCL_STOP
             }
 
             if (size < static_cast<ssize_t> (sizeof (Frame) + DhcpMessage::headerSize))

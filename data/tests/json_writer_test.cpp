@@ -322,10 +322,44 @@ TEST (JsonWriter, setKey)
     EXPECT_EQ (jsonWriter.setKey ("foo"), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
 
+    auto invalid = [&] (auto key) {
+        stream.str ("");
+        jsonWriter.reset ();
+        jsonWriter.startObject ();
+        int result = jsonWriter.setKey (key);
+        jsonWriter.flush ();
+        return result;
+    };
+
+    EXPECT_EQ (invalid (nullptr), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (true), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (int32_t (-2)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (uint32_t (3)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (int64_t (-4)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (uint64_t (5)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (6.5), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (stream.str (), "");
+
+    jsonWriter.reset ();
+    stream.str ("");
     EXPECT_EQ (jsonWriter.startObject (), 0);
     EXPECT_EQ (jsonWriter.setKey ("foo"), 0);
     jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "{\"foo\":");
+
+    jsonWriter.reset ();
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.startObject (), 0);
+    EXPECT_EQ (jsonWriter.setKey (std::string_view ("bar")), 0);
+    jsonWriter.flush ();
+    EXPECT_EQ (stream.str (), "{\"bar\":");
 
     jsonWriter.reset ();
     stream.str ("");

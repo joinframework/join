@@ -254,11 +254,11 @@ namespace join
         }
 
         /**
-         * @brief set key.
+         * @brief set null key.
          * @param key object key to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey (const Value& key)
+        int setKey (std::nullptr_t key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -267,15 +267,16 @@ namespace join
             }
 
             _stack.emplace_back (key);
+
             return 0;
         }
 
         /**
-         * @brief set key.
-         * @param key object key to move.
+         * @brief set boolean key.
+         * @param key object key to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey (Value&& key)
+        int setKey (bool key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -283,8 +284,127 @@ namespace join
                 return -1;
             }
 
-            _stack.emplace_back (std::move (key));
+            _stack.emplace_back (key);
+
             return 0;
+        }
+
+        /**
+         * @brief set integer key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (int32_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (key);
+
+            return 0;
+        }
+
+        /**
+         * @brief set unsigned integer key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (uint32_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (key);
+
+            return 0;
+        }
+
+        /**
+         * @brief set 64 bits integer key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (int64_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (key);
+
+            return 0;
+        }
+
+        /**
+         * @brief set unsigned 64 bits integer key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (uint64_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (key);
+
+            return 0;
+        }
+
+        /**
+         * @brief set real key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (double key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (key);
+
+            return 0;
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (std::string_view key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (key);
+
+            return 0;
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (const char* key)
+        {
+            return setKey (std::string_view (key));
         }
 
         /**

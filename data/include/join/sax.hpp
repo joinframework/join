@@ -26,13 +26,11 @@
 #define JOIN_DATA_SAX_HPP
 
 // libjoin.
+#include <join/sax_error.hpp>
 #include <join/value.hpp>
-#include <join/error.hpp>
 
 // C++.
-#include <system_error>
 #include <string_view>
-#include <string>
 
 // C.
 #include <cstdint>
@@ -42,59 +40,6 @@ namespace join
 {
     /// max number of nested containers.
     constexpr size_t saxMaxDepth = 256;
-
-    /**
-     * @brief SAX API generic error codes.
-     */
-    enum class SaxErrc
-    {
-        StackOverflow = 1, /**< Stack overflow. */
-        InvalidParent,     /**< Parent not an array nor an object. */
-        InvalidKey,        /**< Key is invalid. */
-        InvalidValue,      /**< Value is invalid. */
-        ExtraData,         /**< Extra data detected. */
-        Truncated          /**< Data is truncated. */
-    };
-
-    /**
-     * @brief SAX API generic error category.
-     */
-    class SaxCategory : public std::error_category
-    {
-    public:
-        /**
-         * @brief get SAX API generic error category name.
-         * @return deserializer generic error category name.
-         */
-        virtual const char* name () const noexcept;
-
-        /**
-         * @brief translate SAX API generic error code to human readable error string.
-         * @param code error code.
-         * @return human readable error string.
-         */
-        virtual std::string message (int code) const;
-    };
-
-    /**
-     * @brief get error category.
-     * @return the created std::error_category object.
-     */
-    const std::error_category& saxCategory () noexcept;
-
-    /**
-     * @brief create an std::error_code object.
-     * @param code error code number.
-     * @return the created std::error_code object.
-     */
-    std::error_code make_error_code (SaxErrc code) noexcept;
-
-    /**
-     * @brief create an std::error_condition object.
-     * @param code error code number.
-     * @return the created std::error_condition object.
-     */
-    std::error_condition make_error_condition (SaxErrc code) noexcept;
 
     /**
      * @brief SAX handler ignoring every event, to derive from and use through the derived type.
@@ -220,11 +165,91 @@ namespace join
         }
 
         /**
-         * @brief set key.
+         * @brief set null key.
          * @param key object key.
          * @return 0.
          */
-        int setKey ([[maybe_unused]] const Value& key) noexcept
+        int setKey ([[maybe_unused]] std::nullptr_t key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set boolean key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] bool key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set integer key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] int32_t key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set unsigned integer key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] uint32_t key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set 64 bits integer key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] int64_t key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set unsigned 64 bits integer key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] uint64_t key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set real key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] double key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] std::string_view key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] const char* key) noexcept
         {
             return 0;
         }
@@ -245,15 +270,6 @@ namespace join
         {
             // do nothing.
         }
-    };
-}
-
-namespace std
-{
-    /// SAX API generic error code specialization.
-    template <>
-    struct is_error_condition_enum<join::SaxErrc> : public true_type
-    {
     };
 }
 

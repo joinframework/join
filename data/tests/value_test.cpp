@@ -4146,6 +4146,99 @@ TEST (Value, at)
     ASSERT_TRUE (value.at ("object").isObject ());
 
     ASSERT_THROW (value.at ("non existing path"), std::out_of_range);
+
+    value = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
+                   {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    const Value& constant = value;
+    ASSERT_EQ (value.at (nullptr), 0);
+    ASSERT_EQ (constant.at (nullptr), 0);
+    ASSERT_EQ (value.at (true), 1);
+    ASSERT_EQ (constant.at (true), 1);
+    ASSERT_EQ (value.at (int32_t (-2)), 2);
+    ASSERT_EQ (constant.at (int32_t (-2)), 2);
+    ASSERT_EQ (value.at (uint32_t (3)), 3);
+    ASSERT_EQ (constant.at (uint32_t (3)), 3);
+    ASSERT_EQ (value.at (int64_t (-4)), 4);
+    ASSERT_EQ (constant.at (int64_t (-4)), 4);
+    ASSERT_EQ (value.at (uint64_t (5)), 5);
+    ASSERT_EQ (constant.at (uint64_t (5)), 5);
+    ASSERT_EQ (value.at (6.5), 6);
+    ASSERT_EQ (constant.at (6.5), 6);
+    ASSERT_EQ (value.at (std::string_view ("seven")), 7);
+    ASSERT_EQ (constant.at (std::string_view ("seven")), 7);
+    ASSERT_EQ (value.at ("seven"), 7);
+    ASSERT_EQ (constant.at ("seven"), 7);
+    ASSERT_EQ (value.at (std::string ("seven")), 7);
+    ASSERT_EQ (constant.at (std::string ("seven")), 7);
+    ASSERT_THROW (value.at (8), std::out_of_range);
+    ASSERT_THROW (constant.at (8), std::out_of_range);
+    ASSERT_THROW (constant.at ("eight"), std::out_of_range);
+
+    value = Array{0, 1, 2, 3};
+    ASSERT_EQ (value.at (int32_t (0)), 0);
+    ASSERT_EQ (constant.at (int32_t (0)), 0);
+    ASSERT_EQ (value.at (uint32_t (1)), 1);
+    ASSERT_EQ (constant.at (uint32_t (1)), 1);
+    ASSERT_EQ (value.at (int64_t (2)), 2);
+    ASSERT_EQ (constant.at (int64_t (2)), 2);
+    ASSERT_EQ (value.at (uint64_t (3)), 3);
+    ASSERT_EQ (constant.at (uint64_t (3)), 3);
+    ASSERT_THROW (value.at (-1), std::out_of_range);
+    ASSERT_THROW (constant.at (-1), std::out_of_range);
+    ASSERT_THROW (value.at (4), std::out_of_range);
+    ASSERT_THROW (constant.at (4), std::out_of_range);
+    ASSERT_THROW (value.at (nullptr), std::bad_cast);
+    ASSERT_THROW (constant.at (nullptr), std::bad_cast);
+    ASSERT_THROW (value.at (true), std::bad_cast);
+    ASSERT_THROW (constant.at (true), std::bad_cast);
+    ASSERT_THROW (value.at (1.0), std::bad_cast);
+    ASSERT_THROW (constant.at (1.0), std::bad_cast);
+    ASSERT_THROW (value.at ("seven"), std::bad_cast);
+    ASSERT_THROW (constant.at ("seven"), std::bad_cast);
+}
+
+/**
+ * @brief Test subscript operator.
+ */
+TEST (Value, subscript)
+{
+    Value value;
+    value[nullptr] = 0;
+    value[true] = 1;
+    value[int32_t (-2)] = 2;
+    value[uint32_t (3)] = 3;
+    value[int64_t (-4)] = 4;
+    value[uint64_t (5)] = 5;
+    value[6.5] = 6;
+    value[std::string_view ("seven")] = 7;
+    value["eight"] = 8;
+    value[std::string ("nine")] = 9;
+    ASSERT_EQ (value.size (), 10U);
+    ASSERT_EQ (value[nullptr], 0);
+    ASSERT_EQ (value[true], 1);
+    ASSERT_EQ (value[int32_t (-2)], 2);
+    ASSERT_EQ (value[uint32_t (3)], 3);
+    ASSERT_EQ (value[int64_t (-4)], 4);
+    ASSERT_EQ (value[uint64_t (5)], 5);
+    ASSERT_EQ (value[6.5], 6);
+    ASSERT_EQ (value[std::string_view ("seven")], 7);
+    ASSERT_EQ (value["eight"], 8);
+    ASSERT_EQ (value[std::string ("nine")], 9);
+    ASSERT_EQ (value.size (), 10U);
+
+    value = Array{0, 1, 2, 3};
+    ASSERT_EQ (value[int32_t (0)], 0);
+    ASSERT_EQ (value[uint32_t (1)], 1);
+    ASSERT_EQ (value[int64_t (2)], 2);
+    ASSERT_EQ (value[uint64_t (3)], 3);
+    ASSERT_THROW (value[nullptr], std::bad_cast);
+    ASSERT_THROW (value[true], std::bad_cast);
+    ASSERT_THROW (value[1.0], std::bad_cast);
+    ASSERT_THROW (value["seven"], std::bad_cast);
+
+    value = true;
+    ASSERT_THROW (value[0], std::bad_cast);
+    ASSERT_THROW (value["seven"], std::bad_cast);
 }
 
 /**
@@ -4780,6 +4873,30 @@ TEST (Value, erase)
     value = Object{{"i", 1}};
     ASSERT_EQ (value.erase ("i"), 1);
     ASSERT_EQ (value.erase ("j"), 0);
+
+    value = Object{{nullptr, 0},      {true, 1}, {int32_t (-2), 2}, {uint32_t (3), 3}, {int64_t (-4), 4},
+                   {uint64_t (5), 5}, {6.5, 6},  {"seven", 7},      {"eight", 8},      {"nine", 9}};
+    ASSERT_EQ (value.erase (nullptr), 1);
+    ASSERT_EQ (value.erase (nullptr), 0);
+    ASSERT_EQ (value.erase (true), 1);
+    ASSERT_EQ (value.erase (true), 0);
+    ASSERT_EQ (value.erase (int32_t (-2)), 1);
+    ASSERT_EQ (value.erase (int32_t (-2)), 0);
+    ASSERT_EQ (value.erase (uint32_t (3)), 1);
+    ASSERT_EQ (value.erase (uint32_t (3)), 0);
+    ASSERT_EQ (value.erase (int64_t (-4)), 1);
+    ASSERT_EQ (value.erase (int64_t (-4)), 0);
+    ASSERT_EQ (value.erase (uint64_t (5)), 1);
+    ASSERT_EQ (value.erase (uint64_t (5)), 0);
+    ASSERT_EQ (value.erase (6.5), 1);
+    ASSERT_EQ (value.erase (6.5), 0);
+    ASSERT_EQ (value.erase (std::string_view ("seven")), 1);
+    ASSERT_EQ (value.erase (std::string_view ("seven")), 0);
+    ASSERT_EQ (value.erase ("eight"), 1);
+    ASSERT_EQ (value.erase ("eight"), 0);
+    ASSERT_EQ (value.erase (std::string ("nine")), 1);
+    ASSERT_EQ (value.erase (std::string ("nine")), 0);
+    ASSERT_TRUE (value.empty ());
 }
 
 /**
@@ -5121,6 +5238,36 @@ TEST (Value, contains)
     value = Object{{"i", 1}};
     ASSERT_FALSE (value.contains (0));
     ASSERT_TRUE (value.contains ("i"));
+
+    value = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
+                   {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    ASSERT_TRUE (value.contains (nullptr));
+    ASSERT_TRUE (value.contains (true));
+    ASSERT_TRUE (value.contains (int32_t (-2)));
+    ASSERT_TRUE (value.contains (uint32_t (3)));
+    ASSERT_TRUE (value.contains (int64_t (-4)));
+    ASSERT_TRUE (value.contains (uint64_t (5)));
+    ASSERT_TRUE (value.contains (6.5));
+    ASSERT_TRUE (value.contains (std::string_view ("seven")));
+    ASSERT_TRUE (value.contains ("seven"));
+    ASSERT_TRUE (value.contains (std::string ("seven")));
+    ASSERT_FALSE (value.contains (false));
+    ASSERT_FALSE (value.contains (std::string_view ("eight")));
+
+    value = Array{0, 1};
+    ASSERT_TRUE (value.contains (int32_t (1)));
+    ASSERT_FALSE (value.contains (int32_t (2)));
+    ASSERT_FALSE (value.contains (int32_t (-1)));
+    ASSERT_TRUE (value.contains (uint32_t (1)));
+    ASSERT_FALSE (value.contains (uint32_t (2)));
+    ASSERT_TRUE (value.contains (int64_t (1)));
+    ASSERT_FALSE (value.contains (int64_t (2)));
+    ASSERT_FALSE (value.contains (int64_t (-1)));
+    ASSERT_TRUE (value.contains (uint64_t (1)));
+    ASSERT_FALSE (value.contains (uint64_t (2)));
+    ASSERT_THROW (value.contains (nullptr), std::bad_cast);
+    ASSERT_THROW (value.contains (true), std::bad_cast);
+    ASSERT_THROW (value.contains (1.0), std::bad_cast);
 }
 
 /**

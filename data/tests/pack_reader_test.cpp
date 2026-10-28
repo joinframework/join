@@ -1514,7 +1514,7 @@ TEST (PackReader, key)
     stream.str (std::string ({'\x81', '\xf6', '\x01'}));
     ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
-    ASSERT_TRUE (value.contains (Value (-10)));
+    ASSERT_TRUE (value.contains (-10));
 }
 
 /**

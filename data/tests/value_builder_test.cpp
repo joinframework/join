@@ -332,22 +332,37 @@ TEST (ValueBuilder, setKey)
     ValueBuilder builder (value);
     ASSERT_EQ (builder.setKey ("a"), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
-    const Value a ("a");
-    ASSERT_EQ (builder.setKey (a), -1);
-    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
 
     ASSERT_EQ (builder.startObject (), 0);
-    ASSERT_EQ (builder.setKey ("a"), 0);
+    ASSERT_EQ (builder.setKey (nullptr), 0);
+    ASSERT_EQ (builder.setInt (0), 0);
+    ASSERT_EQ (builder.setKey (true), 0);
     ASSERT_EQ (builder.setInt (1), 0);
-    ASSERT_EQ (builder.setKey (Value (2)), 0);
+    ASSERT_EQ (builder.setKey (int32_t (-2)), 0);
+    ASSERT_EQ (builder.setInt (2), 0);
+    ASSERT_EQ (builder.setKey (uint32_t (3)), 0);
     ASSERT_EQ (builder.setInt (3), 0);
-    const Value c ("c");
-    ASSERT_EQ (builder.setKey (c), 0);
+    ASSERT_EQ (builder.setKey (int64_t (-4)), 0);
     ASSERT_EQ (builder.setInt (4), 0);
+    ASSERT_EQ (builder.setKey (uint64_t (5)), 0);
+    ASSERT_EQ (builder.setInt (5), 0);
+    ASSERT_EQ (builder.setKey (6.5), 0);
+    ASSERT_EQ (builder.setInt (6), 0);
+    ASSERT_EQ (builder.setKey (std::string_view ("seven")), 0);
+    ASSERT_EQ (builder.setInt (7), 0);
+    ASSERT_EQ (builder.setKey ("eight"), 0);
+    ASSERT_EQ (builder.setInt (8), 0);
     ASSERT_EQ (builder.stopObject (), 0);
-    ASSERT_EQ (value["a"], 1);
-    ASSERT_EQ (value.getObject ()[1].first, 2);
-    ASSERT_EQ (value["c"], 4);
+    ASSERT_EQ (value.size (), 9U);
+    ASSERT_TRUE (value.getObject ()[0].first.isNull ());
+    ASSERT_TRUE (value.getObject ()[1].first.isBool ());
+    ASSERT_TRUE (value.getObject ()[2].first.isInt ());
+    ASSERT_TRUE (value.getObject ()[3].first.isUint ());
+    ASSERT_TRUE (value.getObject ()[4].first.isInt64 ());
+    ASSERT_TRUE (value.getObject ()[5].first.isUint64 ());
+    ASSERT_TRUE (value.getObject ()[6].first.isDouble ());
+    ASSERT_EQ (value["seven"], 7);
+    ASSERT_EQ (value["eight"], 8);
 }
 
 /**

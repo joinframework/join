@@ -498,11 +498,95 @@ namespace join
         }
 
         /**
-         * @brief set key.
+         * @brief set null key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] std::nullptr_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set boolean key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] bool key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] int32_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set unsigned integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] uint32_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set 64 bits integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] int64_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set unsigned 64 bits integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] uint64_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set real key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] double key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set string key.
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey (const Value& key)
+        int setKey (std::string_view key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -510,16 +594,10 @@ namespace join
                 reset ();
                 return -1;
             }
-            if (JOIN_UNLIKELY (!key.isString ()))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidKey);
-                reset ();
-                return -1;
-            }
             comma ();
             newLine ();
             append ('"');
-            if (writeEscaped (key.getString ()) == -1)
+            if (writeEscaped (key) == -1)
             {
                 reset ();
                 return -1;
@@ -529,6 +607,16 @@ namespace join
             space ();
             _first = true;
             return 0;
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (const char* key)
+        {
+            return setKey (std::string_view (key));
         }
 
         /**
@@ -1101,9 +1189,9 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename Handler>
-        int deserialize (const std::string& document, Handler& handler)
+        int deserialize (std::string_view document, Handler& handler)
         {
-            StringProbe in (document.c_str (), document.size ());
+            StringProbe in (document.data (), document.size ());
             return read (in, handler);
         }
 
@@ -1718,8 +1806,10 @@ namespace join
                 return handler.setDouble (d);
             }
 
-            join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
-            return -1;                                                  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            join::lastError = make_error_code (SaxErrc::InvalidValue);
+            return -1;
+            // LCOV_EXCL_STOP
         }
 
         /**
@@ -1881,7 +1971,7 @@ namespace join
                 if (JOIN_LIKELY (document.peek () == '"'))
                 {
                     document.get ();
-                    return isKey ? handler.setKey (Value (chunk)) : handler.setString (chunk);
+                    return isKey ? handler.setKey (chunk) : handler.setString (chunk);
                 }
             }
 
@@ -1924,7 +2014,7 @@ namespace join
                 }
             }
 
-            int result = isKey ? handler.setKey (Value (output)) : handler.setString (output);
+            int result = isKey ? handler.setKey (output) : handler.setString (output);
             cache = std::move (output);
             return result;
         }

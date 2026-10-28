@@ -152,8 +152,10 @@ MacAddress Arp::cache (const IpAddress& ip)
 
     if (!(neighbor->state () & NUD_VALID))
     {
-        lastError = std::make_error_code (std::errc::no_such_device_or_address);  // LCOV_EXCL_LINE
-        return {};                                                                // LCOV_EXCL_LINE
+        // LCOV_EXCL_START
+        lastError = std::make_error_code (std::errc::no_such_device_or_address);
+        return {};
+        // LCOV_EXCL_STOP
     }
 
     return neighbor->mac ();

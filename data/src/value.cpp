@@ -57,7 +57,7 @@ int Value::jsonRead (const char* first, const char* last)
 //   CLASS     : Value
 //   METHOD    : jsonRead
 // =========================================================================
-int Value::jsonRead (const std::string& document)
+int Value::jsonRead (std::string_view document)
 {
     return deserialize<JsonReader> (document);
 }
@@ -156,7 +156,7 @@ int Value::packRead (const char* first, const char* last)
 //   CLASS     : Value
 //   METHOD    : packRead
 // =========================================================================
-int Value::packRead (const std::string& document)
+int Value::packRead (std::string_view document)
 {
     return deserialize<PackReader> (document);
 }
