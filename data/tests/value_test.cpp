@@ -25,17 +25,104 @@
 // libjoin.
 #include <join/value.hpp>
 #include <join/error.hpp>
+#include <join/json.hpp>
+#include <join/pack.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
 // C++.
+#include <string_view>
+#include <stdexcept>
+#include <sstream>
+#include <fstream>
 #include <limits>
 
 using join::Array;
 using join::Member;
 using join::Object;
 using join::Value;
+using join::JsonReader;
+using join::JsonReadMode;
+using join::JsonWriter;
+using join::JsonCanonicalizer;
+using join::PackReader;
+using join::PackWriter;
+using join::SaxErrc;
+
+/**
+ * @brief stream buffer failing on its first write.
+ */
+struct FailingBuffer : public std::streambuf
+{
+    std::streamsize xsputn (const char* data, std::streamsize size) override
+    {
+        if (!failed)
+        {
+            failed = true;
+            throw std::runtime_error ("write failed");
+        }
+        written.append (data, size);
+        return size;
+    }
+
+    bool failed = false;
+    std::string written;
+};
+
+/**
+ * @brief handler counting the values it receives.
+ */
+struct Counter : public join::SaxHandler
+{
+    int setNull ()
+    {
+        return count ();
+    }
+
+    int setBool (bool)
+    {
+        return count ();
+    }
+
+    int setInt (int32_t)
+    {
+        return count ();
+    }
+
+    int setUint (uint32_t)
+    {
+        return count ();
+    }
+
+    int setInt64 (int64_t)
+    {
+        return count ();
+    }
+
+    int setUint64 (uint64_t)
+    {
+        return count ();
+    }
+
+    int setDouble (double)
+    {
+        return count ();
+    }
+
+    int setString (std::string_view)
+    {
+        return count ();
+    }
+
+    int count ()
+    {
+        ++values;
+        return 0;
+    }
+
+    size_t values = 0;
+};
 
 /**
  * @brief Test create method.
@@ -3561,128 +3648,128 @@ TEST (Value, getDouble)
  */
 TEST (Value, getString)
 {
-    const char* tmp = nullptr;
+    std::string_view tmp;
     (void)tmp;
 
     Value value;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = nullptr;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = true;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = false;
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<float>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<float>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<double>::min ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = std::numeric_limits<double>::max ();
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = "";
     ASSERT_EQ (value.getString (), "");
-    ASSERT_STREQ (static_cast<const char*> (value), "");
+    ASSERT_EQ (static_cast<std::string_view> (value), "");
 
     value = "foo";
     ASSERT_EQ (value.getString (), "foo");
-    ASSERT_STREQ (static_cast<const char*> (value), "foo");
+    ASSERT_EQ (static_cast<std::string_view> (value), "foo");
 
     value = "02:42:64:2f:6a:d0";
-    ASSERT_STREQ (value.getString ().c_str (), "02:42:64:2f:6a:d0");
-    ASSERT_STREQ (static_cast<const char*> (value), "02:42:64:2f:6a:d0");
+    ASSERT_EQ (value.getString (), "02:42:64:2f:6a:d0");
+    ASSERT_EQ (static_cast<std::string_view> (value), "02:42:64:2f:6a:d0");
 
     value = "127.0.0.1";
-    ASSERT_STREQ (value.getString ().c_str (), "127.0.0.1");
-    ASSERT_STREQ (static_cast<const char*> (value), "127.0.0.1");
+    ASSERT_EQ (value.getString (), "127.0.0.1");
+    ASSERT_EQ (static_cast<std::string_view> (value), "127.0.0.1");
 
     value = Array{1};
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
     value = Object{{"i", 1}};
     ASSERT_THROW (value.getString (), std::bad_cast);
-    ASSERT_THROW ((tmp = static_cast<const char*> (value)), std::bad_cast);
+    ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 }
 
 /**
@@ -4059,6 +4146,132 @@ TEST (Value, at)
     ASSERT_TRUE (value.at ("object").isObject ());
 
     ASSERT_THROW (value.at ("non existing path"), std::out_of_range);
+
+    value = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
+                   {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    const Value& constant = value;
+    ASSERT_EQ (value.at (nullptr), 0);
+    ASSERT_EQ (constant.at (nullptr), 0);
+    ASSERT_EQ (value.at (true), 1);
+    ASSERT_EQ (constant.at (true), 1);
+    ASSERT_EQ (value.at (int32_t (-2)), 2);
+    ASSERT_EQ (constant.at (int32_t (-2)), 2);
+    ASSERT_EQ (value.at (uint32_t (3)), 3);
+    ASSERT_EQ (constant.at (uint32_t (3)), 3);
+    ASSERT_EQ (value.at (int64_t (-4)), 4);
+    ASSERT_EQ (constant.at (int64_t (-4)), 4);
+    ASSERT_EQ (value.at (uint64_t (5)), 5);
+    ASSERT_EQ (constant.at (uint64_t (5)), 5);
+    ASSERT_EQ (value.at (6.5), 6);
+    ASSERT_EQ (constant.at (6.5), 6);
+    ASSERT_EQ (value.at (std::string_view ("seven")), 7);
+    ASSERT_EQ (constant.at (std::string_view ("seven")), 7);
+    ASSERT_EQ (value.at ("seven"), 7);
+    ASSERT_EQ (constant.at ("seven"), 7);
+    ASSERT_EQ (value.at (std::string ("seven")), 7);
+    ASSERT_EQ (constant.at (std::string ("seven")), 7);
+    ASSERT_THROW (value.at (8), std::out_of_range);
+    ASSERT_THROW (constant.at (8), std::out_of_range);
+    ASSERT_THROW (constant.at ("eight"), std::out_of_range);
+
+    value = Object{{"seven", 7}};
+    ASSERT_THROW (value.at (nullptr), std::out_of_range);
+    ASSERT_THROW (constant.at (nullptr), std::out_of_range);
+    ASSERT_THROW (value.at (true), std::out_of_range);
+    ASSERT_THROW (constant.at (true), std::out_of_range);
+    ASSERT_THROW (value.at (uint32_t (3)), std::out_of_range);
+    ASSERT_THROW (constant.at (uint32_t (3)), std::out_of_range);
+    ASSERT_THROW (value.at (int64_t (-4)), std::out_of_range);
+    ASSERT_THROW (constant.at (int64_t (-4)), std::out_of_range);
+    ASSERT_THROW (value.at (uint64_t (5)), std::out_of_range);
+    ASSERT_THROW (constant.at (uint64_t (5)), std::out_of_range);
+    ASSERT_THROW (value.at (6.5), std::out_of_range);
+    ASSERT_THROW (constant.at (6.5), std::out_of_range);
+
+    value = Array{0, 1, 2, 3};
+    ASSERT_EQ (value.at (int32_t (0)), 0);
+    ASSERT_EQ (constant.at (int32_t (0)), 0);
+    ASSERT_EQ (value.at (uint32_t (1)), 1);
+    ASSERT_EQ (constant.at (uint32_t (1)), 1);
+    ASSERT_EQ (value.at (int64_t (2)), 2);
+    ASSERT_EQ (constant.at (int64_t (2)), 2);
+    ASSERT_EQ (value.at (uint64_t (3)), 3);
+    ASSERT_EQ (constant.at (uint64_t (3)), 3);
+    ASSERT_THROW (value.at (-1), std::out_of_range);
+    ASSERT_THROW (constant.at (-1), std::out_of_range);
+    ASSERT_THROW (value.at (4), std::out_of_range);
+    ASSERT_THROW (constant.at (4), std::out_of_range);
+    ASSERT_THROW (value.at (nullptr), std::bad_cast);
+    ASSERT_THROW (constant.at (nullptr), std::bad_cast);
+    ASSERT_THROW (value.at (true), std::bad_cast);
+    ASSERT_THROW (constant.at (true), std::bad_cast);
+    ASSERT_THROW (value.at (1.0), std::bad_cast);
+    ASSERT_THROW (constant.at (1.0), std::bad_cast);
+    ASSERT_THROW (value.at ("seven"), std::bad_cast);
+    ASSERT_THROW (constant.at ("seven"), std::bad_cast);
+}
+
+/**
+ * @brief Test subscript operator.
+ */
+TEST (Value, subscript)
+{
+    Value value;
+    value[nullptr] = 0;
+    value[true] = 1;
+    value[int32_t (-2)] = 2;
+    value[uint32_t (3)] = 3;
+    value[int64_t (-4)] = 4;
+    value[uint64_t (5)] = 5;
+    value[6.5] = 6;
+    value[std::string_view ("seven")] = 7;
+    value["eight"] = 8;
+    value[std::string ("nine")] = 9;
+    ASSERT_EQ (value.size (), 10U);
+    ASSERT_EQ (value[nullptr], 0);
+    ASSERT_EQ (value[true], 1);
+    ASSERT_EQ (value[int32_t (-2)], 2);
+    ASSERT_EQ (value[uint32_t (3)], 3);
+    ASSERT_EQ (value[int64_t (-4)], 4);
+    ASSERT_EQ (value[uint64_t (5)], 5);
+    ASSERT_EQ (value[6.5], 6);
+    ASSERT_EQ (value[std::string_view ("seven")], 7);
+    ASSERT_EQ (value["eight"], 8);
+    ASSERT_EQ (value[std::string ("nine")], 9);
+    ASSERT_EQ (value.size (), 10U);
+
+    value = nullptr;
+    value[true] = 1;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[int32_t (-2)] = 2;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[uint32_t (3)] = 3;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[int64_t (-4)] = 4;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[uint64_t (5)] = 5;
+    ASSERT_TRUE (value.isObject ());
+    value = nullptr;
+    value[6.5] = 6;
+    ASSERT_TRUE (value.isObject ());
+
+    value = Array{0, 1, 2, 3};
+    ASSERT_EQ (value[int32_t (0)], 0);
+    ASSERT_EQ (value[uint32_t (1)], 1);
+    ASSERT_EQ (value[int64_t (2)], 2);
+    ASSERT_EQ (value[uint64_t (3)], 3);
+    ASSERT_THROW (value[nullptr], std::bad_cast);
+    ASSERT_THROW (value[true], std::bad_cast);
+    ASSERT_THROW (value[1.0], std::bad_cast);
+    ASSERT_THROW (value["seven"], std::bad_cast);
+
+    value = true;
+    ASSERT_THROW (value[0], std::bad_cast);
+    ASSERT_THROW (value["seven"], std::bad_cast);
 }
 
 /**
@@ -4508,94 +4721,94 @@ TEST (Value, clear)
 TEST (Value, insert)
 {
     Value value;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = nullptr;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = true;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = false;
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int8_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint8_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int16_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint16_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int32_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint32_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<int64_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<uint64_t>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<float>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<float>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<double>::min ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = std::numeric_limits<double>::max ();
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "foo";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "02:42:64:2f:6a:d0";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = "127.0.0.1";
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = Array{1};
-    ASSERT_THROW (value.insert (std::make_pair ("i", 1)), std::bad_cast);
+    ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
     value = Object{{"i", 1}};
-    ASSERT_NO_THROW (value.insert (std::make_pair ("i", 1)));
+    ASSERT_NO_THROW (value.insert (Member{"i", 1}));
 }
 
 /**
@@ -4693,6 +4906,30 @@ TEST (Value, erase)
     value = Object{{"i", 1}};
     ASSERT_EQ (value.erase ("i"), 1);
     ASSERT_EQ (value.erase ("j"), 0);
+
+    value = Object{{nullptr, 0},      {true, 1}, {int32_t (-2), 2}, {uint32_t (3), 3}, {int64_t (-4), 4},
+                   {uint64_t (5), 5}, {6.5, 6},  {"seven", 7},      {"eight", 8},      {"nine", 9}};
+    ASSERT_EQ (value.erase (nullptr), 1);
+    ASSERT_EQ (value.erase (nullptr), 0);
+    ASSERT_EQ (value.erase (true), 1);
+    ASSERT_EQ (value.erase (true), 0);
+    ASSERT_EQ (value.erase (int32_t (-2)), 1);
+    ASSERT_EQ (value.erase (int32_t (-2)), 0);
+    ASSERT_EQ (value.erase (uint32_t (3)), 1);
+    ASSERT_EQ (value.erase (uint32_t (3)), 0);
+    ASSERT_EQ (value.erase (int64_t (-4)), 1);
+    ASSERT_EQ (value.erase (int64_t (-4)), 0);
+    ASSERT_EQ (value.erase (uint64_t (5)), 1);
+    ASSERT_EQ (value.erase (uint64_t (5)), 0);
+    ASSERT_EQ (value.erase (6.5), 1);
+    ASSERT_EQ (value.erase (6.5), 0);
+    ASSERT_EQ (value.erase (std::string_view ("seven")), 1);
+    ASSERT_EQ (value.erase (std::string_view ("seven")), 0);
+    ASSERT_EQ (value.erase ("eight"), 1);
+    ASSERT_EQ (value.erase ("eight"), 0);
+    ASSERT_EQ (value.erase (std::string ("nine")), 1);
+    ASSERT_EQ (value.erase (std::string ("nine")), 0);
+    ASSERT_TRUE (value.empty ());
 }
 
 /**
@@ -5034,6 +5271,43 @@ TEST (Value, contains)
     value = Object{{"i", 1}};
     ASSERT_FALSE (value.contains (0));
     ASSERT_TRUE (value.contains ("i"));
+
+    value = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
+                   {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    ASSERT_TRUE (value.contains (nullptr));
+    ASSERT_TRUE (value.contains (true));
+    ASSERT_TRUE (value.contains (int32_t (-2)));
+    ASSERT_TRUE (value.contains (uint32_t (3)));
+    ASSERT_TRUE (value.contains (int64_t (-4)));
+    ASSERT_TRUE (value.contains (uint64_t (5)));
+    ASSERT_TRUE (value.contains (6.5));
+    ASSERT_TRUE (value.contains (std::string_view ("seven")));
+    ASSERT_TRUE (value.contains ("seven"));
+    ASSERT_TRUE (value.contains (std::string ("seven")));
+    ASSERT_FALSE (value.contains (false));
+    ASSERT_FALSE (value.contains (std::string_view ("eight")));
+
+    value = Object{{"seven", 7}};
+    ASSERT_FALSE (value.contains (nullptr));
+    ASSERT_FALSE (value.contains (uint32_t (3)));
+    ASSERT_FALSE (value.contains (int64_t (-4)));
+    ASSERT_FALSE (value.contains (uint64_t (5)));
+    ASSERT_FALSE (value.contains (6.5));
+
+    value = Array{0, 1};
+    ASSERT_TRUE (value.contains (int32_t (1)));
+    ASSERT_FALSE (value.contains (int32_t (2)));
+    ASSERT_FALSE (value.contains (int32_t (-1)));
+    ASSERT_TRUE (value.contains (uint32_t (1)));
+    ASSERT_FALSE (value.contains (uint32_t (2)));
+    ASSERT_TRUE (value.contains (int64_t (1)));
+    ASSERT_FALSE (value.contains (int64_t (2)));
+    ASSERT_FALSE (value.contains (int64_t (-1)));
+    ASSERT_TRUE (value.contains (uint64_t (1)));
+    ASSERT_FALSE (value.contains (uint64_t (2)));
+    ASSERT_THROW (value.contains (nullptr), std::bad_cast);
+    ASSERT_THROW (value.contains (true), std::bad_cast);
+    ASSERT_THROW (value.contains (1.0), std::bad_cast);
 }
 
 /**
@@ -5119,6 +5393,457 @@ TEST (Value, swap)
     value.swap (other);
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (other.isArray ());
+}
+
+/**
+ * @brief Test serialize method.
+ */
+TEST (Value, serialize)
+{
+    Value keys = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
+                        {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    Value copy;
+    join::ValueBuilder builder (copy);
+    ASSERT_EQ (keys.serialize (builder), 0) << join::lastError.message ();
+    EXPECT_EQ (copy, keys);
+
+    Value value;
+    value.pushBack (1);
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack ("test");
+    value.pushBack (1.23456789e-13);
+
+    std::stringstream out;
+    JsonWriter jsonWriter (out);
+    ASSERT_EQ (value.serialize (jsonWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonWriter> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
+
+    std::stringstream indented;
+    JsonWriter indentedWriter (indented, 4);
+    ASSERT_EQ (value.serialize (indentedWriter), 0) << join::lastError.message ();
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonWriter> (out, 4), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), indented.str ());
+
+    out.str ("");
+    PackWriter packWriter (out);
+    ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<PackWriter> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+
+    Counter counter;
+    ASSERT_EQ (value.serialize (counter), 0) << join::lastError.message ();
+    EXPECT_EQ (counter.values, 5U);
+
+    value = Object{};
+    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["literals"] = Array{nullptr, true, false};
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonCanonicalizer> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (),
+               "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
+               "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
+
+    value = Object{{Array{1}, 1}};
+    out.str ("");
+    ASSERT_EQ (value.serialize (packWriter), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidKey);
+    ASSERT_EQ (out.str (), "");
+
+    value = Array{7};
+    ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    ASSERT_EQ (out.str (), std::string ({'\x91', '\x07'}));
+
+    FailingBuffer buffer;
+    std::ostream failing (&buffer);
+    JsonWriter failingWriter (failing);
+    value = Array{std::string (2000, 'a')};
+    ASSERT_THROW (value.serialize (failingWriter), std::runtime_error);
+    value = Array{1, 2};
+    ASSERT_EQ (value.serialize (failingWriter), 0) << join::lastError.message ();
+    ASSERT_EQ (buffer.written, "[1,2]");
+}
+
+/**
+ * @brief Test deserialize method.
+ */
+TEST (Value, deserialize)
+{
+    Value value;
+    ASSERT_EQ (value.deserialize<JsonReader> (std::string ("[1,{\"a\":\"b\"}]")), 0) << join::lastError.message ();
+    ASSERT_EQ (value, (Array{1, Object{{"a", "b"}}}));
+
+    const char json[] = "{\"c\":[true,null]}";
+    ASSERT_EQ (value.deserialize<JsonReader> (json, sizeof (json) - 1), 0) << join::lastError.message ();
+    ASSERT_EQ (value, (Object{{"c", Array{true, nullptr}}}));
+
+    ASSERT_EQ (value.deserialize<JsonReader> (&json[5], &json[sizeof (json) - 2]), 0) << join::lastError.message ();
+    ASSERT_EQ (value, (Array{true, nullptr}));
+
+    std::stringstream stream ("42");
+    ASSERT_EQ (value.deserialize<JsonReader> (stream), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 42);
+
+    ASSERT_EQ (value.deserialize<join::BasicJsonReader<JsonReadMode::ParseComments>> (std::string ("/* c */ 1.5")), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (value, 1.5);
+
+    ASSERT_EQ (value.deserialize<JsonReader> (std::string ("[1, [2, ")), -1);
+    ASSERT_EQ (value, 1.5);
+
+    ASSERT_EQ (value.deserialize<PackReader> (std::string ({'\x92', '\x01', '\xa1', '\x61'})), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (value, (Array{1, "a"}));
+
+    ASSERT_EQ (value.deserialize<PackReader> (std::string ({'\x92', '\x01'})), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (value, (Array{1, "a"}));
+}
+
+/**
+ * @brief packRead method.
+ */
+TEST (Value, packRead)
+{
+    Value value;
+
+    std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb', '\x3d', '\x41',
+                      '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'});
+
+    ASSERT_NE (value.packRead (str), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.packRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.packRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringstream sstream (str);
+    ASSERT_NE (value.packRead (sstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::istringstream isstream (str);
+    ASSERT_NE (value.packRead (isstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::ofstream out ("/tmp/fstream.pack", std::ios::binary);
+    out << str;
+    out.close ();
+
+    std::fstream fstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    ASSERT_NE (value.packRead (fstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    fstream.close ();
+
+    std::ifstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
+    ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    ifstream.close ();
+
+    std::stringbuf iosbuf (str, std::ios::in);
+    std::iostream iostream (&iosbuf);
+    ASSERT_NE (value.packRead (iostream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringbuf isbuf (str);
+    std::istream istream (&isbuf);
+    ASSERT_NE (value.packRead (istream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+}
+
+/**
+ * @brief packWrite method.
+ */
+TEST (Value, packWrite)
+{
+    Value value;
+    value.pushBack (1);
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack ("test");
+    value.pushBack (1.23456789e-13);
+
+    std::stringstream out;
+    ASSERT_NE (value.packWrite (out), -1) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
+                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
+}
+
+/**
+ * @brief jsonRead method.
+ */
+TEST (Value, jsonRead)
+{
+    Value value;
+
+    std::string str = "[1,null,true,\"test\",1.23456789e-13]";
+    ASSERT_NE (value.jsonRead (str), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.jsonRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    ASSERT_NE (value.jsonRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringstream sstream (str);
+    ASSERT_NE (value.jsonRead (sstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::istringstream isstream (str);
+    ASSERT_NE (value.jsonRead (isstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::ofstream out ("/tmp/fstream.json");
+    out << str;
+    out.close ();
+
+    std::fstream fstream ("/tmp/fstream.json", std::ios::in);
+    ASSERT_NE (value.jsonRead (fstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    fstream.close ();
+
+    std::ifstream ifstream ("/tmp/fstream.json");
+    ASSERT_NE (value.jsonRead (ifstream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+    ifstream.close ();
+
+    std::stringbuf iosbuf (str, std::ios::in);
+    std::iostream iostream (&iosbuf);
+    ASSERT_NE (value.jsonRead (iostream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+
+    std::stringbuf isbuf (str);
+    std::istream istream (&isbuf);
+    ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isInt ());
+    ASSERT_EQ (value[0], 1);
+    ASSERT_TRUE (value[1].isNull ());
+    ASSERT_EQ (value[1], nullptr);
+    ASSERT_TRUE (value[2].isBool ());
+    ASSERT_EQ (value[2], true);
+    ASSERT_TRUE (value[3].isString ());
+    ASSERT_EQ (value[3], "test");
+    ASSERT_TRUE (value[4].isDouble ());
+    ASSERT_EQ (value[4], 1.23456789e-13);
+}
+
+/**
+ * @brief jsonWrite method.
+ */
+TEST (Value, jsonWrite)
+{
+    Value value;
+    value.pushBack (1);
+    value.pushBack (nullptr);
+    value.pushBack (true);
+    value.pushBack ("test");
+    value.pushBack (1.23456789e-13);
+
+    std::stringstream out;
+    ASSERT_NE (value.jsonWrite (out), -1) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
+}
+
+/**
+ * @brief jsonCanonicalize method.
+ */
+TEST (Value, jsonCanonicalize)
+{
+    Value value;
+    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
+    value["literals"] = Array{nullptr, true, false};
+
+    std::stringstream out;
+    ASSERT_NE (value.jsonCanonicalize (out), -1) << join::lastError.message ();
+    EXPECT_EQ (out.str (),
+               "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
+               "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
 }
 
 /**

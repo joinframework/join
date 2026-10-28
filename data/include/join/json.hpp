@@ -26,6 +26,7 @@
 #define JOIN_DATA_JSON_HPP
 
 // libjoin.
+#include <join/value_builder.hpp>
 #include <join/atodpow.hpp>
 #include <join/value.hpp>
 #include <join/utf16.hpp>
@@ -385,13 +386,18 @@ namespace join
          */
         int setString (std::string_view value)
         {
+            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+                {
+                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                    reset ();
+                    return -1;
+                }
+            }
             array ();
             append ('"');
-            if (writeEscaped (value) == -1)
-            {
-                reset ();
-                return -1;
-            }
+            writeEscaped (value);
             append ('"');
             endValue ();
             return 0;
@@ -497,11 +503,95 @@ namespace join
         }
 
         /**
-         * @brief set key.
+         * @brief set null key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] std::nullptr_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set boolean key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] bool key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] int32_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set unsigned integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] uint32_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set 64 bits integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] int64_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set unsigned 64 bits integer key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] uint64_t key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set real key.
+         * @param key object key.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] double key)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief set string key.
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey (const Value& key)
+        int setKey (std::string_view key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -509,25 +599,34 @@ namespace join
                 reset ();
                 return -1;
             }
-            if (JOIN_UNLIKELY (!key.isString ()))
+            if constexpr (WriteMode == JsonWriteMode::Canonical)
             {
-                join::lastError = make_error_code (SaxErrc::InvalidKey);
-                reset ();
-                return -1;
+                if (JOIN_UNLIKELY (utf8::validate (key.data (), key.data () + key.size ()) == -1))
+                {
+                    join::lastError = make_error_code (JsonErrc::InvalidEncoding);
+                    reset ();
+                    return -1;
+                }
             }
             comma ();
             newLine ();
             append ('"');
-            if (writeEscaped (key.getString ()) == -1)
-            {
-                reset ();
-                return -1;
-            }
+            writeEscaped (key);
             append ('"');
             append (':');
             space ();
             _first = true;
             return 0;
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (const char* key)
+        {
+            return setKey (std::string_view (key));
         }
 
         /**
@@ -686,10 +785,10 @@ namespace join
          */
         void writeDouble (double value)
         {
-            char buf[25];
-            char* end = join::dtoa (buf, value);
             if constexpr (WriteMode == JsonWriteMode::Canonical)
             {
+                char buf[25];
+                char* end = join::dtoa (buf, value);
                 for (char* pos = buf; pos < end; ++pos)
                 {
                     append (*pos);
@@ -701,18 +800,19 @@ namespace join
             }
             else
             {
-                append (buf, end - buf);
+                if (JOIN_UNLIKELY (sizeof (_buffer) - _size < 25))
+                {
+                    flush ();
+                }
+                _size = join::dtoa (_buffer + _size, value) - _buffer;
             }
         }
 
         /**
          * @brief escape string value.
          * @param value string value to escape.
-         * @return 0 on success, -1 otherwise.
          */
-        template <JsonWriteMode Mode = WriteMode>
-        int writeEscaped (std::string_view value)
-            requires (Mode == JsonWriteMode::None)
+        void writeEscaped (std::string_view value)
         {
             const char* cur = value.data ();
             const char* end = cur + value.size ();
@@ -769,25 +869,6 @@ namespace join
 
                 ++cur;
             }
-
-            return 0;
-        }
-
-        /**
-         * @brief validate and escape string value.
-         * @param value string value to escape.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <JsonWriteMode Mode = WriteMode>
-        int writeEscaped (std::string_view value)
-            requires (Mode == JsonWriteMode::Canonical)
-        {
-            if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
-            {
-                join::lastError = make_error_code (JsonErrc::InvalidEncoding);
-                return -1;
-            }
-            return writeEscaped<JsonWriteMode::None> (value);
         }
 
         /**
@@ -964,7 +1045,7 @@ namespace join
     /// JSON default writer.
     using JsonWriter = BasicJsonWriter<JsonWriteMode::None>;
 
-    /// JSON canonicalizer, sorting object members when used with Document::serialize.
+    /// JSON canonicalizer, sorting object members when used with Value::serialize.
     using JsonCanonicalizer = BasicJsonWriter<JsonWriteMode::Canonical>;
 
     /**
@@ -1100,9 +1181,9 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename Handler>
-        int deserialize (const std::string& document, Handler& handler)
+        int deserialize (std::string_view document, Handler& handler)
         {
-            StringProbe in (document.c_str (), document.size ());
+            StringProbe in (document.data (), document.size ());
             return read (in, handler);
         }
 
@@ -1186,13 +1267,25 @@ namespace join
 
     protected:
         /**
+         * @brief parse a document into a value.
+         * @param document document to parse.
+         * @param value value receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ProbeType>
+        int read (ProbeType& document, Value& value)
+        {
+            return read (document, ValueBuilder (value));
+        }
+
+        /**
          * @brief parse a document, resetting the handler on failure.
          * @param document document to parse.
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int read (ProbeType& document, Handler& handler)
+        int read (ProbeType& document, Handler&& handler)
         {
             try
             {
@@ -1705,8 +1798,10 @@ namespace join
                 return handler.setDouble (d);
             }
 
-            join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
-            return -1;                                                  // LCOV_EXCL_LINE
+            // LCOV_EXCL_START
+            join::lastError = make_error_code (SaxErrc::InvalidValue);
+            return -1;
+            // LCOV_EXCL_STOP
         }
 
         /**
@@ -1868,7 +1963,7 @@ namespace join
                 if (JOIN_LIKELY (document.peek () == '"'))
                 {
                     document.get ();
-                    return isKey ? handler.setKey (Value (chunk)) : handler.setString (chunk);
+                    return isKey ? handler.setKey (chunk) : handler.setString (chunk);
                 }
             }
 
@@ -1911,7 +2006,7 @@ namespace join
                 }
             }
 
-            int result = isKey ? handler.setKey (Value (output)) : handler.setString (output);
+            int result = isKey ? handler.setKey (output) : handler.setString (output);
             cache = std::move (output);
             return result;
         }

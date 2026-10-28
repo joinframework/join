@@ -11,7 +11,8 @@ set(PUBLIC_HEADERS
     include/join/utf16.hpp
     include/join/probe.hpp
     include/join/value.hpp
-    include/join/document.hpp
+    include/join/value_builder.hpp
+    include/join/sax_error.hpp
     include/join/sax.hpp
     include/join/pack.hpp
     include/join/json.hpp
@@ -20,7 +21,8 @@ set(PUBLIC_HEADERS
 )
 
 set(SOURCES
-    src/sax.cpp
+    src/value.cpp
+    src/sax_error.cpp
     src/json.cpp
     src/zstream.cpp
 )

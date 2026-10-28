@@ -26,6 +26,7 @@
 #define JOIN_DATA_PACK_HPP
 
 // libjoin.
+#include <join/value_builder.hpp>
 #include <join/value.hpp>
 #include <join/utils.hpp>
 #include <join/probe.hpp>
@@ -413,11 +414,11 @@ namespace join
         }
 
         /**
-         * @brief set key.
+         * @brief set null key.
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey (const Value& key)
+        int setKey ([[maybe_unused]] std::nullptr_t key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -425,38 +426,129 @@ namespace join
                 reset ();
                 return -1;
             }
-            if (JOIN_UNLIKELY (key.isArray () || key.isObject ()))
+            return setNull ();
+        }
+
+        /**
+         * @brief set boolean key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (bool key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
             {
-                join::lastError = make_error_code (SaxErrc::InvalidKey);
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
                 reset ();
                 return -1;
             }
-            switch (key.index ())
+            return setBool (key);
+        }
+
+        /**
+         * @brief set integer key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (int32_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
             {
-                case Value::BooleanValue:
-                    return setBool (key.getBool ());
-
-                case Value::IntegerValue:
-                    return setInt (key.getInt ());
-
-                case Value::UnsignedValue:
-                    return setUint (key.getUint ());
-
-                case Value::Integer64Value:
-                    return setInt64 (key.getInt64 ());
-
-                case Value::Unsigned64Value:
-                    return setUint64 (key.getUint64 ());
-
-                case Value::RealValue:
-                    return setDouble (key.getDouble ());
-
-                case Value::StringValue:
-                    return setString (key.getString ());
-
-                default:
-                    return setNull ();
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
             }
+            return setInt (key);
+        }
+
+        /**
+         * @brief set unsigned integer key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (uint32_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return setUint (key);
+        }
+
+        /**
+         * @brief set 64 bits integer key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (int64_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return setInt64 (key);
+        }
+
+        /**
+         * @brief set unsigned 64 bits integer key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (uint64_t key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return setUint64 (key);
+        }
+
+        /**
+         * @brief set real key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (double key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return setDouble (key);
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (std::string_view key)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return setString (key);
+        }
+
+        /**
+         * @brief set string key.
+         * @param key object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (const char* key)
+        {
+            return setKey (std::string_view (key));
         }
 
         /**
@@ -642,9 +734,9 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename Handler>
-        int deserialize (const std::string& document, Handler& handler)
+        int deserialize (std::string_view document, Handler& handler)
         {
-            StringProbe in (document.c_str (), document.size ());
+            StringProbe in (document.data (), document.size ());
             return read (in, handler);
         }
 
@@ -728,13 +820,25 @@ namespace join
 
     protected:
         /**
+         * @brief parse a document into a value.
+         * @param document document to parse.
+         * @param value value receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename ProbeType>
+        int read (ProbeType& document, Value& value)
+        {
+            return read (document, ValueBuilder (value));
+        }
+
+        /**
          * @brief parse a document, resetting the handler on failure.
          * @param document document to parse.
          * @param handler handler receiving the document.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int read (ProbeType& document, Handler& handler)
+        int read (ProbeType& document, Handler&& handler)
         {
             try
             {
@@ -826,7 +930,7 @@ namespace join
         int readNull (ProbeType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? handler.setKey (Value (nullptr)) : handler.setNull ();
+            return (isKey) ? handler.setKey (nullptr) : handler.setNull ();
         }
 
         /**
@@ -840,7 +944,7 @@ namespace join
         int readFalse (ProbeType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? handler.setKey (Value (false)) : handler.setBool (false);
+            return (isKey) ? handler.setKey (false) : handler.setBool (false);
         }
 
         /**
@@ -854,7 +958,7 @@ namespace join
         int readTrue (ProbeType& document, Handler& handler, bool isKey = false)
         {
             document.get ();
-            return (isKey) ? handler.setKey (Value (true)) : handler.setBool (true);
+            return (isKey) ? handler.setKey (true) : handler.setBool (true);
         }
 
         /**
@@ -1063,7 +1167,7 @@ namespace join
                 return -1;
             }
 
-            int result = isKey ? handler.setKey (Value (output)) : handler.setString (output);
+            int result = isKey ? handler.setKey (output) : handler.setString (output);
             cache = std::move (output);
             return result;
         }
@@ -1129,12 +1233,12 @@ namespace join
             if (head <= 0x7f)
             {
                 auto number = uint32_t (head);
-                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
+                return isKey ? handler.setKey (number) : handler.setUint (number);
             }
             else if (head >= 0xe0)
             {
                 auto number = int32_t (static_cast<int8_t> (head));
-                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
+                return isKey ? handler.setKey (number) : handler.setInt (number);
             }
             else if (head == 0xd3)
             {
@@ -1143,7 +1247,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setInt64 (number);
+                return isKey ? handler.setKey (number) : handler.setInt64 (number);
             }
             else if (head == 0xcf)
             {
@@ -1152,7 +1256,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setUint64 (number);
+                return isKey ? handler.setKey (number) : handler.setUint64 (number);
             }
             else if (head == 0xcb)
             {
@@ -1161,7 +1265,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setDouble (number);
+                return isKey ? handler.setKey (number) : handler.setDouble (number);
             }
             else if (head == 0xd2)
             {
@@ -1170,7 +1274,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
+                return isKey ? handler.setKey (number) : handler.setInt (number);
             }
             else if (head == 0xce)
             {
@@ -1179,7 +1283,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
+                return isKey ? handler.setKey (number) : handler.setUint (number);
             }
             else if (head == 0xca)
             {
@@ -1188,7 +1292,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setDouble (number);
+                return isKey ? handler.setKey (number) : handler.setDouble (number);
             }
             else if (head == 0xd1)
             {
@@ -1197,7 +1301,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
+                return isKey ? handler.setKey (number) : handler.setInt (number);
             }
             else if (head == 0xcd)
             {
@@ -1206,7 +1310,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
+                return isKey ? handler.setKey (number) : handler.setUint (number);
             }
             else if (head == 0xd0)
             {
@@ -1215,7 +1319,7 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setInt (number);
+                return isKey ? handler.setKey (number) : handler.setInt (number);
             }
             else if (head == 0xcc)
             {
@@ -1224,12 +1328,14 @@ namespace join
                 {
                     return -1;
                 }
-                return isKey ? handler.setKey (Value (number)) : handler.setUint (number);
+                return isKey ? handler.setKey (number) : handler.setUint (number);
             }
             else
             {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);  // LCOV_EXCL_LINE
-                return -1;                                                  // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                return -1;
+                // LCOV_EXCL_STOP
             }
         }
 

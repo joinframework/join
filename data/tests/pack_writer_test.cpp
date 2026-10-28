@@ -23,7 +23,6 @@
  */
 
 // libjoin.
-#include <join/document.hpp>
 #include <join/value.hpp>
 #include <join/pack.hpp>
 
@@ -33,7 +32,6 @@
 // C++.
 #include <sstream>
 
-using join::Document;
 using join::PackWriter;
 using join::Value;
 using join::Array;
@@ -483,7 +481,7 @@ TEST (PackWriter, setKey)
     std::stringstream stream;
     PackWriter packWriter (stream);
 
-    auto key = [&] (const Value& value) {
+    auto key = [&] (auto value) {
         stream.str ("");
         packWriter.reset ();
         packWriter.startObject (1);
@@ -492,7 +490,23 @@ TEST (PackWriter, setKey)
         return result;
     };
 
-    EXPECT_EQ (packWriter.setKey ("a"), -1);
+    EXPECT_EQ (packWriter.setKey (nullptr), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (true), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (int32_t (-2)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (uint32_t (3)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (int64_t (-4)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (uint64_t (5)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (6.5), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (std::string_view ("seven")), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey ("eight"), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
 
     EXPECT_EQ (key (nullptr), 0);
@@ -547,16 +561,8 @@ TEST (PackWriter, setKey)
     EXPECT_EQ (key (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (1, 6, std::string ({'\xDB', '\x00', '\x01', '\x00', '\x00', '\x78'})), 0);
 
-    EXPECT_EQ (key (Value (Array{})), -1);
-
-    EXPECT_EQ (key (Value (Object{})), -1);
-
-    stream.str ("");
-    EXPECT_EQ (packWriter.startObject (1), 0);
-    EXPECT_EQ (packWriter.setKey (Value (Array{})), -1);
-    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
-    EXPECT_EQ (packWriter.setNull (), 0);
-    EXPECT_EQ (stream.str (), std::string ({'\xC0'}));
+    EXPECT_EQ (key ("a"), 0);
+    EXPECT_EQ (stream.str ().substr (1), std::string ({'\xA1', 'a'}));
 }
 
 /**
@@ -616,8 +622,7 @@ TEST (PackWriter, reset)
  */
 TEST (PackWriter, document)
 {
-    Document document;
-    Value& value = document.root ();
+    Value value;
     value.pushBack (nullptr);
     value.pushBack (true);
     value.pushBack (int32_t (1));
@@ -631,24 +636,24 @@ TEST (PackWriter, document)
     PackWriter packWriter (stream);
 
     stream.str ("");
-    EXPECT_EQ (document.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (),
                std::string ({'\x98', '\xC0', '\xC3', '\x01', '\x02', '\x03', '\x04', '\xCB', '\x3D', '\x41', '\x5F',
                              '\xFF', '\xE5', '\x3A', '\x68', '\x5D', '\xA4', '\x74', '\x65', '\x73', '\x74'}));
 
     value = Object{{"a", 1}};
     stream.str ("");
-    EXPECT_EQ (document.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), std::string ({'\x81', '\xA1', 'a', '\x01'}));
 
     value = Object{{Array{1}, 1}};
     stream.str ("");
-    EXPECT_EQ (document.serialize (packWriter), -1);
+    EXPECT_EQ (value.serialize (packWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (stream.str (), "");
 
     value = Array{7};
-    EXPECT_EQ (document.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), std::string ({'\x91', '\x07'}));
 }
 

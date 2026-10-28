@@ -23,7 +23,7 @@
  */
 
 // libjoin.
-#include <join/sax.hpp>
+#include <join/sax_error.hpp>
 
 using join::SaxErrc;
 using join::SaxCategory;

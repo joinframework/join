@@ -26,12 +26,16 @@
 #define JOIN_DATA_VALUE_HPP
 
 // libjoin.
+#include <join/sax_error.hpp>
 #include <join/variant.hpp>
-#include <join/error.hpp>
+#include <join/utils.hpp>
 
 // C++.
 #include <string_view>
+#include <stdexcept>
 #include <compare>
+#include <sstream>
+#include <fstream>
 #include <string>
 #include <vector>
 #include <limits>
@@ -48,8 +52,35 @@ namespace join
     /// array.
     using Array = std::vector<Value>;
 
+    /**
+     * @brief member.
+     */
+    template <typename Type>
+    struct BasicMember
+    {
+        /**
+         * @brief compare members.
+         * @param other member to compare to.
+         * @return true if equal.
+         */
+        constexpr bool operator== (const BasicMember& other) const = default;
+
+        /**
+         * @brief three-way compare members.
+         * @param other member to compare to.
+         * @return ordering of this member relative to other.
+         */
+        constexpr std::partial_ordering operator<=> (const BasicMember& other) const = default;
+
+        /// member key.
+        Type first;
+
+        /// member value.
+        Type second;
+    };
+
     /// object member.
-    using Member = std::pair<Value, Value>;
+    using Member = BasicMember<Value>;
 
     /// object.
     using Object = std::vector<Member>;
@@ -69,16 +100,16 @@ namespace join
          */
         enum Index : size_t
         {
-            NullValue = 0,       /**< index of the std::nullptr_t alternative. */
+            NullValue = 0,       /**< index of the null alternative. */
             BooleanValue = 1,    /**< index of the boolean alternative. */
             IntegerValue = 2,    /**< index of the 32 bits integer alternative. */
             UnsignedValue = 3,   /**< index of the 32 bits unsigned integer alternative. */
             Integer64Value = 4,  /**< index of the 64 bits integer alternative. */
             Unsigned64Value = 5, /**< index of the 64 bits unsigned integer alternative. */
             RealValue = 6,       /**< index of the real alternative. */
-            StringValue = 7,     /**< index of the std::string alternative. */
-            ArrayValue = 8,      /**< index of the Array alternative. */
-            ObjectValue = 9,     /**< index of the Object alternative. */
+            StringValue = 7,     /**< index of the string alternative. */
+            ArrayValue = 8,      /**< index of the array alternative. */
+            ObjectValue = 9,     /**< index of the object alternative. */
         };
 
         /**
@@ -950,17 +981,7 @@ namespace join
          * @return variable held by value as a string value.
          * @throw std::bad_cast.
          */
-        constexpr const std::string& getString () const
-        {
-            return _data.get<StringValue> ();
-        }
-
-        /**
-         * @brief get variable held by value as a string value.
-         * @return variable held by value as a string value.
-         * @throw std::bad_cast.
-         */
-        constexpr std::string& getString ()
+        constexpr std::string_view getString () const
         {
             return _data.get<StringValue> ();
         }
@@ -970,9 +991,9 @@ namespace join
          * @return converted string value.
          * @throw std::bad_cast.
          */
-        explicit operator const char* () const
+        explicit operator std::string_view () const
         {
-            return getString ().c_str ();
+            return getString ();
         }
 
         /**
@@ -1034,64 +1055,434 @@ namespace join
         }
 
         /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key the position or key of the element to find.
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
          * @return a reference to the requested element.
          * @throw std::bad_cast, std::out_of_range.
          */
-        Value& at (const Value& key)
+        Value& at ([[maybe_unused]] std::nullptr_t key)
+        {
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isNull ())
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (bool key)
+        {
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isBool () && member.first.getBool () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (int32_t key)
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key.getUint64 ());
+                return _data.get<ArrayValue> ().at (key);
             }
 
             for (auto& member : _data.get<ObjectValue> ())
             {
-                if (member.first == key)
+                if (member.first.isInt () && member.first.getInt () == key)
                 {
                     return member.second;
                 }
             }
 
-            throw std::out_of_range ("invalid key");
+            throwException<std::out_of_range> ("invalid key");
         }
 
         /**
          * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key the position or key of the element to find.
+         * @param key position or key of the element to find.
          * @return a reference to the requested element.
          * @throw std::bad_cast, std::out_of_range.
          */
-        const Value& at (const Value& key) const
+        Value& at (uint32_t key)
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key.getUint64 ());
+                return _data.get<ArrayValue> ().at (key);
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint () && member.first.getUint () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (int64_t key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ().at (key);
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isInt64 () && member.first.getInt64 () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (uint64_t key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ().at (key);
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint64 () && member.first.getUint64 () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (double key)
+        {
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isDouble () && member.first.getDouble () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (std::string_view key)
+        {
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isString () && member.first.getString () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        Value& at (const char* key)
+        {
+            return at (std::string_view (key));
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at ([[maybe_unused]] std::nullptr_t key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isNull ())
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (bool key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isBool () && member.first.getBool () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (int32_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ().at (key);
             }
 
             for (auto const& member : _data.get<ObjectValue> ())
             {
-                if (member.first == key)
+                if (member.first.isInt () && member.first.getInt () == key)
                 {
                     return member.second;
                 }
             }
 
-            throw std::out_of_range ("invalid key");
+            throwException<std::out_of_range> ("invalid key");
         }
 
         /**
          * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key the position or key of the element to find.
+         * @param key position or key of the element to find.
          * @return a reference to the requested element.
-         * @throw std::bad_cast.
+         * @throw std::bad_cast, std::out_of_range.
          */
-        Value& operator[] (const Value& key)
+        const Value& at (uint32_t key) const
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ()[key.getUint64 ()];
+                return _data.get<ArrayValue> ().at (key);
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint () && member.first.getUint () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (int64_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ().at (key);
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isInt64 () && member.first.getInt64 () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (uint64_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ().at (key);
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint64 () && member.first.getUint64 () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (double key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isDouble () && member.first.getDouble () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (std::string_view key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isString () && member.first.getString () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        const Value& at (const char* key) const
+        {
+            return at (std::string_view (key));
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (std::nullptr_t key)
+        {
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isNull ())
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (bool key)
+        {
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isBool () && member.first.getBool () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (int32_t key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ()[key];
             }
 
             if (_data.index () == NullValue)
@@ -1101,7 +1492,7 @@ namespace join
 
             for (auto& member : _data.get<ObjectValue> ())
             {
-                if (member.first == key)
+                if (member.first.isInt () && member.first.getInt () == key)
                 {
                     return member.second;
                 }
@@ -1110,6 +1501,162 @@ namespace join
             _data.get<ObjectValue> ().emplace_back (key, nullptr);
 
             return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (uint32_t key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ()[key];
+            }
+
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint () && member.first.getUint () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (int64_t key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ()[key];
+            }
+
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isInt64 () && member.first.getInt64 () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (uint64_t key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.get<ArrayValue> ()[key];
+            }
+
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint64 () && member.first.getUint64 () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (double key)
+        {
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isDouble () && member.first.getDouble () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (std::string_view key)
+        {
+            if (_data.index () == NullValue)
+            {
+                _data.set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isString () && member.first.getString () == key)
+                {
+                    return member.second;
+                }
+            }
+
+            _data.get<ObjectValue> ().emplace_back (key, nullptr);
+
+            return _data.get<ObjectValue> ().back ().second;
+        }
+
+        /**
+         * @brief returns a reference to the value mapped to key.
+         * @param key key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        Value& operator[] (const char* key)
+        {
+            return operator[] (std::string_view (key));
         }
 
         /**
@@ -1243,18 +1790,18 @@ namespace join
 
         /**
          * @brief removes member with the key equivalent to key.
-         * @param key key value of the member to remove.
+         * @param key key of the member to remove.
          * @return number of elements removed.
          * @throw std::bad_cast.
          */
-        size_t erase (const Value& key)
+        size_t erase ([[maybe_unused]] std::nullptr_t key)
         {
             auto beg = _data.get<ObjectValue> ().begin ();
             auto end = _data.get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
-                if (it->first == key)
+                if (it->first.isNull ())
                 {
                     _data.get<ObjectValue> ().erase (it);
                     return 1;
@@ -1262,6 +1809,178 @@ namespace join
             }
 
             return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (bool key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isBool () && it->first.getBool () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (int32_t key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isInt () && it->first.getInt () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (uint32_t key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isUint () && it->first.getUint () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (int64_t key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isInt64 () && it->first.getInt64 () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (uint64_t key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isUint64 () && it->first.getUint64 () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (double key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isDouble () && it->first.getDouble () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (std::string_view key)
+        {
+            auto beg = _data.get<ObjectValue> ().begin ();
+            auto end = _data.get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first.isString () && it->first.getString () == key)
+                {
+                    _data.get<ObjectValue> ().erase (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        size_t erase (const char* key)
+        {
+            return erase (std::string_view (key));
         }
 
         /**
@@ -1324,25 +2043,185 @@ namespace join
 
         /**
          * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key key of the element to find.
          * @return true if the nested container contains an element mapped to key, false otherwise.
          * @throw std::bad_cast.
          */
-        bool contains (const Value& key) const
+        bool contains ([[maybe_unused]] std::nullptr_t key) const
         {
-            if (_data.index () == ArrayValue)
-            {
-                return _data.get<ArrayValue> ().size () > key.getUint64 ();
-            }
-
             for (auto const& member : _data.get<ObjectValue> ())
             {
-                if (member.first == key)
+                if (member.first.isNull ())
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (bool key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isBool () && member.first.getBool () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key position or key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (int32_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return key >= 0 && static_cast<uint64_t> (key) < _data.get<ArrayValue> ().size ();
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isInt () && member.first.getInt () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key position or key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (uint32_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return key < _data.get<ArrayValue> ().size ();
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint () && member.first.getUint () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key position or key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (int64_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return key >= 0 && static_cast<uint64_t> (key) < _data.get<ArrayValue> ().size ();
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isInt64 () && member.first.getInt64 () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key position or key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (uint64_t key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return key < _data.get<ArrayValue> ().size ();
+            }
+
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isUint64 () && member.first.getUint64 () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (double key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isDouble () && member.first.getDouble () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (std::string_view key) const
+        {
+            for (auto const& member : _data.get<ObjectValue> ())
+            {
+                if (member.first.isString () && member.first.getString () == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief checks if the nested container contains an element that is mapped to key.
+         * @param key key of the element to find.
+         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        bool contains (const char* key) const
+        {
+            return contains (std::string_view (key));
         }
 
         /**
@@ -1356,6 +2235,207 @@ namespace join
             other = std::move (temp);
         }
 
+        /**
+         * @brief serialize the value, resetting the handler on failure.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        int serialize (Handler& handler) const
+        {
+            try
+            {
+                if (JOIN_LIKELY (setValue (*this, handler) == 0))
+                {
+                    return 0;
+                }
+            }
+            catch (...)
+            {
+                handler.reset ();
+                throw;
+            }
+            handler.reset ();
+            return -1;
+        }
+
+        /**
+         * @brief deserialize a document into the value.
+         * @param args document to deserialize, followed by any reader argument.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Reader, typename... Args>
+        int deserialize (Args&&... args)
+        {
+            Reader reader;
+            return reader.deserialize (std::forward<Args> (args)..., *this);
+        }
+
+        /**
+         * @brief serialize the value to a stream.
+         * @param document stream receiving the value.
+         * @param args writer arguments.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Writer, typename... Args>
+        int serialize (std::ostream& document, Args&&... args) const
+        {
+            Writer writer (document, std::forward<Args> (args)...);
+            return serialize (writer);
+        }
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @param length the length of the json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const char* document, size_t length);
+
+        /**
+         * @brief deserialize a json document.
+         * @param first the first character of the json document to deserialize.
+         * @param last the last character of the document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (const char* first, const char* last);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::string_view document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::stringstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::istringstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::fstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::ifstream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::iostream& document);
+
+        /**
+         * @brief deserialize a json document.
+         * @param document json document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonRead (std::istream& document);
+
+        /**
+         * @brief serialize json data.
+         * @param document Document where to serialize json data.
+         * @param indentation number of spaces per indentation level.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonWrite (std::ostream& document, size_t indentation = 0) const;
+
+        /**
+         * @brief serialize canonicalized json data.
+         * @param document Document where to serialize canonicalized json data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int jsonCanonicalize (std::ostream& document) const;
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @param length the length of the msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const char* document, size_t length);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param first the first character of the msgpack document to deserialize.
+         * @param last the last character of the document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (const char* first, const char* last);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::string_view document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::stringstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::istringstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::fstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::ifstream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::iostream& document);
+
+        /**
+         * @brief deserialize a msgpack document.
+         * @param document msgpack document to deserialize.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packRead (std::istream& document);
+
+        /**
+         * @brief serialize msgpack data.
+         * @param document Document where to serialize msgpack data.
+         * @return 0 on success, -1 otherwise.
+         */
+        int packWrite (std::ostream& document) const;
+
         // friendship with equal operator.
         friend constexpr bool operator== (const Value& lhs, const Value& rhs);
 
@@ -1363,6 +2443,149 @@ namespace join
         friend constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs);
 
     private:
+        /**
+         * @brief set value.
+         * @param value value to write.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        static int setValue (const Value& value, Handler& handler)
+        {
+            switch (value.index ())
+            {
+                case Value::BooleanValue:
+                    return handler.setBool (value.getBool ());
+
+                case Value::IntegerValue:
+                    return handler.setInt (value.getInt ());
+
+                case Value::UnsignedValue:
+                    return handler.setUint (value.getUint ());
+
+                case Value::Integer64Value:
+                    return handler.setInt64 (value.getInt64 ());
+
+                case Value::Unsigned64Value:
+                    return handler.setUint64 (value.getUint64 ());
+
+                case Value::RealValue:
+                    return handler.setDouble (value.getDouble ());
+
+                case Value::StringValue:
+                    return handler.setString (value.getString ());
+
+                case Value::ArrayValue:
+                    return setArray (value.getArray (), handler);
+
+                case Value::ObjectValue:
+                    return setObject (value.getObject (), handler);
+
+                default:
+                    return handler.setNull ();
+            }
+        }
+
+        /**
+         * @brief set array value.
+         * @param array array value to set.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        static int setArray (const Array& array, Handler& handler)
+        {
+            if (handler.startArray (array.size ()) == -1)
+            {
+                return -1;
+            }
+
+            for (auto const& element : array)
+            {
+                if (setValue (element, handler) == -1)
+                {
+                    return -1;
+                }
+            }
+
+            return handler.stopArray ();
+        }
+
+        /**
+         * @brief set object value.
+         * @param object object value to set.
+         * @param handler handler receiving the value.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+        static int setObject (const Object& object, Handler& handler)
+        {
+            if (handler.startObject (object.size ()) == -1)
+            {
+                return -1;
+            }
+
+            for (const Member& member : handler.members (object))
+            {
+                int result = -1;
+
+                if (JOIN_LIKELY (member.first.isString ()))
+                {
+                    result = handler.setKey (member.first.getString ());
+                }
+                else
+                {
+                    switch (member.first.index ())
+                    {
+                        case Value::BooleanValue:
+                            result = handler.setKey (member.first.getBool ());
+                            break;
+
+                        case Value::IntegerValue:
+                            result = handler.setKey (member.first.getInt ());
+                            break;
+
+                        case Value::UnsignedValue:
+                            result = handler.setKey (member.first.getUint ());
+                            break;
+
+                        case Value::Integer64Value:
+                            result = handler.setKey (member.first.getInt64 ());
+                            break;
+
+                        case Value::Unsigned64Value:
+                            result = handler.setKey (member.first.getUint64 ());
+                            break;
+
+                        case Value::RealValue:
+                            result = handler.setKey (member.first.getDouble ());
+                            break;
+
+                        case Value::ArrayValue:
+                        case Value::ObjectValue:
+                            join::lastError = make_error_code (SaxErrc::InvalidKey);
+                            break;
+
+                        default:
+                            result = handler.setKey (nullptr);
+                            break;
+                    }
+                }
+
+                if (result == -1)
+                {
+                    return -1;
+                }
+
+                if (setValue (member.second, handler) == -1)
+                {
+                    return -1;
+                }
+            }
+
+            return handler.stopObject ();
+        }
+
         /**
          * @brief convert the value held by the variant to float.
          * @return converted value.

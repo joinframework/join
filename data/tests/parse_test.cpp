@@ -23,7 +23,6 @@
  */
 
 // libjoin.
-#include <join/document.hpp>
 #include <join/json.hpp>
 
 // libraries.
@@ -33,7 +32,6 @@
 #include <fstream>
 
 using join::Value;
-using join::Document;
 using join::JsonReader;
 
 /**
@@ -44,8 +42,8 @@ TEST (Parse, canada)
     std::ifstream fs ("data/canada.json");
     ASSERT_TRUE (fs.is_open ());
 
-    Document document;
-    ASSERT_EQ (JsonReader ().deserialize (fs, document), 0) << join::lastError.message ();
+    Value value;
+    ASSERT_EQ (JsonReader ().deserialize (fs, value), 0) << join::lastError.message ();
 }
 
 /**
@@ -60,8 +58,8 @@ TEST (Parse, citm_catalog)
     buffer << fs.rdbuf ();
     std::string json = buffer.str ();
 
-    Document document;
-    ASSERT_EQ (JsonReader ().deserialize (json, document), 0) << join::lastError.message ();
+    Value value;
+    ASSERT_EQ (JsonReader ().deserialize (json, value), 0) << join::lastError.message ();
 }
 
 /**
@@ -72,8 +70,8 @@ TEST (Parse, twitter)
     std::ifstream fs ("data/twitter.json");
     ASSERT_TRUE (fs.is_open ());
 
-    Document document;
-    ASSERT_EQ (JsonReader ().deserialize (fs, document), 0) << join::lastError.message ();
+    Value value;
+    ASSERT_EQ (JsonReader ().deserialize (fs, value), 0) << join::lastError.message ();
 }
 
 /**
