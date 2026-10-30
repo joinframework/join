@@ -12,21 +12,6 @@ target_link_libraries(utf16.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME utf16.gtest COMMAND utf16.gtest)
 install(TARGETS utf16.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
-add_executable(dtoa.gtest dtoa_test.cpp)
-target_link_libraries(dtoa.gtest ${JOIN_DATA} GTest::gtest_main)
-add_test(NAME dtoa.gtest COMMAND dtoa.gtest)
-install(TARGETS dtoa.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(string_probe.gtest string_probe_test.cpp)
-target_link_libraries(string_probe.gtest ${JOIN_DATA} GTest::gtest_main)
-add_test(NAME string_probe.gtest COMMAND string_probe.gtest)
-install(TARGETS string_probe.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
-add_executable(stream_probe.gtest stream_probe_test.cpp)
-target_link_libraries(stream_probe.gtest ${JOIN_DATA} GTest::gtest_main)
-add_test(NAME stream_probe.gtest COMMAND stream_probe.gtest)
-install(TARGETS stream_probe.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
-
 add_executable(value.gtest value_test.cpp)
 target_link_libraries(value.gtest ${JOIN_DATA} GTest::gtest_main) 
 add_test(NAME value.gtest COMMAND value.gtest)

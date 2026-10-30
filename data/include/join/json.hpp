@@ -25,14 +25,16 @@
 #ifndef JOIN_DATA_JSON_HPP
 #define JOIN_DATA_JSON_HPP
 
+// dconv.
+#include <dconv/probe.hpp>
+#include <dconv/atod.hpp>
+#include <dconv/dtoa.hpp>
+
 // libjoin.
 #include <join/value_builder.hpp>
-#include <join/atodpow.hpp>
 #include <join/value.hpp>
 #include <join/utf16.hpp>
 #include <join/utf8.hpp>
-#include <join/dtoa.hpp>
-#include <join/probe.hpp>
 #include <join/sax.hpp>
 
 // C++.
@@ -43,7 +45,6 @@
 #include <fstream>
 #include <memory>
 #include <vector>
-#include <locale>
 
 namespace join
 {
@@ -86,18 +87,6 @@ namespace join
 
         constexpr char hexDigits[17] = "0123456789abcdef";
     }
-
-    struct LocaleDelete
-    {
-        constexpr LocaleDelete () noexcept = default;
-
-        void operator() (locale_t loc) noexcept
-        {
-            freelocale (loc);
-        }
-    };
-
-    using LocalePtr = std::unique_ptr<std::remove_pointer_t<locale_t>, LocaleDelete>;
 
     /**
      * @brief JSON error codes.
@@ -788,7 +777,7 @@ namespace join
             if constexpr (WriteMode == JsonWriteMode::Canonical)
             {
                 char buf[25];
-                char* end = join::dtoa (buf, value);
+                char* end = dconv::dtoa (buf, value);
                 for (char* pos = buf; pos < end; ++pos)
                 {
                     append (*pos);
@@ -804,7 +793,7 @@ namespace join
                 {
                     flush ();
                 }
-                _size = join::dtoa (_buffer + _size, value) - _buffer;
+                _size = dconv::dtoa (_buffer + _size, value) - _buffer;
             }
         }
 
@@ -1156,7 +1145,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* document, size_t length, Handler& handler)
         {
-            StringProbe in (document, length);
+            dconv::StringProbe in (document, length);
             return read (in, handler);
         }
 
@@ -1170,7 +1159,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* first, const char* last, Handler& handler)
         {
-            StringProbe in (first, last);
+            dconv::StringProbe in (first, last);
             return read (in, handler);
         }
 
@@ -1183,7 +1172,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::string_view document, Handler& handler)
         {
-            StringProbe in (document.data (), document.size ());
+            dconv::StringProbe in (document.data (), document.size ());
             return read (in, handler);
         }
 
@@ -1196,7 +1185,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::stringstream& document, Handler& handler)
         {
-            StringStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1209,7 +1198,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istringstream& document, Handler& handler)
         {
-            StringStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1222,7 +1211,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::fstream& document, Handler& handler)
         {
-            FileStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1235,7 +1224,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::ifstream& document, Handler& handler)
         {
-            FileStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1248,7 +1237,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::iostream& document, Handler& handler)
         {
-            StreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1261,7 +1250,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istream& document, Handler& handler)
         {
-            StreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -1433,226 +1422,6 @@ namespace join
         }
 
         /**
-         * @brief parse an infinity value.
-         * @param document document to parse.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename ProbeType, typename Handler>
-        int readInf (ProbeType& document, Handler& handler, bool negative)
-        {
-            if (JOIN_UNLIKELY (!(document.getIfNoCase ('n') && document.getIfNoCase ('f'))))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
-
-            if (JOIN_UNLIKELY (document.getIfNoCase ('i') &&
-                               !(document.getIfNoCase ('n') && document.getIfNoCase ('i') &&
-                                 document.getIfNoCase ('t') && document.getIfNoCase ('y'))))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
-
-            return handler.setDouble (negative ? -std::numeric_limits<double>::infinity ()
-                                               : std::numeric_limits<double>::infinity ());
-        }
-
-        /**
-         * @brief parse a nan value.
-         * @param document document to parse.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename ProbeType, typename Handler>
-        int readNan (ProbeType& document, Handler& handler, bool negative)
-        {
-            if (JOIN_UNLIKELY (!(document.getIfNoCase ('a') && document.getIfNoCase ('n'))))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidValue);
-                return -1;
-            }
-
-            return handler.setDouble (negative ? -std::numeric_limits<double>::quiet_NaN ()
-                                               : std::numeric_limits<double>::quiet_NaN ());
-        }
-
-        /**
-         * @brief multiply two 64 bits unsigned integers.
-         * @param a multiplicand.
-         * @param b multiplier.
-         * @param high high 64 bits of the 128-bit result.
-         * @param low low 64 bits of the 128-bit result.
-         */
-        inline void umul128 (uint64_t a, uint64_t b, uint64_t& high, uint64_t& low) noexcept
-        {
-#if defined(__SIZEOF_INT128__)
-            __uint128_t p = static_cast<__uint128_t> (a) * b;
-
-            high = static_cast<uint64_t> (p >> 64);
-            low = static_cast<uint64_t> (p);
-#else
-            uint64_t b_lo = static_cast<uint32_t> (b);
-            uint64_t b_hi = b >> 32;
-            uint64_t p0 = (a & 0xFFFFFFFF) * b_lo;
-            uint64_t p1 = (a >> 32) * b_lo;
-            uint64_t p2 = (a & 0xFFFFFFFF) * b_hi;
-            uint64_t p3 = (a >> 32) * b_hi;
-            uint64_t carry = (p0 >> 32) + (p1 & 0xFFFFFFFF) + (p2 & 0xFFFFFFFF);
-
-            low = (carry << 32) | (p0 & 0xFFFFFFFF);
-            high = (carry >> 32) + (p1 >> 32) + (p2 >> 32) + p3;
-#endif
-        }
-
-        /**
-         * @brief multiply 192 bits unsigned integer by 64 bits unsigned integer.
-         * @param hi high 64 bits of the 128-bit multiplicand.
-         * @param lo low 64 bits of the 128-bit multiplicand.
-         * @param significand 64-bit multiplier.
-         * @param high high 64 bits of the 192-bit result.
-         * @param middle middle 64 bits of the 192-bit result.
-         * @param low low 64 bits of the 192-bit result.
-         */
-        inline void umul192 (uint64_t hi, uint64_t lo, uint64_t significand, uint64_t& high, uint64_t& middle,
-                             uint64_t& low) noexcept
-        {
-            uint64_t hi_hi, hi_lo, lo_hi;
-            umul128 (hi, significand, hi_hi, hi_lo);
-            umul128 (lo, significand, lo_hi, low);
-
-            middle = hi_lo + lo_hi;
-            high = hi_hi + (middle < hi_lo);
-        }
-
-        /**
-         * @brief convert double using fast path.
-         * @param significand significand digits.
-         * @param exponent exponent.
-         * @param value converted value.
-         * @return true on success, false otherwise.
-         */
-        inline bool strtodFast (uint64_t significand, int64_t exponent, double& value)
-        {
-            constexpr double pow10[] = {1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,  1e10, 1e11,
-                                        1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19, 1e20, 1e21, 1e22};
-
-            value = static_cast<double> (significand);
-
-            if (JOIN_LIKELY ((exponent >= -22) && (exponent <= 22) && (value <= 9007199254740991.0)))
-            {
-                value = (exponent < 0) ? (value / pow10[-exponent]) : (value * pow10[exponent]);
-                return true;
-            }
-
-            if (JOIN_UNLIKELY ((exponent > 22) && (exponent < (22 + 16))))
-            {
-                const double scaled = value * pow10[exponent - 22];
-                if (scaled <= 9007199254740991.0)
-                {
-                    value = scaled * pow10[22];
-                    return true;
-                }
-            }
-
-            if (JOIN_UNLIKELY (value == 0.0))
-            {
-                return true;
-            }
-
-            if (JOIN_UNLIKELY (exponent < -325 || exponent > 308))
-            {
-                return false;
-            }
-
-            uint64_t high, middle, low;
-            const details::Power& power = details::atodpow[exponent + 325];
-            int64_t exp = ((exponent * 217706) >> 16) + 1087;
-
-            umul128 (power.hi, significand, high, middle);
-            if (JOIN_LIKELY (high != 0))
-            {
-                const int shift = __builtin_clzll (high);
-                const uint64_t top = (shift != 0) ? ((high << shift) | (middle >> (64 - shift))) : high;
-                const uint64_t frac = top & 0x7FF;
-
-                if (JOIN_LIKELY (((frac < 0x3FE) || (frac > 0x400)) && (exp - shift > 0) && (exp - shift < 2047)))
-                {
-                    uint64_t bits = (static_cast<uint64_t> (exp - shift) << 52) | ((top >> 11) & 0xFFFFFFFFFFFFF);
-                    bits += (frac > 0x400);
-                    std::memcpy (&value, &bits, sizeof (double));
-                    return true;
-                }
-            }
-            umul192 (power.hi, power.lo, significand, high, middle, low);
-
-            int lz;
-            if (high != 0)
-            {
-                lz = __builtin_clzll (high);
-                exp -= lz;
-            }
-            else if (middle != 0)
-            {
-                lz = __builtin_clzll (middle);
-                exp -= lz + 64;
-            }
-            else
-            {
-                return false;  // LCOV_EXCL_LINE
-            }
-
-            if (JOIN_UNLIKELY (exp <= 0 || exp >= 2047))
-            {
-                return false;
-            }
-
-            if (high == 0)
-            {
-                high = middle << lz;
-                middle = 0;
-            }
-            else if (lz != 0)
-            {
-                high = (high << lz) | (middle >> (64 - lz));
-                middle <<= lz;
-            }
-
-            middle |= (low != 0);
-
-            uint64_t mant = (high >> 11) & 0xFFFFFFFFFFFFF;
-            uint64_t bits = (static_cast<uint64_t> (exp) << 52) | mant;
-            uint64_t frac = high & 0x7FF;
-
-            if (JOIN_UNLIKELY ((frac == 0x3FF) && ((middle >> 8) == (~0ULL >> 8))))
-            {
-                return false;
-            }
-
-            bool roundUp = (frac > 0x400) | ((frac == 0x400) && ((middle != 0) || (mant & 1)));
-
-            bits += roundUp;
-            std::memcpy (&value, &bits, sizeof (double));
-
-            return true;
-        }
-
-        /**
-         * @brief convert double using strtod.
-         * @param num number to convert.
-         * @param value converted value.
-         * @return true on success, false otherwise.
-         */
-        inline bool strtodSlow (const std::string& num, double& d)
-        {
-            static LocalePtr locale (newlocale (LC_ALL_MASK, "C", nullptr));
-            char* end = nullptr;
-            d = strtod_l (num.c_str (), &end, locale.get ());
-            return (end && (*end == '\0'));
-        }
-
-        /**
          * @brief parse a number value.
          * @param document document to parse.
          * @param handler handler receiving the document.
@@ -1661,147 +1430,34 @@ namespace join
         template <typename ProbeType, typename Handler>
         int readNumber (ProbeType& document, Handler& handler)
         {
-            BufferingProbe<ProbeType> probe (document);
+            double value = 0.0;
+            uint64_t significand = 0;
+            int64_t exponent = 0;
+            bool negative = false;
+            std::error_code ec;
 
-            bool negative = probe.getIf ('-');
-
-            uint64_t max64 = std::numeric_limits<uint64_t>::max ();
-            if (negative)
+            if (JOIN_LIKELY (dconv::atod (document, value, significand, exponent, negative, ec) == 0))
             {
-                max64 = static_cast<uint64_t> (std::numeric_limits<int64_t>::max ()) + 1;
+                return handler.setDouble (value);
             }
 
-            uint64_t digits = 0;
-            bool isDouble = false;
-            uint64_t u = 0;
-
-            if (JOIN_UNLIKELY (probe.getIf ('0')))
-            {
-                if (JOIN_UNLIKELY (isDigit (probe.peek ())))
-                {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
-                }
-            }
-            else if (JOIN_LIKELY (isDigit (probe.peek ())))
-            {
-                digits = probe.readDigits (u, 18);
-
-                while (JOIN_LIKELY (isDigit (probe.peek ())))
-                {
-                    int digit = probe.peek () - '0';
-
-                    if (JOIN_UNLIKELY (u > ((max64 - digit) / 10)))
-                    {
-                        isDouble = true;
-                        break;
-                    }
-
-                    u = (u * 10) + (probe.get () - '0');
-                    ++digits;
-                }
-            }
-            else if (JOIN_LIKELY (document.getIfNoCase ('i')))
-            {
-                return readInf (document, handler, negative);
-            }
-            else if (JOIN_LIKELY (document.getIfNoCase ('n')))
-            {
-                return readNan (document, handler, negative);
-            }
-            else
+            if (JOIN_UNLIKELY (ec != dconv::Errc::NotDouble))
             {
                 join::lastError = make_error_code (SaxErrc::InvalidValue);
                 return -1;
             }
 
-            if (isDouble)
+            if (!negative)
             {
-                digits += probe.readDigits (u);
+                return handler.setUint64 (significand);
             }
 
-            int64_t frac = 0;
-            if (probe.getIf ('.'))
+            if (significand <= static_cast<uint64_t> (std::numeric_limits<int64_t>::max ()) + 1)
             {
-                isDouble = true;
-
-                if (JOIN_UNLIKELY (digits == 0))
-                {
-                    while (probe.getIf ('0'))
-                    {
-                        --frac;
-                    }
-                }
-
-                size_t count = probe.readDigits (u);
-                digits += count;
-                frac -= static_cast<int64_t> (count);
+                return handler.setInt64 (static_cast<int64_t> (-significand));
             }
 
-            int64_t exponent = 0;
-            if (probe.getIf ('e') || probe.getIf ('E'))
-            {
-                isDouble = true;
-
-                bool negExp = false;
-                if (isSign (probe.peek ()))
-                {
-                    negExp = (probe.get () == '-');
-                }
-
-                if (JOIN_LIKELY (isDigit (probe.peek ())))
-                {
-                    exponent = (probe.get () - '0');
-
-                    while (JOIN_LIKELY (isDigit (probe.peek ())))
-                    {
-                        int digit = probe.get () - '0';
-
-                        if (JOIN_LIKELY (exponent <= ((std::numeric_limits<int>::max () - digit) / 10)))
-                        {
-                            exponent = (exponent * 10) + digit;
-                        }
-                    }
-                }
-                else
-                {
-                    join::lastError = make_error_code (SaxErrc::InvalidValue);
-                    return -1;
-                }
-
-                if (negExp)
-                {
-                    exponent = -exponent;
-                }
-            }
-
-            if (!isDouble)
-            {
-                return negative ? handler.setInt64 (static_cast<int64_t> (-u)) : handler.setUint64 (u);
-            }
-
-            if (JOIN_LIKELY (digits <= 19))
-            {
-                double d = 0.0;
-                if (strtodFast (u, exponent + frac, d))
-                {
-                    return handler.setDouble (negative ? -d : d);
-                }
-            }
-
-            std::string number;
-            probe.snapshot (number);
-
-            double d = 0.0;
-            if (strtodSlow (number, d))
-            {
-                return handler.setDouble (d);
-            }
-
-            // LCOV_EXCL_START
-            join::lastError = make_error_code (SaxErrc::InvalidValue);
-            return -1;
-            // LCOV_EXCL_STOP
+            return handler.setDouble (-static_cast<double> (significand));
         }
 
         /**
@@ -2051,7 +1707,7 @@ namespace join
 
                 int ch = document.get ();
 
-                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
+                if (JOIN_UNLIKELY (dconv::details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
                     if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
@@ -2151,7 +1807,7 @@ namespace join
 
                 int ch = document.get ();
 
-                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
+                if (JOIN_UNLIKELY (dconv::details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
                     if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
@@ -2245,16 +1901,6 @@ namespace join
         constexpr bool isDigit (char c) noexcept
         {
             return static_cast<unsigned char> (c - '0') <= 9u;
-        }
-
-        /**
-         * @brief check if sign.
-         * @param c character to check.
-         * @return true if sign, false otherwise.
-         */
-        constexpr bool isSign (char c) noexcept
-        {
-            return ((c ^ '+') & (c ^ '-')) == 0;
         }
     };
 

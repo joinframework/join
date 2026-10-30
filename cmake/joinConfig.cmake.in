@@ -23,6 +23,7 @@ foreach(comp ${join_FIND_COMPONENTS})
 endforeach()
 
 if(@JOIN_ENABLE_DATA@ OR @JOIN_ENABLE_SERVICES@)
+    find_dependency(dconv 1.1.0)
     find_dependency(ZLIB)
 endif()
 

@@ -25,11 +25,13 @@
 #ifndef JOIN_DATA_PACK_HPP
 #define JOIN_DATA_PACK_HPP
 
+// dconv.
+#include <dconv/probe.hpp>
+
 // libjoin.
 #include <join/value_builder.hpp>
 #include <join/value.hpp>
 #include <join/utils.hpp>
-#include <join/probe.hpp>
 #include <join/sax.hpp>
 
 // C++.
@@ -709,7 +711,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* document, size_t length, Handler& handler)
         {
-            StringProbe in (document, length);
+            dconv::StringProbe in (document, length);
             return read (in, handler);
         }
 
@@ -723,7 +725,7 @@ namespace join
         template <typename Handler>
         int deserialize (const char* first, const char* last, Handler& handler)
         {
-            StringProbe in (first, last);
+            dconv::StringProbe in (first, last);
             return read (in, handler);
         }
 
@@ -736,7 +738,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::string_view document, Handler& handler)
         {
-            StringProbe in (document.data (), document.size ());
+            dconv::StringProbe in (document.data (), document.size ());
             return read (in, handler);
         }
 
@@ -749,7 +751,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::stringstream& document, Handler& handler)
         {
-            StringStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -762,7 +764,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istringstream& document, Handler& handler)
         {
-            StringStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -775,7 +777,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::fstream& document, Handler& handler)
         {
-            FileStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -788,7 +790,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::ifstream& document, Handler& handler)
         {
-            FileStreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -801,7 +803,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::iostream& document, Handler& handler)
         {
-            StreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
@@ -814,7 +816,7 @@ namespace join
         template <typename Handler>
         int deserialize (std::istream& document, Handler& handler)
         {
-            StreamProbe in (document);
+            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 

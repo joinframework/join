@@ -1,15 +1,11 @@
 cmake_minimum_required(VERSION 3.22.1)
 
+find_package(dconv 1.1.0 REQUIRED)
 find_package(ZLIB REQUIRED)
 
 set(PUBLIC_HEADERS
-    include/join/diyfp.hpp
-    include/join/atodpow.hpp
-    include/join/dtoapow.hpp
-    include/join/dtoa.hpp
     include/join/utf8.hpp
     include/join/utf16.hpp
-    include/join/probe.hpp
     include/join/value.hpp
     include/join/value_builder.hpp
     include/join/sax_error.hpp
@@ -47,6 +43,7 @@ target_include_directories(${JOIN_DATA}
 target_link_libraries(${JOIN_DATA}
     PUBLIC
         ${JOIN_CORE}
+        dconv::dconv
         ZLIB::ZLIB
 )
 
