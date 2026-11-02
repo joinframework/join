@@ -1608,6 +1608,146 @@ TEST (JsonReader, encoding)
 }
 
 /**
+ * @brief skipWhitespaces test.
+ */
+TEST (JsonReader, skipWhitespaces)
+{
+    Value value;
+
+    std::string text ("   1");
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "\t\r\n                    1";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "\n         1";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "\n                 1                 ";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "[\n    1,\n            2\n]";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value[0], 1);
+    ASSERT_EQ (value[1], 2);
+
+    std::stringstream stream ("   1");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    stream.clear ();
+    stream.str ("\t\r\n                    1   ");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+}
+
+/**
+ * @brief skipWhitespacesAndComments test.
+ */
+TEST (JsonReader, skipWhitespacesAndComments)
+{
+    using Reader = BasicJsonReader<JsonReadMode::ParseComments>;
+
+    Value value;
+
+    std::string text ("   // comment\n1");
+    ASSERT_EQ (Reader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "   /* comment */1";
+    ASSERT_EQ (Reader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "1// comment";
+    ASSERT_EQ (Reader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "1/* comment */";
+    ASSERT_EQ (Reader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    text = "1/";
+    ASSERT_EQ (Reader ().deserialize (text, value), -1);
+
+    text = "1/*";
+    ASSERT_EQ (Reader ().deserialize (text, value), -1);
+
+    text = "1/!";
+    ASSERT_EQ (Reader ().deserialize (text, value), -1);
+
+    std::stringstream stream ("   // comment\n1");
+    ASSERT_EQ (Reader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    stream.clear ();
+    stream.str ("   /* comment */1");
+    ASSERT_EQ (Reader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    stream.clear ();
+    stream.str ("1// comment");
+    ASSERT_EQ (Reader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    stream.clear ();
+    stream.str ("1/* comment */");
+    ASSERT_EQ (Reader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+
+    stream.clear ();
+    stream.str ("1/");
+    ASSERT_EQ (Reader ().deserialize (stream, value), -1);
+
+    stream.clear ();
+    stream.str ("1/*");
+    ASSERT_EQ (Reader ().deserialize (stream, value), -1);
+
+    stream.clear ();
+    stream.str ("1/!");
+    ASSERT_EQ (Reader ().deserialize (stream, value), -1);
+}
+
+/**
+ * @brief readUntilEscaped test.
+ */
+TEST (JsonReader, readUntilEscaped)
+{
+    Value value;
+
+    std::string text ("\"abc\"");
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, "abc");
+
+    text = "\"hello wonderful world\"";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, "hello wonderful world");
+
+    text = "\"hello wonderful\\nworld\"";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, "hello wonderful\nworld");
+
+    text = "\"abc";
+    ASSERT_EQ (JsonReader ().deserialize (text, value), -1);
+
+    std::stringstream stream ("\"hello wonderful world\"");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, "hello wonderful world");
+
+    stream.clear ();
+    stream.str ("\"hello wonderful\\nworld\"");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, "hello wonderful\nworld");
+
+    stream.clear ();
+    stream.str ("\"abc");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+}
+
+/**
  * @brief main function.
  */
 int main (int argc, char** argv)

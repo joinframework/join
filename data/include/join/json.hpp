@@ -46,6 +46,10 @@
 #include <memory>
 #include <vector>
 
+// C.
+#include <cstring>
+#include <cstdint>
+
 namespace join
 {
     namespace details
@@ -84,6 +88,40 @@ namespace join
         };
 
         constexpr UnescapedTable unescapedLookup{};
+
+        struct alignas (64) EscapedTable
+        {
+            uint8_t data[256];
+
+            constexpr EscapedTable ()
+            : data{}
+            {
+                for (unsigned i = 0; i < 0x20; ++i)
+                {
+                    data[i] = 1;
+                }
+                data[static_cast<unsigned char> ('"')] = 1;
+                data[static_cast<unsigned char> ('\\')] = 1;
+            }
+        };
+
+        constexpr EscapedTable escapedLookup{};
+
+        struct alignas (64) WhitespaceTable
+        {
+            uint8_t data[256];
+
+            constexpr WhitespaceTable ()
+            : data{}
+            {
+                data[static_cast<unsigned char> ('\t')] = 1;
+                data[static_cast<unsigned char> ('\n')] = 1;
+                data[static_cast<unsigned char> ('\r')] = 1;
+                data[static_cast<unsigned char> (' ')] = 1;
+            }
+        };
+
+        constexpr WhitespaceTable whitespaceLookup{};
 
         constexpr char hexDigits[17] = "0123456789abcdef";
     }
@@ -1607,9 +1645,9 @@ namespace join
         {
             std::string_view chunk;
 
-            if constexpr (requires { document.readUntilEscaped (); })
+            if constexpr (std::is_same_v<ProbeType, dconv::StringProbe>)
             {
-                chunk = document.readUntilEscaped ();
+                chunk = readUntilEscaped (document);
 
                 if (JOIN_UNLIKELY (validateChunk (chunk) == -1))
                 {
@@ -1630,7 +1668,7 @@ namespace join
             for (;;)
             {
                 size_t pos = output.size ();
-                document.readUntilEscaped (output);
+                readUntilEscaped (document, output);
 
                 if (JOIN_UNLIKELY (validateChunk (std::string_view (output).substr (pos)) == -1))
                 {
@@ -1707,7 +1745,7 @@ namespace join
 
                 int ch = document.get ();
 
-                if (JOIN_UNLIKELY (dconv::details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
+                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
                     if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
@@ -1807,7 +1845,7 @@ namespace join
 
                 int ch = document.get ();
 
-                if (JOIN_UNLIKELY (dconv::details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
+                if (JOIN_UNLIKELY (details::whitespaceLookup.data[static_cast<unsigned char> (ch)]))
                 {
                     if (JOIN_UNLIKELY (skipWhitespaces (document) == -1))
                     {
@@ -1838,21 +1876,257 @@ namespace join
         }
 
         /**
+         * @brief read characters until escaped.
+         * @param document document to parse.
+         * @return characters read.
+         */
+        inline std::string_view readUntilEscaped (dconv::StringProbe& document) noexcept
+        {
+            const char* beg = document.tell ();
+            const char* cur = beg;
+            const char* end = document.end ();
+
+            while (end - cur >= 8)
+            {
+                uint64_t word, quote, backslash;
+                std::memcpy (&word, cur, 8);
+                quote = word ^ 0x2222222222222222ULL;
+                backslash = word ^ 0x5C5C5C5C5C5C5C5CULL;
+                uint64_t mask =
+                    (((quote - 0x0101010101010101ULL) & ~quote) | ((backslash - 0x0101010101010101ULL) & ~backslash) |
+                     ((word - 0x2020202020202020ULL) & ~word)) &
+                    0x8080808080808080ULL;
+                if (mask)
+                {
+                    cur += __builtin_ctzll (mask) >> 3;
+                    break;
+                }
+                cur += 8;
+            }
+
+            while (cur < end && !details::escapedLookup.data[static_cast<unsigned char> (*cur)])
+            {
+                ++cur;
+            }
+
+            document.seek (cur);
+            return std::string_view (beg, static_cast<size_t> (cur - beg));
+        }
+
+        /**
+         * @brief read characters until escaped.
+         * @param document document to parse.
+         * @param out output buffer.
+         */
+        inline void readUntilEscaped (dconv::StringProbe& document, std::string& out) noexcept
+        {
+            out.append (readUntilEscaped (document));
+        }
+
+        /**
+         * @brief read characters until escaped.
+         * @param document document to parse.
+         * @param out output buffer.
+         */
+        inline void readUntilEscaped (dconv::StreamProbe& document, std::string& out) noexcept
+        {
+            int c;
+            while ((c = document.peek ()) != std::char_traits<char>::eof () &&
+                   !details::escapedLookup.data[static_cast<unsigned char> (c)])
+            {
+                out.push_back (static_cast<char> (c));
+                document.get ();
+            }
+        }
+
+        /**
          * @brief skip whitespaces, and comments when comment parsing is enabled.
          * @param document document to parse.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ProbeType>
-        inline int skipWhitespaces (ProbeType& document)
+        inline int skipWhitespaces (dconv::StringProbe& document) noexcept
         {
             if constexpr (ReadMode & JsonReadMode::ParseComments)
             {
-                return document.skipWhitespacesAndComments ();
+                return skipWhitespacesAndComments (document);
             }
-            else
+
+            const char* cur = document.tell ();
+            const char* end = document.end ();
+
+            while (cur < end && details::whitespaceLookup.data[static_cast<unsigned char> (*cur)])
             {
-                return document.skipWhitespaces ();
+                ++cur;
+
+                while (end - cur >= 8)
+                {
+                    uint64_t word;
+                    std::memcpy (&word, cur, 8);
+                    word ^= 0x2020202020202020ULL;
+                    if (word != 0)
+                    {
+                        cur += __builtin_ctzll (word) >> 3;
+                        break;
+                    }
+                    cur += 8;
+                }
             }
+
+            document.seek (cur);
+
+            return 0;
+        }
+
+        /**
+         * @brief skip whitespaces, and comments when comment parsing is enabled.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        inline int skipWhitespaces (dconv::StreamProbe& document) noexcept
+        {
+            if constexpr (ReadMode & JsonReadMode::ParseComments)
+            {
+                return skipWhitespacesAndComments (document);
+            }
+
+            int c;
+            while ((c = document.peek ()) != std::char_traits<char>::eof () &&
+                   details::whitespaceLookup.data[static_cast<unsigned char> (c)])
+            {
+                document.get ();
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief skip whitespaces and comments.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        inline int skipWhitespacesAndComments (dconv::StringProbe& document) noexcept
+        {
+            const char* cur = document.tell ();
+            const char* end = document.end ();
+
+            while (cur < end)
+            {
+                while (cur < end && details::whitespaceLookup.data[static_cast<unsigned char> (*cur)])
+                {
+                    ++cur;
+                }
+
+                if (cur >= end || *cur != '/')
+                {
+                    break;
+                }
+
+                if (++cur >= end)
+                {
+                    return -1;
+                }
+
+                if (*cur == '*')
+                {
+                    ++cur;
+                    bool closed = false;
+                    while (cur < end)
+                    {
+                        if (*cur == '*' && (cur + 1 < end) && *(cur + 1) == '/')
+                        {
+                            cur += 2;
+                            closed = true;
+                            break;
+                        }
+                        ++cur;
+                    }
+                    if (!closed)
+                    {
+                        return -1;
+                    }
+                }
+                else if (*cur == '/')
+                {
+                    ++cur;
+                    const char* p = static_cast<const char*> (std::memchr (cur, '\n', end - cur));
+                    cur = p ? p : end;
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+
+            document.seek (cur);
+
+            return 0;
+        }
+
+        /**
+         * @brief skip whitespaces and comments.
+         * @param document document to parse.
+         * @return 0 on success, -1 otherwise.
+         */
+        inline int skipWhitespacesAndComments (dconv::StreamProbe& document) noexcept
+        {
+            int c;
+
+            while ((c = document.peek ()) != std::char_traits<char>::eof ())
+            {
+                while ((c = document.peek ()) != std::char_traits<char>::eof () &&
+                       details::whitespaceLookup.data[static_cast<unsigned char> (c)])
+                {
+                    document.get ();
+                }
+
+                if (c != '/')
+                {
+                    break;
+                }
+
+                document.get ();
+                c = document.peek ();
+
+                if (c == std::char_traits<char>::eof ())
+                {
+                    return -1;
+                }
+
+                if (c == '*')
+                {
+                    document.get ();
+                    bool closed = false;
+
+                    while ((c = document.get ()) != std::char_traits<char>::eof ())
+                    {
+                        if (c == '*' && document.peek () == '/')
+                        {
+                            document.get ();
+                            closed = true;
+                            break;
+                        }
+                    }
+
+                    if (!closed)
+                    {
+                        return -1;
+                    }
+                }
+                else if (c == '/')
+                {
+                    document.get ();
+
+                    while ((c = document.get ()) != std::char_traits<char>::eof () && c != '\n')
+                    {
+                    }
+                }
+                else
+                {
+                    return -1;
+                }
+            }
+
+            return 0;
         }
 
         /**
