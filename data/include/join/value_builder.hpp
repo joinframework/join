@@ -32,9 +32,7 @@
 
 // C++.
 #include <string_view>
-#include <iterator>
 #include <utility>
-#include <string>
 #include <vector>
 
 // C.
@@ -45,8 +43,18 @@ namespace join
     /**
      * @brief value builder class, filled by balanced SAX calls.
      */
+    template <typename Value>
     class ValueBuilder
     {
+        /// array.
+        using Array = typename Value::Array;
+
+        /// object.
+        using Object = typename Value::Object;
+
+        /// value of the open containers.
+        using Data = typename Value::Data;
+
     public:
         /**
          * @brief create instance.
@@ -56,6 +64,7 @@ namespace join
         : _stack (std::move (cache ()))
         , _root (root)
         {
+            _root.reset ();
         }
 
         /**
@@ -169,7 +178,7 @@ namespace join
          */
         int setString (std::string_view value)
         {
-            return emplaceValue (std::string (value));
+            return emplaceValue (_root.copyString (value));
         }
 
         /**
@@ -206,19 +215,12 @@ namespace join
                 return -1;
             }
 
-            auto first = _stack.begin () + _starts[--_depth];
-            Array array (std::make_move_iterator (first), std::make_move_iterator (_stack.end ()));
-            _stack.erase (first, _stack.end ());
+            const size_t first = _starts[--_depth];
 
-            if (_depth == 0)
-            {
-                _root = std::move (array);
-                return 0;
-            }
+            Array array = _root.makeArray (_stack.data () + first, _stack.size () - first);
+            _stack.resize (first);
 
-            _stack.emplace_back (std::move (array));
-
-            return 0;
+            return emplaceValue (array);
         }
 
         /**
@@ -248,7 +250,8 @@ namespace join
          * @param object object to write.
          * @return object members in insertion order.
          */
-        const Object& members (const Object& object) const noexcept
+        template <typename Type>
+        const View<Type>& members (const View<Type>& object) const noexcept
         {
             return object;
         }
@@ -392,7 +395,7 @@ namespace join
                 return -1;
             }
 
-            _stack.emplace_back (key);
+            _stack.emplace_back (_root.copyString (key));
 
             return 0;
         }
@@ -425,24 +428,12 @@ namespace join
                 return -1;
             }
 
-            auto first = _stack.begin () + _starts[--_depth];
-            Object object;
-            object.reserve ((_stack.end () - first) / 2);
-            for (auto it = first; it != _stack.end (); it += 2)
-            {
-                object.emplace_back (std::move (it[0]), std::move (it[1]));
-            }
-            _stack.erase (first, _stack.end ());
+            const size_t first = _starts[--_depth];
 
-            if (_depth == 0)
-            {
-                _root = std::move (object);
-                return 0;
-            }
+            Object object = _root.makeObject (_stack.data () + first, (_stack.size () - first) / 2);
+            _stack.resize (first);
 
-            _stack.emplace_back (std::move (object));
-
-            return 0;
+            return emplaceValue (object);
         }
 
         /**
@@ -465,7 +456,8 @@ namespace join
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
-                _root = Value (std::forward<T> (value));
+                _root._data = std::forward<T> (value);
+                _root._capacity = 0;
                 return 0;
             }
 
@@ -478,9 +470,9 @@ namespace join
          * @brief get the stack kept by the calling thread between documents.
          * @return stack.
          */
-        static std::vector<Value>& cache () noexcept
+        static std::vector<Data>& cache () noexcept
         {
-            thread_local std::vector<Value> stack;
+            thread_local std::vector<Data> stack;
             return stack;
         }
 
@@ -491,7 +483,7 @@ namespace join
         size_t _depth = 0;
 
         /// stack of the values of the open containers.
-        std::vector<Value> _stack;
+        std::vector<Data> _stack;
 
         /// value receiving the document.
         Value& _root;

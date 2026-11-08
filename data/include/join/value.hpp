@@ -26,31 +26,43 @@
 #define JOIN_DATA_VALUE_HPP
 
 // libjoin.
+#include <join/bump_allocator.hpp>
 #include <join/sax_error.hpp>
 #include <join/variant.hpp>
+#include <join/memory.hpp>
 #include <join/utils.hpp>
+#include <join/view.hpp>
 
 // C++.
+#include <type_traits>
 #include <string_view>
 #include <stdexcept>
+#include <algorithm>
+#include <concepts>
 #include <compare>
-#include <sstream>
-#include <fstream>
+#include <ostream>
+#include <memory>
 #include <string>
-#include <vector>
 #include <limits>
+#include <new>
 
 // C.
 #include <cstdint>
+#include <cstring>
 #include <cmath>
 
 namespace join
 {
     /// forward declaration.
-    class Value;
+    template <typename Allocator = HeapMem::BumpAllocator<4096, BumpPlain>>
+    class BasicValue;
 
-    /// array.
-    using Array = std::vector<Value>;
+    /// forward declaration.
+    template <typename Value>
+    class ValueBuilder;
+
+    /// string.
+    using String = View<const char>;
 
     /**
      * @brief member.
@@ -79,22 +91,25 @@ namespace join
         Type second;
     };
 
-    /// object member.
-    using Member = BasicMember<Value>;
-
-    /// object.
-    using Object = std::vector<Member>;
-
     /**
-     * @brief value class.
+     * @brief value class, the root owning or borrowing the allocator shared by its children.
      */
-    class Value
+    template <typename Allocator>
+    class BasicValue
     {
-        /// variant type holding the value.
-        using Data =
-            Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, std::string, Array, Object>;
-
     public:
+        /// value.
+        using Value = BasicValue;
+
+        /// array.
+        using Array = View<BasicValue>;
+
+        /// member.
+        using Member = BasicMember<BasicValue>;
+
+        /// object.
+        using Object = View<Member>;
+
         /**
          * @brief nested value type index.
          */
@@ -115,86 +130,195 @@ namespace join
         /**
          * @brief default constructor.
          */
-        constexpr Value () = default;
+        constexpr BasicValue () noexcept = default;
+
+        /**
+         * @brief constructs a null value using an allocator owned by the caller.
+         * @param allocator allocator providing the memory of the value.
+         */
+        explicit BasicValue (Allocator& allocator)
+        : _allocator (std::addressof (allocator))
+        , _owner (false)
+        {
+        }
 
         /**
          * @brief constructs a null value.
          * @param value null value.
          */
-        constexpr Value (std::nullptr_t value)
+        constexpr BasicValue (std::nullptr_t value)
         : _data (std::in_place_index<NullValue>, value)
         {
+        }
+
+        /**
+         * @brief constructs a null value using an allocator owned by the caller.
+         * @param value null value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (std::nullptr_t value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<NullValue> (value);
         }
 
         /**
          * @brief constructs a boolean value.
          * @param value boolean value.
          */
-        constexpr Value (bool value)
+        constexpr BasicValue (bool value)
         : _data (std::in_place_index<BooleanValue>, value)
         {
         }
 
         /**
-         * @brief constructs an integer value.
+         * @brief constructs a boolean value using an allocator owned by the caller.
+         * @param value boolean value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (bool value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<BooleanValue> (value);
+        }
+
+        /**
+         * @brief constructs a integer value.
          * @param value integer value.
          */
-        constexpr Value (int32_t value)
+        constexpr BasicValue (int32_t value)
         : _data (std::in_place_index<IntegerValue>, value)
         {
         }
 
         /**
-         * @brief constructs an unsigned integer value.
+         * @brief constructs a integer value using an allocator owned by the caller.
+         * @param value integer value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (int32_t value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<IntegerValue> (value);
+        }
+
+        /**
+         * @brief constructs a unsigned integer value.
          * @param value unsigned integer value.
          */
-        constexpr Value (uint32_t value)
+        constexpr BasicValue (uint32_t value)
         : _data (std::in_place_index<UnsignedValue>, value)
         {
+        }
+
+        /**
+         * @brief constructs a unsigned integer value using an allocator owned by the caller.
+         * @param value unsigned integer value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (uint32_t value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<UnsignedValue> (value);
         }
 
         /**
          * @brief constructs a 64 bits integer value.
          * @param value 64 bits integer value.
          */
-        constexpr Value (int64_t value)
+        constexpr BasicValue (int64_t value)
         : _data (std::in_place_index<Integer64Value>, value)
         {
+        }
+
+        /**
+         * @brief constructs a 64 bits integer value using an allocator owned by the caller.
+         * @param value 64 bits integer value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (int64_t value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<Integer64Value> (value);
         }
 
         /**
          * @brief constructs a 64 bits unsigned integer value.
          * @param value 64 bits unsigned integer value.
          */
-        constexpr Value (uint64_t value)
+        constexpr BasicValue (uint64_t value)
         : _data (std::in_place_index<Unsigned64Value>, value)
         {
+        }
+
+        /**
+         * @brief constructs a 64 bits unsigned integer value using an allocator owned by the caller.
+         * @param value 64 bits unsigned integer value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (uint64_t value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<Unsigned64Value> (value);
         }
 
         /**
          * @brief constructs a real value.
          * @param value real value.
          */
-        constexpr Value (double value)
+        constexpr BasicValue (double value)
         : _data (std::in_place_index<RealValue>, value)
         {
         }
 
         /**
-         * @brief constructs a string value from a C-style string.
-         * @param value string value.
+         * @brief constructs a real value using an allocator owned by the caller.
+         * @param value real value.
+         * @param allocator allocator providing the memory of the value.
          */
-        Value (const char* value)
-        : _data (std::in_place_index<StringValue>, value)
+        BasicValue (double value, Allocator& allocator)
+        : BasicValue (allocator)
         {
+            _data.template set<RealValue> (value);
         }
 
         /**
          * @brief constructs a string value from a string view.
          * @param value string value.
          */
-        Value (std::string_view value)
-        : _data (std::in_place_index<StringValue>, value)
+        BasicValue (std::string_view value)
+        : BasicValue (nullptr)
+        {
+            _data.template set<StringValue> (copyString (value));
+        }
+
+        /**
+         * @brief constructs a string value from a string view using an allocator owned by the caller.
+         * @param value string value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (std::string_view value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<StringValue> (copyString (value));
+        }
+
+        /**
+         * @brief constructs a string value from a C-style string.
+         * @param value string value.
+         */
+        BasicValue (const char* value)
+        : BasicValue (std::string_view (value))
+        {
+        }
+
+        /**
+         * @brief constructs a string value from a C-style string using an allocator owned by the caller.
+         * @param value string value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (const char* value, Allocator& allocator)
+        : BasicValue (std::string_view (value), allocator)
         {
         }
 
@@ -202,17 +326,8 @@ namespace join
          * @brief constructs a string value.
          * @param value string value.
          */
-        Value (const std::string& value)
-        : _data (std::in_place_index<StringValue>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a string value.
-         * @param value string value.
-         */
-        Value (std::string&& value)
-        : _data (std::in_place_index<StringValue>, std::move (value))
+        BasicValue (const std::string& value)
+        : BasicValue (std::string_view (value))
         {
         }
 
@@ -220,68 +335,328 @@ namespace join
          * @brief constructs an array value.
          * @param value array value.
          */
-        Value (const Array& value)
-        : _data (std::in_place_index<ArrayValue>, value)
+        BasicValue (Array value)
+        : BasicValue (nullptr)
         {
+            _data.template set<ArrayValue> (copyArray (value));
         }
 
         /**
-         * @brief constructs an array value.
+         * @brief constructs an array value using an allocator owned by the caller.
          * @param value array value.
+         * @param allocator allocator providing the memory of the value.
          */
-        Value (Array&& value)
-        : _data (std::in_place_index<ArrayValue>, std::move (value))
+        BasicValue (Array value, Allocator& allocator)
+        : BasicValue (allocator)
         {
+            _data.template set<ArrayValue> (copyArray (value));
         }
 
         /**
          * @brief constructs an object value.
          * @param value object value.
          */
-        Value (const Object& value)
-        : _data (std::in_place_index<ObjectValue>, value)
+        BasicValue (Object value)
+        : BasicValue (nullptr)
         {
+            _data.template set<ObjectValue> (copyObject (value));
         }
 
         /**
-         * @brief constructs an object value.
+         * @brief constructs an object value using an allocator owned by the caller.
          * @param value object value.
+         * @param allocator allocator providing the memory of the value.
          */
-        Value (Object&& value)
-        : _data (std::in_place_index<ObjectValue>, std::move (value))
+        BasicValue (Object value, Allocator& allocator)
+        : BasicValue (allocator)
         {
+            _data.template set<ObjectValue> (copyObject (value));
         }
 
         /**
          * @brief copy constructor.
          * @param other object to copy.
          */
-        constexpr Value (const Value& other) = default;
+        BasicValue (const BasicValue& other)
+        : BasicValue (nullptr)
+        {
+            copy (other);
+        }
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        Value& operator= (const Value& other) = default;
+        Value& operator= (const Value& other)
+        {
+            if (_owner)
+            {
+                return *this = BasicValue (other);
+            }
+
+            copy (other);
+
+            return *this;
+        }
+
+        /**
+         * @brief constructs a copy of a value using an allocator owned by the caller.
+         * @param other value to copy.
+         * @param allocator allocator providing the memory of the value.
+         */
+        template <typename Other>
+            requires std::same_as<Other, BasicValue>
+        BasicValue (const Other& other, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            copy (other);
+        }
+
+        /**
+         * @brief assign a null value.
+         * @param value null value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (std::nullptr_t value)
+        {
+            reset ();
+            _data.template set<NullValue> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a boolean value.
+         * @param value boolean value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (bool value)
+        {
+            reset ();
+            _data.template set<BooleanValue> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a integer value.
+         * @param value integer value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (int32_t value)
+        {
+            reset ();
+            _data.template set<IntegerValue> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a unsigned integer value.
+         * @param value unsigned integer value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (uint32_t value)
+        {
+            reset ();
+            _data.template set<UnsignedValue> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a 64 bits integer value.
+         * @param value 64 bits integer value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (int64_t value)
+        {
+            reset ();
+            _data.template set<Integer64Value> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a 64 bits unsigned integer value.
+         * @param value 64 bits unsigned integer value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (uint64_t value)
+        {
+            reset ();
+            _data.template set<Unsigned64Value> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a real value.
+         * @param value real value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (double value)
+        {
+            reset ();
+            _data.template set<RealValue> (value);
+            return *this;
+        }
+
+        /**
+         * @brief assign a string value from a string view.
+         * @param value string value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (std::string_view value)
+        {
+            if (isString () && (value.size () <= std::max<size_t> (_capacity, getString ().size ())))
+            {
+                char* data = const_cast<char*> (getString ().data ());
+                _capacity = std::max<size_t> (_capacity, getString ().size ());
+                std::char_traits<char>::move (data, value.data (), value.size ());
+                data[value.size ()] = '\0';
+                _data.template set<StringValue> (data, value.size ());
+                return *this;
+            }
+
+            if (_owner || (_allocator == nullptr))
+            {
+                return *this = BasicValue (value);
+            }
+
+            _data.template set<StringValue> (copyString (value));
+            _capacity = 0;
+
+            return *this;
+        }
+
+        /**
+         * @brief assign a string value from a C-style string.
+         * @param value string value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (const char* value)
+        {
+            return *this = std::string_view (value);
+        }
+
+        /**
+         * @brief assign a string value.
+         * @param value string value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (const std::string& value)
+        {
+            return *this = std::string_view (value);
+        }
+
+        /**
+         * @brief assign an array value.
+         * @param value array value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (Array value)
+        {
+            if (_owner || (_allocator == nullptr))
+            {
+                return *this = BasicValue (value);
+            }
+
+            _data.template set<ArrayValue> (copyArray (value));
+            _capacity = 0;
+
+            return *this;
+        }
+
+        /**
+         * @brief assign an object value.
+         * @param value object value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (Object value)
+        {
+            if (_owner || (_allocator == nullptr))
+            {
+                return *this = BasicValue (value);
+            }
+
+            _data.template set<ObjectValue> (copyObject (value));
+            _capacity = 0;
+
+            return *this;
+        }
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        constexpr Value (Value&& other) = default;
+        BasicValue (BasicValue&& other)
+        : BasicValue (nullptr)
+        {
+            if (other._owner)
+            {
+                _data = other._data;
+                _allocator = other._allocator;
+                _capacity = other._capacity;
+                _owner = other._owner;
+                other._data.template set<NullValue> ();
+                other._allocator = nullptr;
+                other._capacity = 0;
+                other._owner = false;
+            }
+            else
+            {
+                copy (other);
+                other._data.template set<NullValue> ();
+                other._capacity = 0;
+            }
+        }
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        Value& operator= (Value&& other) = default;
+        Value& operator= (Value&& other)
+        {
+            if (other._owner && (_owner || (_allocator == nullptr)))
+            {
+                if (_owner)
+                {
+                    delete _allocator;
+                }
+                _data = other._data;
+                _allocator = other._allocator;
+                _capacity = other._capacity;
+                _owner = other._owner;
+                other._data.template set<NullValue> ();
+                other._allocator = nullptr;
+                other._capacity = 0;
+                other._owner = false;
+            }
+            else if (_allocator == other._allocator)
+            {
+                _data = other._data;
+                _capacity = other._capacity;
+                other._data.template set<NullValue> ();
+                other._capacity = 0;
+            }
+            else
+            {
+                reset ();
+                copy (other);
+                other._data.template set<NullValue> ();
+                other._capacity = 0;
+            }
+
+            return *this;
+        }
 
         /**
          * @brief destroy the Value instance.
          */
-        ~Value () = default;
+        ~BasicValue ()
+        {
+            if (_owner)
+            {
+                delete _allocator;
+            }
+        }
 
         /**
          * @brief get the index of the alternative in use.
@@ -319,7 +694,7 @@ namespace join
         {
             if (_data.index () == BooleanValue)
             {
-                return _data.get<BooleanValue> ();
+                return _data.template get<BooleanValue> ();
             }
 
             return convertBool ();
@@ -374,23 +749,31 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return _data.get<IntegerValue> () >= static_cast<int32_t> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<int8_t>::max ());
+                    return _data.template get<IntegerValue> () >=
+                               static_cast<int32_t> (std::numeric_limits<int8_t>::min ()) &&
+                           _data.template get<IntegerValue> () <=
+                               static_cast<int32_t> (std::numeric_limits<int8_t>::max ());
 
                 case UnsignedValue:
-                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<int8_t>::max ());
+                    return _data.template get<UnsignedValue> () <=
+                           static_cast<uint32_t> (std::numeric_limits<int8_t>::max ());
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >= static_cast<int64_t> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<int8_t>::max ());
+                    return _data.template get<Integer64Value> () >=
+                               static_cast<int64_t> (std::numeric_limits<int8_t>::min ()) &&
+                           _data.template get<Integer64Value> () <=
+                               static_cast<int64_t> (std::numeric_limits<int8_t>::max ());
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <= static_cast<uint64_t> (std::numeric_limits<int8_t>::max ());
+                    return _data.template get<Unsigned64Value> () <=
+                           static_cast<uint64_t> (std::numeric_limits<int8_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<int8_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >=
+                               static_cast<double> (std::numeric_limits<int8_t>::min ()) &&
+                           _data.template get<RealValue> () <=
+                               static_cast<double> (std::numeric_limits<int8_t>::max ());
 
                 default:
                     break;
@@ -411,19 +794,19 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<int8_t> (_data.get<IntegerValue> ());
+                        return static_cast<int8_t> (_data.template get<IntegerValue> ());
 
                     case UnsignedValue:
-                        return static_cast<int8_t> (_data.get<UnsignedValue> ());
+                        return static_cast<int8_t> (_data.template get<UnsignedValue> ());
 
                     case Integer64Value:
-                        return static_cast<int8_t> (_data.get<Integer64Value> ());
+                        return static_cast<int8_t> (_data.template get<Integer64Value> ());
 
                     case Unsigned64Value:
-                        return static_cast<int8_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<int8_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int8_t> (_data.get<RealValue> ());
+                        return static_cast<int8_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -449,24 +832,28 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return _data.get<IntegerValue> () >= 0 &&
-                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<uint8_t>::max ());
+                    return _data.template get<IntegerValue> () >= 0 &&
+                           _data.template get<IntegerValue> () <=
+                               static_cast<int32_t> (std::numeric_limits<uint8_t>::max ());
 
                 case UnsignedValue:
-                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<uint8_t>::max ());
+                    return _data.template get<UnsignedValue> () <=
+                           static_cast<uint32_t> (std::numeric_limits<uint8_t>::max ());
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >= 0 &&
-                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<uint8_t>::max ());
+                    return _data.template get<Integer64Value> () >= 0 &&
+                           _data.template get<Integer64Value> () <=
+                               static_cast<int64_t> (std::numeric_limits<uint8_t>::max ());
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <=
+                    return _data.template get<Unsigned64Value> () <=
                            static_cast<uint64_t> (std::numeric_limits<uint8_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= 0 &&
-                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<uint8_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >= 0 &&
+                           _data.template get<RealValue> () <=
+                               static_cast<double> (std::numeric_limits<uint8_t>::max ());
 
                 default:
                     break;
@@ -487,19 +874,19 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<uint8_t> (_data.get<IntegerValue> ());
+                        return static_cast<uint8_t> (_data.template get<IntegerValue> ());
 
                     case UnsignedValue:
-                        return static_cast<uint8_t> (_data.get<UnsignedValue> ());
+                        return static_cast<uint8_t> (_data.template get<UnsignedValue> ());
 
                     case Integer64Value:
-                        return static_cast<uint8_t> (_data.get<Integer64Value> ());
+                        return static_cast<uint8_t> (_data.template get<Integer64Value> ());
 
                     case Unsigned64Value:
-                        return static_cast<uint8_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<uint8_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<uint8_t> (_data.get<RealValue> ());
+                        return static_cast<uint8_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -525,25 +912,31 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return _data.get<IntegerValue> () >= static_cast<int32_t> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<int16_t>::max ());
+                    return _data.template get<IntegerValue> () >=
+                               static_cast<int32_t> (std::numeric_limits<int16_t>::min ()) &&
+                           _data.template get<IntegerValue> () <=
+                               static_cast<int32_t> (std::numeric_limits<int16_t>::max ());
 
                 case UnsignedValue:
-                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<int16_t>::max ());
+                    return _data.template get<UnsignedValue> () <=
+                           static_cast<uint32_t> (std::numeric_limits<int16_t>::max ());
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >=
+                    return _data.template get<Integer64Value> () >=
                                static_cast<int64_t> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<int16_t>::max ());
+                           _data.template get<Integer64Value> () <=
+                               static_cast<int64_t> (std::numeric_limits<int16_t>::max ());
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <=
+                    return _data.template get<Unsigned64Value> () <=
                            static_cast<uint64_t> (std::numeric_limits<int16_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<int16_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >=
+                               static_cast<double> (std::numeric_limits<int16_t>::min ()) &&
+                           _data.template get<RealValue> () <=
+                               static_cast<double> (std::numeric_limits<int16_t>::max ());
 
                 default:
                     break;
@@ -564,19 +957,19 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<int16_t> (_data.get<IntegerValue> ());
+                        return static_cast<int16_t> (_data.template get<IntegerValue> ());
 
                     case UnsignedValue:
-                        return static_cast<int16_t> (_data.get<UnsignedValue> ());
+                        return static_cast<int16_t> (_data.template get<UnsignedValue> ());
 
                     case Integer64Value:
-                        return static_cast<int16_t> (_data.get<Integer64Value> ());
+                        return static_cast<int16_t> (_data.template get<Integer64Value> ());
 
                     case Unsigned64Value:
-                        return static_cast<int16_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<int16_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int16_t> (_data.get<RealValue> ());
+                        return static_cast<int16_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -602,24 +995,28 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return _data.get<IntegerValue> () >= 0 &&
-                           _data.get<IntegerValue> () <= static_cast<int32_t> (std::numeric_limits<uint16_t>::max ());
+                    return _data.template get<IntegerValue> () >= 0 &&
+                           _data.template get<IntegerValue> () <=
+                               static_cast<int32_t> (std::numeric_limits<uint16_t>::max ());
 
                 case UnsignedValue:
-                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<uint16_t>::max ());
+                    return _data.template get<UnsignedValue> () <=
+                           static_cast<uint32_t> (std::numeric_limits<uint16_t>::max ());
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >= 0 &&
-                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<uint16_t>::max ());
+                    return _data.template get<Integer64Value> () >= 0 &&
+                           _data.template get<Integer64Value> () <=
+                               static_cast<int64_t> (std::numeric_limits<uint16_t>::max ());
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <=
+                    return _data.template get<Unsigned64Value> () <=
                            static_cast<uint64_t> (std::numeric_limits<uint16_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= 0 &&
-                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<uint16_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >= 0 &&
+                           _data.template get<RealValue> () <=
+                               static_cast<double> (std::numeric_limits<uint16_t>::max ());
 
                 default:
                     break;
@@ -640,19 +1037,19 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<uint16_t> (_data.get<IntegerValue> ());
+                        return static_cast<uint16_t> (_data.template get<IntegerValue> ());
 
                     case UnsignedValue:
-                        return static_cast<uint16_t> (_data.get<UnsignedValue> ());
+                        return static_cast<uint16_t> (_data.template get<UnsignedValue> ());
 
                     case Integer64Value:
-                        return static_cast<uint16_t> (_data.get<Integer64Value> ());
+                        return static_cast<uint16_t> (_data.template get<Integer64Value> ());
 
                     case Unsigned64Value:
-                        return static_cast<uint16_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<uint16_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<uint16_t> (_data.get<RealValue> ());
+                        return static_cast<uint16_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -681,21 +1078,25 @@ namespace join
                     return true;
 
                 case UnsignedValue:
-                    return _data.get<UnsignedValue> () <= static_cast<uint32_t> (std::numeric_limits<int32_t>::max ());
+                    return _data.template get<UnsignedValue> () <=
+                           static_cast<uint32_t> (std::numeric_limits<int32_t>::max ());
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >=
+                    return _data.template get<Integer64Value> () >=
                                static_cast<int64_t> (std::numeric_limits<int32_t>::min ()) &&
-                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<int32_t>::max ());
+                           _data.template get<Integer64Value> () <=
+                               static_cast<int64_t> (std::numeric_limits<int32_t>::max ());
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <=
+                    return _data.template get<Unsigned64Value> () <=
                            static_cast<uint64_t> (std::numeric_limits<int32_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int32_t>::min ()) &&
-                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<int32_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >=
+                               static_cast<double> (std::numeric_limits<int32_t>::min ()) &&
+                           _data.template get<RealValue> () <=
+                               static_cast<double> (std::numeric_limits<int32_t>::max ());
 
                 default:
                     break;
@@ -713,7 +1114,7 @@ namespace join
         {
             if (_data.index () == IntegerValue)
             {
-                return _data.get<IntegerValue> ();
+                return _data.template get<IntegerValue> ();
             }
 
             return convertInt ();
@@ -738,23 +1139,25 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return _data.get<IntegerValue> () >= 0;
+                    return _data.template get<IntegerValue> () >= 0;
 
                 case UnsignedValue:
                     return true;
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >= 0 &&
-                           _data.get<Integer64Value> () <= static_cast<int64_t> (std::numeric_limits<uint32_t>::max ());
+                    return _data.template get<Integer64Value> () >= 0 &&
+                           _data.template get<Integer64Value> () <=
+                               static_cast<int64_t> (std::numeric_limits<uint32_t>::max ());
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <=
+                    return _data.template get<Unsigned64Value> () <=
                            static_cast<uint64_t> (std::numeric_limits<uint32_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= 0 &&
-                           _data.get<RealValue> () <= static_cast<double> (std::numeric_limits<uint32_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >= 0 &&
+                           _data.template get<RealValue> () <=
+                               static_cast<double> (std::numeric_limits<uint32_t>::max ());
 
                 default:
                     break;
@@ -772,7 +1175,7 @@ namespace join
         {
             if (_data.index () == UnsignedValue)
             {
-                return _data.get<UnsignedValue> ();
+                return _data.template get<UnsignedValue> ();
             }
 
             return convertUint ();
@@ -802,13 +1205,15 @@ namespace join
                     return true;
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> () <=
+                    return _data.template get<Unsigned64Value> () <=
                            static_cast<uint64_t> (std::numeric_limits<int64_t>::max ());
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= static_cast<double> (std::numeric_limits<int64_t>::min ()) &&
-                           _data.get<RealValue> () < static_cast<double> (std::numeric_limits<int64_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >=
+                               static_cast<double> (std::numeric_limits<int64_t>::min ()) &&
+                           _data.template get<RealValue> () <
+                               static_cast<double> (std::numeric_limits<int64_t>::max ());
 
                 default:
                     break;
@@ -826,7 +1231,7 @@ namespace join
         {
             if (_data.index () == Integer64Value)
             {
-                return _data.get<Integer64Value> ();
+                return _data.template get<Integer64Value> ();
             }
 
             return convertInt64 ();
@@ -851,21 +1256,22 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return _data.get<IntegerValue> () >= 0;
+                    return _data.template get<IntegerValue> () >= 0;
 
                 case UnsignedValue:
                     return true;
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> () >= 0;
+                    return _data.template get<Integer64Value> () >= 0;
 
                 case Unsigned64Value:
                     return true;
 
                 case RealValue:
-                    return std::trunc (_data.get<RealValue> ()) == _data.get<RealValue> () &&
-                           _data.get<RealValue> () >= 0 &&
-                           _data.get<RealValue> () < static_cast<double> (std::numeric_limits<uint64_t>::max ());
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >= 0 &&
+                           _data.template get<RealValue> () <
+                               static_cast<double> (std::numeric_limits<uint64_t>::max ());
 
                 default:
                     break;
@@ -883,7 +1289,7 @@ namespace join
         {
             if (_data.index () == Unsigned64Value)
             {
-                return _data.get<Unsigned64Value> ();
+                return _data.template get<Unsigned64Value> ();
             }
 
             return convertUint64 ();
@@ -917,7 +1323,7 @@ namespace join
         {
             if (_data.index () == RealValue)
             {
-                return static_cast<float> (_data.get<RealValue> ());
+                return static_cast<float> (_data.template get<RealValue> ());
             }
 
             return convertFloat ();
@@ -951,7 +1357,7 @@ namespace join
         {
             if (_data.index () == RealValue)
             {
-                return _data.get<RealValue> ();
+                return _data.template get<RealValue> ();
             }
 
             return convertDouble ();
@@ -978,12 +1384,13 @@ namespace join
 
         /**
          * @brief get variable held by value as a string value.
-         * @return variable held by value as a string value.
+         * @return view of a null-terminated string.
          * @throw std::bad_cast.
          */
         constexpr std::string_view getString () const
         {
-            return _data.get<StringValue> ();
+            const String& value = _data.template get<StringValue> ();
+            return std::string_view (value.data (), value.size ());
         }
 
         /**
@@ -1012,17 +1419,7 @@ namespace join
          */
         constexpr const Array& getArray () const
         {
-            return _data.get<ArrayValue> ();
-        }
-
-        /**
-         * @brief get variable held by value as an array.
-         * @return variable held by value as an array.
-         * @throw std::bad_cast.
-         */
-        constexpr Array& getArray ()
-        {
-            return _data.get<ArrayValue> ();
+            return _data.template get<ArrayValue> ();
         }
 
         /**
@@ -1041,17 +1438,7 @@ namespace join
          */
         constexpr const Object& getObject () const
         {
-            return _data.get<ObjectValue> ();
-        }
-
-        /**
-         * @brief get variable held by value as an object.
-         * @return variable held by value as an object.
-         * @throw std::bad_cast.
-         */
-        constexpr Object& getObject ()
-        {
-            return _data.get<ObjectValue> ();
+            return _data.template get<ObjectValue> ();
         }
 
         /**
@@ -1062,7 +1449,7 @@ namespace join
          */
         Value& at ([[maybe_unused]] std::nullptr_t key)
         {
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isNull ())
                 {
@@ -1081,7 +1468,7 @@ namespace join
          */
         Value& at (bool key)
         {
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isBool () && member.first.getBool () == key)
                 {
@@ -1102,10 +1489,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt () && member.first.getInt () == key)
                 {
@@ -1126,10 +1513,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint () && member.first.getUint () == key)
                 {
@@ -1150,10 +1537,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt64 () && member.first.getInt64 () == key)
                 {
@@ -1174,10 +1561,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint64 () && member.first.getUint64 () == key)
                 {
@@ -1196,7 +1583,7 @@ namespace join
          */
         Value& at (double key)
         {
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isDouble () && member.first.getDouble () == key)
                 {
@@ -1215,7 +1602,7 @@ namespace join
          */
         Value& at (std::string_view key)
         {
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isString () && member.first.getString () == key)
                 {
@@ -1238,6 +1625,32 @@ namespace join
         }
 
         /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        template <typename Key>
+            requires std::same_as<Key, BasicValue>
+        Value& at (const Key& key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return elementAt (key.getUint64 ());
+            }
+
+            for (auto& member : _data.template get<ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
          * @brief returns a reference to the value mapped to key.
          * @param key key of the element to find.
          * @return a reference to the requested element.
@@ -1245,7 +1658,7 @@ namespace join
          */
         const Value& at ([[maybe_unused]] std::nullptr_t key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isNull ())
                 {
@@ -1264,7 +1677,7 @@ namespace join
          */
         const Value& at (bool key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isBool () && member.first.getBool () == key)
                 {
@@ -1285,10 +1698,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt () && member.first.getInt () == key)
                 {
@@ -1309,10 +1722,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint () && member.first.getUint () == key)
                 {
@@ -1333,10 +1746,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt64 () && member.first.getInt64 () == key)
                 {
@@ -1357,10 +1770,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ().at (key);
+                return elementAt (key);
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint64 () && member.first.getUint64 () == key)
                 {
@@ -1379,7 +1792,7 @@ namespace join
          */
         const Value& at (double key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isDouble () && member.first.getDouble () == key)
                 {
@@ -1398,7 +1811,7 @@ namespace join
          */
         const Value& at (std::string_view key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isString () && member.first.getString () == key)
                 {
@@ -1421,6 +1834,32 @@ namespace join
         }
 
         /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast, std::out_of_range.
+         */
+        template <typename Key>
+            requires std::same_as<Key, BasicValue>
+        const Value& at (const Key& key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return elementAt (key.getUint64 ());
+            }
+
+            for (auto const& member : _data.template get<ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            throwException<std::out_of_range> ("invalid key");
+        }
+
+        /**
          * @brief returns a reference to the value mapped to key.
          * @param key key of the element to find.
          * @return a reference to the requested element.
@@ -1430,10 +1869,10 @@ namespace join
         {
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isNull ())
                 {
@@ -1441,9 +1880,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1456,10 +1893,10 @@ namespace join
         {
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isBool () && member.first.getBool () == key)
                 {
@@ -1467,9 +1904,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1482,15 +1917,15 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ()[key];
+                return _data.template get<ArrayValue> ()[key];
             }
 
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt () && member.first.getInt () == key)
                 {
@@ -1498,9 +1933,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1513,15 +1946,15 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ()[key];
+                return _data.template get<ArrayValue> ()[key];
             }
 
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint () && member.first.getUint () == key)
                 {
@@ -1529,9 +1962,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1544,15 +1975,15 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ()[key];
+                return _data.template get<ArrayValue> ()[key];
             }
 
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt64 () && member.first.getInt64 () == key)
                 {
@@ -1560,9 +1991,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1575,15 +2004,15 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return _data.get<ArrayValue> ()[key];
+                return _data.template get<ArrayValue> ()[key];
             }
 
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint64 () && member.first.getUint64 () == key)
                 {
@@ -1591,9 +2020,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1606,10 +2033,10 @@ namespace join
         {
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isDouble () && member.first.getDouble () == key)
                 {
@@ -1617,9 +2044,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1632,10 +2057,10 @@ namespace join
         {
             if (_data.index () == NullValue)
             {
-                _data.set<ObjectValue> ();
+                _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.get<ObjectValue> ())
+            for (auto& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isString () && member.first.getString () == key)
                 {
@@ -1643,9 +2068,7 @@ namespace join
                 }
             }
 
-            _data.get<ObjectValue> ().emplace_back (key, nullptr);
-
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (key);
         }
 
         /**
@@ -1660,6 +2083,37 @@ namespace join
         }
 
         /**
+         * @brief returns a reference to the value at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return a reference to the requested element.
+         * @throw std::bad_cast.
+         */
+        template <typename Key>
+            requires std::same_as<Key, BasicValue>
+        Value& operator[] (const Key& key)
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return _data.template get<ArrayValue> ()[key.getUint64 ()];
+            }
+
+            if (_data.index () == NullValue)
+            {
+                _data.template set<ObjectValue> ();
+            }
+
+            for (auto& member : _data.template get<ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return member.second;
+                }
+            }
+
+            return appendMember (Value (key, *allocator ()), Value (*allocator ()));
+        }
+
+        /**
          * @brief check if the nested container is empty.
          * @return true if empty, false otherwise.
          * @throw std::bad_cast.
@@ -1669,13 +2123,13 @@ namespace join
             switch (_data.index ())
             {
                 case StringValue:
-                    return _data.get<StringValue> ().empty ();
+                    return _data.template get<StringValue> ().empty ();
 
                 case ArrayValue:
-                    return _data.get<ArrayValue> ().empty ();
+                    return _data.template get<ArrayValue> ().empty ();
 
                 case ObjectValue:
-                    return _data.get<ObjectValue> ().empty ();
+                    return _data.template get<ObjectValue> ().empty ();
 
                 default:
                     break;
@@ -1694,13 +2148,13 @@ namespace join
             switch (_data.index ())
             {
                 case StringValue:
-                    return _data.get<StringValue> ().size ();
+                    return _data.template get<StringValue> ().size ();
 
                 case ArrayValue:
-                    return _data.get<ArrayValue> ().size ();
+                    return _data.template get<ArrayValue> ().size ();
 
                 case ObjectValue:
-                    return _data.get<ObjectValue> ().size ();
+                    return _data.template get<ObjectValue> ().size ();
 
                 default:
                     break;
@@ -1710,7 +2164,7 @@ namespace join
         }
 
         /**
-         * @brief increase the capacity of the nested container.
+         * @brief increase the capacity of the nested container or string.
          * @param cap new capacity.
          * @throw std::bad_cast.
          */
@@ -1719,15 +2173,26 @@ namespace join
             switch (_data.index ())
             {
                 case StringValue:
-                    _data.get<StringValue> ().reserve (cap);
+                    if (cap > std::max<size_t> (_capacity, getString ().size ()))
+                    {
+                        if (JOIN_UNLIKELY (cap >= std::numeric_limits<uint32_t>::max ()))
+                        {
+                            throwException<std::bad_alloc> ();
+                        }
+                        std::string_view str = getString ();
+                        char* data = allocate<char> (cap + 1);
+                        std::copy_n (str.data (), str.size () + 1, data);
+                        _data.template set<StringValue> (data, str.size ());
+                        _capacity = static_cast<uint32_t> (cap);
+                    }
                     return;
 
                 case ArrayValue:
-                    _data.get<ArrayValue> ().reserve (cap);
+                    grow<Value> (cap);
                     return;
 
                 case ObjectValue:
-                    _data.get<ObjectValue> ().reserve (cap);
+                    grow<Member> (cap);
                     return;
 
                 default:
@@ -1746,15 +2211,15 @@ namespace join
             switch (_data.index ())
             {
                 case StringValue:
-                    _data.get<StringValue> ().clear ();
+                    *this = std::string_view ();
                     return;
 
                 case ArrayValue:
-                    _data.get<ArrayValue> ().clear ();
+                    _data.template set<ArrayValue> (_data.template get<ArrayValue> ().data (), 0);
                     return;
 
                 case ObjectValue:
-                    _data.get<ObjectValue> ().clear ();
+                    _data.template set<ObjectValue> (_data.template get<ObjectValue> ().data (), 0);
                     return;
 
                 default:
@@ -1770,22 +2235,25 @@ namespace join
          * @return a reference to the inserted element.
          * @throw std::bad_cast.
          */
-        Value& insert (const Member& member)
+        template <typename M>
+            requires std::same_as<M, Member>
+        Value& insert (const M& member)
         {
-            _data.get<ObjectValue> ().push_back (member);
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (Value (member.first, *allocator ()), Value (member.second, *allocator ()));
         }
 
         /**
-         * @brief insert element in the nested container.
-         * @param member the element to insert in the nested container.
+         * @brief insert a member built with the allocator of the tree.
+         * @param key key of the member.
+         * @param value value of the member.
          * @return a reference to the inserted element.
          * @throw std::bad_cast.
          */
-        Value& insert (Member&& member)
+        template <typename K, typename T>
+        Value& insert (K&& key, T&& value)
         {
-            _data.get<ObjectValue> ().emplace_back (std::move (member));
-            return _data.get<ObjectValue> ().back ().second;
+            return appendMember (Value (std::forward<K> (key), *allocator ()),
+                                 Value (std::forward<T> (value), *allocator ()));
         }
 
         /**
@@ -1796,14 +2264,14 @@ namespace join
          */
         size_t erase ([[maybe_unused]] std::nullptr_t key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isNull ())
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1819,14 +2287,14 @@ namespace join
          */
         size_t erase (bool key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isBool () && it->first.getBool () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1842,14 +2310,14 @@ namespace join
          */
         size_t erase (int32_t key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isInt () && it->first.getInt () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1865,14 +2333,14 @@ namespace join
          */
         size_t erase (uint32_t key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isUint () && it->first.getUint () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1888,14 +2356,14 @@ namespace join
          */
         size_t erase (int64_t key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isInt64 () && it->first.getInt64 () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1911,14 +2379,14 @@ namespace join
          */
         size_t erase (uint64_t key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isUint64 () && it->first.getUint64 () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1934,14 +2402,14 @@ namespace join
          */
         size_t erase (double key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isDouble () && it->first.getDouble () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1957,14 +2425,14 @@ namespace join
          */
         size_t erase (std::string_view key)
         {
-            auto beg = _data.get<ObjectValue> ().begin ();
-            auto end = _data.get<ObjectValue> ().end ();
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
 
             for (auto it = beg; it != end; ++it)
             {
                 if (it->first.isString () && it->first.getString () == key)
                 {
-                    _data.get<ObjectValue> ().erase (it);
+                    eraseMember (it);
                     return 1;
                 }
             }
@@ -1984,6 +2452,31 @@ namespace join
         }
 
         /**
+         * @brief removes member with the key equivalent to key.
+         * @param key key of the member to remove.
+         * @return number of elements removed.
+         * @throw std::bad_cast.
+         */
+        template <typename Key>
+            requires std::same_as<Key, BasicValue>
+        size_t erase (const Key& key)
+        {
+            auto beg = _data.template get<ObjectValue> ().begin ();
+            auto end = _data.template get<ObjectValue> ().end ();
+
+            for (auto it = beg; it != end; ++it)
+            {
+                if (it->first == key)
+                {
+                    eraseMember (it);
+                    return 1;
+                }
+            }
+
+            return 0;
+        }
+
+        /**
          * @brief constructs an element in place at the end of the nested container.
          * @param args arguments forwarded to the element constructor.
          * @return a reference to the constructed object.
@@ -1992,44 +2485,150 @@ namespace join
         template <typename... Args>
         Value& emplaceBack (Args&&... args)
         {
-            if (_data.index () == NullValue)
-            {
-                _data.set<ArrayValue> ();
-            }
-            _data.get<ArrayValue> ().emplace_back (std::forward<Args> (args)...);
-            return _data.get<ArrayValue> ().back ();
+            return pushBack (Value (std::forward<Args> (args)..., *allocator ()));
         }
 
         /**
-         * @brief appends element at the end of the nested container.
+         * @brief appends a null value at the end of the nested container.
          * @param value the element to append.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
-        Value& pushBack (const Value& value)
+        Value& pushBack (std::nullptr_t value)
         {
-            if (_data.index () == NullValue)
-            {
-                _data.set<ArrayValue> ();
-            }
-            _data.get<ArrayValue> ().push_back (value);
-            return _data.get<ArrayValue> ().back ();
+            return pushBack (Value (value, *allocator ()));
         }
 
         /**
-         * @brief appends element at the end of the nested container.
+         * @brief appends a boolean value at the end of the nested container.
          * @param value the element to append.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
-        Value& pushBack (Value&& value)
+        Value& pushBack (bool value)
         {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a integer value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (int32_t value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a unsigned integer value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (uint32_t value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a 64 bits integer value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (int64_t value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a 64 bits unsigned integer value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (uint64_t value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a real value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (double value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a string value from a C-style string at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (const char* value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a string value from a string view at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (std::string_view value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends an array value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (Array value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends an object value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (Object value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
+         * @brief appends a value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        template <typename Other>
+            requires std::same_as<std::remove_cvref_t<Other>, BasicValue>
+        Value& pushBack (Other&& value)
+        {
+            Value element (*allocator ());
+            element = std::forward<Other> (value);
             if (_data.index () == NullValue)
             {
-                _data.set<ArrayValue> ();
+                _data.template set<ArrayValue> ();
             }
-            _data.get<ArrayValue> ().emplace_back (std::move (value));
-            return _data.get<ArrayValue> ().back ();
+            Value& slot = append<Value> ();
+            ::new (&slot) Value (*_allocator);
+            slot = std::move (element);
+            return slot;
         }
 
         /**
@@ -2038,7 +2637,12 @@ namespace join
          */
         void popBack ()
         {
-            _data.get<ArrayValue> ().pop_back ();
+            Array& array = _data.template get<ArrayValue> ();
+            if (array.empty ())
+            {
+                return;
+            }
+            array = Array (array.data (), array.size () - 1);
         }
 
         /**
@@ -2049,7 +2653,7 @@ namespace join
          */
         bool contains ([[maybe_unused]] std::nullptr_t key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isNull ())
                 {
@@ -2068,7 +2672,7 @@ namespace join
          */
         bool contains (bool key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isBool () && member.first.getBool () == key)
                 {
@@ -2089,10 +2693,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return key >= 0 && static_cast<uint64_t> (key) < _data.get<ArrayValue> ().size ();
+                return key >= 0 && static_cast<uint64_t> (key) < _data.template get<ArrayValue> ().size ();
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt () && member.first.getInt () == key)
                 {
@@ -2113,10 +2717,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return key < _data.get<ArrayValue> ().size ();
+                return key < _data.template get<ArrayValue> ().size ();
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint () && member.first.getUint () == key)
                 {
@@ -2137,10 +2741,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return key >= 0 && static_cast<uint64_t> (key) < _data.get<ArrayValue> ().size ();
+                return key >= 0 && static_cast<uint64_t> (key) < _data.template get<ArrayValue> ().size ();
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isInt64 () && member.first.getInt64 () == key)
                 {
@@ -2161,10 +2765,10 @@ namespace join
         {
             if (_data.index () == ArrayValue)
             {
-                return key < _data.get<ArrayValue> ().size ();
+                return key < _data.template get<ArrayValue> ().size ();
             }
 
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isUint64 () && member.first.getUint64 () == key)
                 {
@@ -2183,7 +2787,7 @@ namespace join
          */
         bool contains (double key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isDouble () && member.first.getDouble () == key)
                 {
@@ -2202,7 +2806,7 @@ namespace join
          */
         bool contains (std::string_view key) const
         {
-            for (auto const& member : _data.get<ObjectValue> ())
+            for (auto const& member : _data.template get<ObjectValue> ())
             {
                 if (member.first.isString () && member.first.getString () == key)
                 {
@@ -2225,11 +2829,44 @@ namespace join
         }
 
         /**
+         * @brief checks if the nested container contains an element at position pos or mapped to key.
+         * @param key position or key of the element to find.
+         * @return true if the nested container contains an element at position pos or mapped to key, false otherwise.
+         * @throw std::bad_cast.
+         */
+        template <typename Key>
+            requires std::same_as<Key, BasicValue>
+        bool contains (const Key& key) const
+        {
+            if (_data.index () == ArrayValue)
+            {
+                return key.getUint64 () < _data.template get<ArrayValue> ().size ();
+            }
+
+            for (auto const& member : _data.template get<ObjectValue> ())
+            {
+                if (member.first == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /**
          * @brief exchanges the contents of the value with those of other.
          * @param other value to exchange the contents with.
          */
         void swap (Value& other)
         {
+            if (_allocator == other._allocator)
+            {
+                std::swap (_data, other._data);
+                std::swap (_capacity, other._capacity);
+                return;
+            }
+
             Value temp (std::move (*this));
             *this = std::move (other);
             other = std::move (temp);
@@ -2285,164 +2922,451 @@ namespace join
         }
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @param length the length of the json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal.
+         * @param other value to compare to.
+         * @return true if equal.
          */
-        int jsonRead (const char* document, size_t length);
+        template <typename Other>
+            requires std::same_as<Other, BasicValue<Allocator>>
+        constexpr bool operator== (const Other& other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param first the first character of the json document to deserialize.
-         * @param last the last character of the document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare values.
+         * @param other value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int jsonRead (const char* first, const char* last);
+        template <typename Other>
+            requires std::same_as<Other, BasicValue<Allocator>>
+        constexpr std::partial_ordering operator<=> (const Other& other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a null value.
+         * @param other null value to compare to.
+         * @return true if equal.
          */
-        int jsonRead (std::string_view document);
+        constexpr bool operator== (std::nullptr_t other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a null value.
+         * @param other null value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int jsonRead (std::stringstream& document);
+        constexpr std::partial_ordering operator<=> (std::nullptr_t other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a boolean value.
+         * @param other boolean value to compare to.
+         * @return true if equal.
          */
-        int jsonRead (std::istringstream& document);
+        constexpr bool operator== (bool other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a boolean value.
+         * @param other boolean value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int jsonRead (std::fstream& document);
+        constexpr std::partial_ordering operator<=> (bool other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a integer value.
+         * @param other integer value to compare to.
+         * @return true if equal.
          */
-        int jsonRead (std::ifstream& document);
+        constexpr bool operator== (int32_t other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a integer value.
+         * @param other integer value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int jsonRead (std::iostream& document);
+        constexpr std::partial_ordering operator<=> (int32_t other) const;
 
         /**
-         * @brief deserialize a json document.
-         * @param document json document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a unsigned integer value.
+         * @param other unsigned integer value to compare to.
+         * @return true if equal.
          */
-        int jsonRead (std::istream& document);
+        constexpr bool operator== (uint32_t other) const;
 
         /**
-         * @brief serialize json data.
-         * @param document Document where to serialize json data.
-         * @param indentation number of spaces per indentation level.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a unsigned integer value.
+         * @param other unsigned integer value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int jsonWrite (std::ostream& document, size_t indentation = 0) const;
+        constexpr std::partial_ordering operator<=> (uint32_t other) const;
 
         /**
-         * @brief serialize canonicalized json data.
-         * @param document Document where to serialize canonicalized json data.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a 64 bits integer value.
+         * @param other 64 bits integer value to compare to.
+         * @return true if equal.
          */
-        int jsonCanonicalize (std::ostream& document) const;
+        constexpr bool operator== (int64_t other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @param length the length of the msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a 64 bits integer value.
+         * @param other 64 bits integer value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int packRead (const char* document, size_t length);
+        constexpr std::partial_ordering operator<=> (int64_t other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param first the first character of the msgpack document to deserialize.
-         * @param last the last character of the document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a 64 bits unsigned integer value.
+         * @param other 64 bits unsigned integer value to compare to.
+         * @return true if equal.
          */
-        int packRead (const char* first, const char* last);
+        constexpr bool operator== (uint64_t other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a 64 bits unsigned integer value.
+         * @param other 64 bits unsigned integer value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int packRead (std::string_view document);
+        constexpr std::partial_ordering operator<=> (uint64_t other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a real value.
+         * @param other real value to compare to.
+         * @return true if equal.
          */
-        int packRead (std::stringstream& document);
+        constexpr bool operator== (double other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a real value.
+         * @param other real value to compare to.
+         * @return ordering of this value relative to other.
          */
-        int packRead (std::istringstream& document);
+        constexpr std::partial_ordering operator<=> (double other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a C-style string.
+         * @param other string to compare to.
+         * @return true if equal.
          */
-        int packRead (std::fstream& document);
+        constexpr bool operator== (const char* other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a C-style string.
+         * @param other string to compare to.
+         * @return ordering of this value relative to other.
          */
-        int packRead (std::ifstream& document);
+        constexpr std::partial_ordering operator<=> (const char* other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to a string view.
+         * @param other string to compare to.
+         * @return true if equal.
          */
-        int packRead (std::iostream& document);
+        constexpr bool operator== (std::string_view other) const;
 
         /**
-         * @brief deserialize a msgpack document.
-         * @param document msgpack document to deserialize.
-         * @return 0 on success, -1 otherwise.
+         * @brief three-way compare to a string view.
+         * @param other string to compare to.
+         * @return ordering of this value relative to other.
          */
-        int packRead (std::istream& document);
+        constexpr std::partial_ordering operator<=> (std::string_view other) const;
 
         /**
-         * @brief serialize msgpack data.
-         * @param document Document where to serialize msgpack data.
-         * @return 0 on success, -1 otherwise.
+         * @brief compare if equal to an array.
+         * @param other array to compare to.
+         * @return true if equal.
          */
-        int packWrite (std::ostream& document) const;
+        constexpr bool operator== (const Array& other) const;
 
-        // friendship with equal operator.
-        friend constexpr bool operator== (const Value& lhs, const Value& rhs);
+        /**
+         * @brief three-way compare to an array.
+         * @param other array to compare to.
+         * @return ordering of this value relative to other.
+         */
+        constexpr std::partial_ordering operator<=> (const Array& other) const;
 
-        // friendship with three-way comparison operator.
-        friend constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs);
+        /**
+         * @brief compare if equal to an object.
+         * @param other object to compare to.
+         * @return true if equal.
+         */
+        constexpr bool operator== (const Object& other) const;
+
+        /**
+         * @brief three-way compare to an object.
+         * @param other object to compare to.
+         * @return ordering of this value relative to other.
+         */
+        constexpr std::partial_ordering operator<=> (const Object& other) const;
 
     private:
+        /// variant type holding the value.
+        using Data = Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, String, Array, Object>;
+
+        // friendship with value builder.
+        friend class ValueBuilder<BasicValue>;
+
+        /**
+         * @brief get the allocator shared by the tree, created when the root has none.
+         * @return allocator.
+         */
+        Allocator* allocator ()
+        {
+            if (_allocator == nullptr)
+            {
+                _allocator = new Allocator ();
+                _owner = true;
+            }
+            return _allocator;
+        }
+
+        /**
+         * @brief allocate uninitialized memory for elements.
+         * @param count number of elements.
+         * @return pointer to the memory.
+         * @throw std::bad_alloc.
+         */
+        template <typename T>
+        T* allocate (size_t count)
+        {
+            void* data = nullptr;
+            if (JOIN_LIKELY (count <= std::min<size_t> (std::numeric_limits<uint32_t>::max (),
+                                                        std::numeric_limits<size_t>::max () / sizeof (T))))
+            {
+                data = allocator ()->allocate (count * sizeof (T));
+            }
+
+            if (JOIN_UNLIKELY (data == nullptr))
+            {
+                throwException<std::bad_alloc> ();
+            }
+
+            return static_cast<T*> (data);
+        }
+
+        /**
+         * @brief reset to null, releasing the memory of the tree when the value owns the allocator.
+         */
+        void reset () noexcept
+        {
+            if constexpr (requires { _allocator->reset (); })
+            {
+                if (_owner)
+                {
+                    _allocator->reset ();
+                }
+            }
+            _data.template set<NullValue> ();
+            _capacity = 0;
+        }
+
+        /**
+         * @brief copy a string into the allocator.
+         * @param value string to copy.
+         * @return copied string.
+         */
+        String copyString (std::string_view value)
+        {
+            char* data = allocate<char> (value.size () + 1);
+            std::copy_n (value.data (), value.size (), data);
+            data[value.size ()] = '\0';
+            return String (data, value.size ());
+        }
+
+        /**
+         * @brief move values of the open containers of a builder into the allocator.
+         * @param values values to move.
+         * @param count number of values.
+         * @return array holding the values.
+         */
+        Array makeArray (const Data* values, size_t count)
+        {
+            Value* data = allocate<Value> (count);
+            for (size_t i = 0; i < count; ++i)
+            {
+                ::new (data + i) Value (*_allocator);
+                data[i]._data = values[i];
+            }
+            return Array (data, count);
+        }
+
+        /**
+         * @brief copy an array into the allocator.
+         * @param value array to copy.
+         * @return copied array.
+         */
+        Array copyArray (const Array& value)
+        {
+            Value* data = allocate<Value> (value.size ());
+            for (size_t i = 0; i < value.size (); ++i)
+            {
+                ::new (data + i) Value (value[i], *_allocator);
+            }
+            return Array (data, value.size ());
+        }
+
+        /**
+         * @brief move keys and values of the open containers of a builder into the allocator.
+         * @param values keys and values to move, alternated.
+         * @param count number of members.
+         * @return object holding the members.
+         */
+        Object makeObject (const Data* values, size_t count)
+        {
+            Member* data = allocate<Member> (count);
+            for (size_t i = 0; i < count; ++i)
+            {
+                ::new (data + i) Member{Value (*_allocator), Value (*_allocator)};
+                data[i].first._data = values[2 * i];
+                data[i].second._data = values[2 * i + 1];
+            }
+            return Object (data, count);
+        }
+
+        /**
+         * @brief copy an object into the allocator.
+         * @param value object to copy.
+         * @return copied object.
+         */
+        Object copyObject (const Object& value)
+        {
+            Member* data = allocate<Member> (value.size ());
+            for (size_t i = 0; i < value.size (); ++i)
+            {
+                ::new (data + i) Member{Value (value[i].first, *_allocator), Value (value[i].second, *_allocator)};
+            }
+            return Object (data, value.size ());
+        }
+
+        /**
+         * @brief copy a value into the allocator.
+         * @param other value to copy.
+         */
+        void copy (const Value& other)
+        {
+            _capacity = 0;
+
+            switch (other.index ())
+            {
+                case StringValue:
+                    _data.template set<StringValue> (copyString (other.getString ()));
+                    break;
+
+                case ArrayValue:
+                    _data.template set<ArrayValue> (copyArray (other.getArray ()));
+                    break;
+
+                case ObjectValue:
+                    _data.template set<ObjectValue> (copyObject (other.getObject ()));
+                    break;
+
+                default:
+                    _data = other._data;
+                    break;
+            }
+        }
+
+        /**
+         * @brief move the elements of the nested container to a larger block.
+         * @param cap new capacity.
+         */
+        template <typename T>
+        void grow (size_t cap)
+        {
+            View<T>& view = _data.template get<View<T>> ();
+            if (cap > std::max<size_t> (view.size (), _capacity))
+            {
+                T* data = allocate<T> (cap);
+                if (!view.empty ())
+                {
+                    std::memcpy (static_cast<void*> (data), static_cast<const void*> (view.data ()),
+                                 view.size () * sizeof (T));
+                }
+                view = View<T> (data, view.size ());
+                _capacity = static_cast<uint32_t> (cap);
+            }
+        }
+
+        /**
+         * @brief add an uninitialized element at the end of the nested container.
+         * @return a reference to the element.
+         */
+        template <typename T>
+        T& append ()
+        {
+            View<T>& view = _data.template get<View<T>> ();
+            if (view.size () >= _capacity)
+            {
+                grow<T> (std::max<size_t> (view.size () * 2, 1));
+            }
+            view = View<T> (view.data (), view.size () + 1);
+            return view[view.size () - 1];
+        }
+
+        /**
+         * @brief add a member at the end of the object.
+         * @param key key of the member.
+         * @param value value of the member.
+         * @return a reference to the value of the member.
+         */
+        Value& appendMember (Value&& key, Value&& value)
+        {
+            Member& slot = append<Member> ();
+            ::new (&slot) Member{Value (*_allocator), Value (*_allocator)};
+            slot.first = std::move (key);
+            slot.second = std::move (value);
+            return slot.second;
+        }
+
+        /**
+         * @brief add a member with a null value at the end of the object.
+         * @param key key of the member.
+         * @return a reference to the value of the member.
+         */
+        template <typename Key>
+        Value& appendMember (Key key)
+        {
+            return appendMember (Value (key, *allocator ()), Value (*allocator ()));
+        }
+
+        /**
+         * @brief remove a member of the object.
+         * @param it member to remove.
+         */
+        void eraseMember (Member* it)
+        {
+            Object& object = _data.template get<ObjectValue> ();
+            std::memmove (static_cast<void*> (it), static_cast<const void*> (it + 1),
+                          (object.end () - it - 1) * sizeof (Member));
+            object = Object (object.data (), object.size () - 1);
+        }
+
+        /**
+         * @brief returns a reference to the array element at position pos.
+         * @param pos position of the element.
+         * @return a reference to the requested element.
+         * @throw std::out_of_range.
+         */
+        Value& elementAt (size_t pos)
+        {
+            Array& array = _data.template get<ArrayValue> ();
+            if (pos >= array.size ())
+            {
+                throwException<std::out_of_range> ("invalid key");
+            }
+            return array[pos];
+        }
+
+        /**
+         * @brief returns a reference to the array element at position pos.
+         * @param pos position of the element.
+         * @return a reference to the requested element.
+         * @throw std::out_of_range.
+         */
+        const Value& elementAt (size_t pos) const
+        {
+            const Array& array = _data.template get<ArrayValue> ();
+            if (pos >= array.size ())
+            {
+                throwException<std::out_of_range> ("invalid key");
+            }
+            return array[pos];
+        }
+
         /**
          * @brief set value.
          * @param value value to write.
@@ -2595,16 +3519,16 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return static_cast<float> (_data.get<IntegerValue> ());
+                    return static_cast<float> (_data.template get<IntegerValue> ());
 
                 case UnsignedValue:
-                    return static_cast<float> (_data.get<UnsignedValue> ());
+                    return static_cast<float> (_data.template get<UnsignedValue> ());
 
                 case Integer64Value:
-                    return static_cast<float> (_data.get<Integer64Value> ());
+                    return static_cast<float> (_data.template get<Integer64Value> ());
 
                 case Unsigned64Value:
-                    return static_cast<float> (_data.get<Unsigned64Value> ());
+                    return static_cast<float> (_data.template get<Unsigned64Value> ());
 
                 default:
                     break;
@@ -2625,19 +3549,19 @@ namespace join
                     return false;
 
                 case IntegerValue:
-                    return _data.get<IntegerValue> ();
+                    return _data.template get<IntegerValue> ();
 
                 case UnsignedValue:
-                    return _data.get<UnsignedValue> ();
+                    return _data.template get<UnsignedValue> ();
 
                 case Integer64Value:
-                    return _data.get<Integer64Value> ();
+                    return _data.template get<Integer64Value> ();
 
                 case Unsigned64Value:
-                    return _data.get<Unsigned64Value> ();
+                    return _data.template get<Unsigned64Value> ();
 
                 case RealValue:
-                    return _data.get<RealValue> ();
+                    return _data.template get<RealValue> ();
 
                 default:
                     break;
@@ -2657,16 +3581,16 @@ namespace join
                 switch (_data.index ())
                 {
                     case UnsignedValue:
-                        return static_cast<int32_t> (_data.get<UnsignedValue> ());
+                        return static_cast<int32_t> (_data.template get<UnsignedValue> ());
 
                     case Integer64Value:
-                        return static_cast<int32_t> (_data.get<Integer64Value> ());
+                        return static_cast<int32_t> (_data.template get<Integer64Value> ());
 
                     case Unsigned64Value:
-                        return static_cast<int32_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<int32_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int32_t> (_data.get<RealValue> ());
+                        return static_cast<int32_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -2684,16 +3608,16 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<uint32_t> (_data.get<IntegerValue> ());
+                        return static_cast<uint32_t> (_data.template get<IntegerValue> ());
 
                     case Integer64Value:
-                        return static_cast<uint32_t> (_data.get<Integer64Value> ());
+                        return static_cast<uint32_t> (_data.template get<Integer64Value> ());
 
                     case Unsigned64Value:
-                        return static_cast<uint32_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<uint32_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<uint32_t> (_data.get<RealValue> ());
+                        return static_cast<uint32_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -2711,16 +3635,16 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<int64_t> (_data.get<IntegerValue> ());
+                        return static_cast<int64_t> (_data.template get<IntegerValue> ());
 
                     case UnsignedValue:
-                        return static_cast<int64_t> (_data.get<UnsignedValue> ());
+                        return static_cast<int64_t> (_data.template get<UnsignedValue> ());
 
                     case Unsigned64Value:
-                        return static_cast<int64_t> (_data.get<Unsigned64Value> ());
+                        return static_cast<int64_t> (_data.template get<Unsigned64Value> ());
 
                     default:
-                        return static_cast<int64_t> (_data.get<RealValue> ());
+                        return static_cast<int64_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -2738,16 +3662,16 @@ namespace join
                 switch (_data.index ())
                 {
                     case IntegerValue:
-                        return static_cast<uint64_t> (_data.get<IntegerValue> ());
+                        return static_cast<uint64_t> (_data.template get<IntegerValue> ());
 
                     case UnsignedValue:
-                        return static_cast<uint64_t> (_data.get<UnsignedValue> ());
+                        return static_cast<uint64_t> (_data.template get<UnsignedValue> ());
 
                     case Integer64Value:
-                        return static_cast<uint64_t> (_data.get<Integer64Value> ());
+                        return static_cast<uint64_t> (_data.template get<Integer64Value> ());
 
                     default:
-                        return static_cast<uint64_t> (_data.get<RealValue> ());
+                        return static_cast<uint64_t> (_data.template get<RealValue> ());
                 }
             }
 
@@ -2763,16 +3687,16 @@ namespace join
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return static_cast<double> (_data.get<IntegerValue> ());
+                    return static_cast<double> (_data.template get<IntegerValue> ());
 
                 case UnsignedValue:
-                    return static_cast<double> (_data.get<UnsignedValue> ());
+                    return static_cast<double> (_data.template get<UnsignedValue> ());
 
                 case Integer64Value:
-                    return static_cast<double> (_data.get<Integer64Value> ());
+                    return static_cast<double> (_data.template get<Integer64Value> ());
 
                 case Unsigned64Value:
-                    return static_cast<double> (_data.get<Unsigned64Value> ());
+                    return static_cast<double> (_data.template get<Unsigned64Value> ());
 
                 default:
                     break;
@@ -2783,69 +3707,348 @@ namespace join
 
         /// variant holding the value.
         Data _data;
+
+        /// allocator shared by the tree.
+        Allocator* _allocator = nullptr;
+
+        /// capacity of the nested container or string, 0 when it has no spare room.
+        uint32_t _capacity = 0;
+
+        /// true when the value destroys the allocator.
+        bool _owner = false;
     };
 
     /**
      * @brief compare if equal.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
+     * @param other value to compare to.
      * @return true if equal.
      */
-    constexpr bool operator== (const Value& lhs, const Value& rhs)
+    template <typename Allocator>
+    template <typename Other>
+        requires std::same_as<Other, BasicValue<Allocator>>
+    constexpr bool BasicValue<Allocator>::operator== (const Other& other) const
     {
-        if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
+        if (isNumber () && other.isNumber () && (index () != other.index ()))
         {
-            if (lhs.isInt64 () && rhs.isUint64 ())
+            if (isInt64 () && other.isUint64 ())
             {
-                return lhs.getInt64 () >= 0 && uint64_t (lhs.getInt64 ()) == rhs.getUint64 ();
+                return getInt64 () >= 0 && uint64_t (getInt64 ()) == other.getUint64 ();
             }
-            else if (lhs.isUint64 () && rhs.isInt64 ())
+            else if (isUint64 () && other.isInt64 ())
             {
-                return rhs.getInt64 () >= 0 && uint64_t (rhs.getInt64 ()) == lhs.getUint64 ();
+                return other.getInt64 () >= 0 && uint64_t (other.getInt64 ()) == getUint64 ();
             }
             else
             {
-                return lhs.getDouble () == rhs.getDouble ();
+                return getDouble () == other.getDouble ();
             }
         }
 
-        return lhs._data == rhs._data;
+        return _data == other._data;
     }
 
     /**
      * @brief three-way compare values.
-     * @param lhs value to compare.
-     * @param rhs value to compare to.
-     * @return ordering of lhs relative to rhs.
+     * @param other value to compare to.
+     * @return ordering of this value relative to other.
      */
-    constexpr std::partial_ordering operator<=> (const Value& lhs, const Value& rhs)
+    template <typename Allocator>
+    template <typename Other>
+        requires std::same_as<Other, BasicValue<Allocator>>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (const Other& other) const
     {
-        if (lhs.isNumber () && rhs.isNumber () && (lhs.index () != rhs.index ()))
+        if (isNumber () && other.isNumber () && (index () != other.index ()))
         {
-            if (lhs.isInt64 () && rhs.isUint64 ())
+            if (isInt64 () && other.isUint64 ())
             {
-                if (lhs.getInt64 () < 0)
+                if (getInt64 () < 0)
                 {
                     return std::partial_ordering::less;
                 }
-                return uint64_t (lhs.getInt64 ()) <=> rhs.getUint64 ();
+                return uint64_t (getInt64 ()) <=> other.getUint64 ();
             }
-            else if (lhs.isUint64 () && rhs.isInt64 ())
+            else if (isUint64 () && other.isInt64 ())
             {
-                if (rhs.getInt64 () < 0)
+                if (other.getInt64 () < 0)
                 {
                     return std::partial_ordering::greater;
                 }
-                return lhs.getUint64 () <=> uint64_t (rhs.getInt64 ());
+                return getUint64 () <=> uint64_t (other.getInt64 ());
             }
             else
             {
-                return lhs.getDouble () <=> rhs.getDouble ();
+                return getDouble () <=> other.getDouble ();
             }
         }
 
-        return lhs._data <=> rhs._data;
+        return _data <=> other._data;
     }
+
+    /**
+     * @brief compare if equal to a null value.
+     * @param other null value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (std::nullptr_t other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a null value.
+     * @param other null value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (std::nullptr_t other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a boolean value.
+     * @param other boolean value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (bool other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a boolean value.
+     * @param other boolean value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (bool other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a integer value.
+     * @param other integer value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (int32_t other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a integer value.
+     * @param other integer value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (int32_t other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a unsigned integer value.
+     * @param other unsigned integer value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (uint32_t other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a unsigned integer value.
+     * @param other unsigned integer value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (uint32_t other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a 64 bits integer value.
+     * @param other 64 bits integer value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (int64_t other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a 64 bits integer value.
+     * @param other 64 bits integer value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (int64_t other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a 64 bits unsigned integer value.
+     * @param other 64 bits unsigned integer value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (uint64_t other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a 64 bits unsigned integer value.
+     * @param other 64 bits unsigned integer value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (uint64_t other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a real value.
+     * @param other real value to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (double other) const
+    {
+        return *this == BasicValue (other);
+    }
+
+    /**
+     * @brief three-way compare to a real value.
+     * @param other real value to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (double other) const
+    {
+        return *this <=> BasicValue (other);
+    }
+
+    /**
+     * @brief compare if equal to a C-style string.
+     * @param other string to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (const char* other) const
+    {
+        return *this == std::string_view (other);
+    }
+
+    /**
+     * @brief three-way compare to a C-style string.
+     * @param other string to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (const char* other) const
+    {
+        return *this <=> std::string_view (other);
+    }
+
+    /**
+     * @brief compare if equal to a string view.
+     * @param other string to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (std::string_view other) const
+    {
+        return isString () && (getString () == other);
+    }
+
+    /**
+     * @brief three-way compare to a string view.
+     * @param other string to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (std::string_view other) const
+    {
+        if (!isString ())
+        {
+            return index () <=> StringValue;
+        }
+        return getString () <=> other;
+    }
+
+    /**
+     * @brief compare if equal to an array.
+     * @param other array to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (const Array& other) const
+    {
+        return isArray () && (getArray () == other);
+    }
+
+    /**
+     * @brief three-way compare to an array.
+     * @param other array to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (const Array& other) const
+    {
+        if (!isArray ())
+        {
+            return index () <=> ArrayValue;
+        }
+        return getArray () <=> other;
+    }
+
+    /**
+     * @brief compare if equal to an object.
+     * @param other object to compare to.
+     * @return true if equal.
+     */
+    template <typename Allocator>
+    constexpr bool BasicValue<Allocator>::operator== (const Object& other) const
+    {
+        return isObject () && (getObject () == other);
+    }
+
+    /**
+     * @brief three-way compare to an object.
+     * @param other object to compare to.
+     * @return ordering of this value relative to other.
+     */
+    template <typename Allocator>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (const Object& other) const
+    {
+        if (!isObject ())
+        {
+            return index () <=> ObjectValue;
+        }
+        return getObject () <=> other;
+    }
+
+    /// value using the default allocator.
+    using Value = BasicValue<>;
+
+    /// array.
+    using Array = View<Value>;
+
+    /// object member.
+    using Member = BasicMember<Value>;
+
+    /// object.
+    using Object = View<Member>;
 }
 
 #endif

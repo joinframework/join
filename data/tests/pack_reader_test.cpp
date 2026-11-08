@@ -188,13 +188,24 @@ TEST (PackReader, deserialize)
 
     PackReader reader;
     ASSERT_EQ (reader.deserialize (std::string ({'\x92', '\x01'}), value), -1);
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value.empty ());
+    ASSERT_TRUE (value.isNull ());
 
     ASSERT_EQ (reader.deserialize (std::string ({'\x91', '\x03'}), value), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_EQ (value.size (), 1);
     ASSERT_EQ (value[0], 3);
+
+    join::ValueBuilder<Value> builder (value);
+    for (size_t depth = 0; depth < join::saxMaxDepth; ++depth)
+    {
+        builder.startArray ();
+    }
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\x01'}), builder), -1);
+    for (size_t depth = 0; depth < join::saxMaxDepth; ++depth)
+    {
+        builder.startArray ();
+    }
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\x80'), builder), -1);
 }
 
 /**

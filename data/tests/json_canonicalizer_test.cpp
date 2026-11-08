@@ -40,7 +40,12 @@ using join::SaxErrc;
  */
 TEST (JsonCanonicalizer, members)
 {
-    Object object{{"b", 1}, {"\u20ac", 2}, {"a", 3}, {"\U0001F600", 4}};
+    Value members;
+    members["b"] = 1;
+    members["\u20ac"] = 2;
+    members["a"] = 3;
+    members["\U0001F600"] = 4;
+    const Object& object = members.getObject ();
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
@@ -52,7 +57,8 @@ TEST (JsonCanonicalizer, members)
     EXPECT_EQ (sorted[3].get ().first, "\U0001F600");
 
     Value value;
-    value = Object{{"b", 1}, {"a", 2}};
+    value["b"] = 1;
+    value["a"] = 2;
     ASSERT_EQ (value.serialize (writer), 0) << join::lastError.message ();
     EXPECT_EQ (out.str (), "{\"a\":2,\"b\":1}");
     EXPECT_EQ (value.getObject ()[0].first, "b");
@@ -130,7 +136,10 @@ TEST (JsonCanonicalizer, array)
 {
     Value value;
     value.pushBack (56);
-    value.pushBack (Object{{"d", true}, {"10", nullptr}, {"1", Array{}}});
+    Value& object = value.pushBack (Object ());
+    object["d"] = true;
+    object["10"] = nullptr;
+    object["1"] = Array ();
     value.pushBack (-53.0);
 
     std::stringstream out;
@@ -164,12 +173,16 @@ TEST (JsonCanonicalizer, french)
 TEST (JsonCanonicalizer, structures)
 {
     Value value;
-    value["1"] = Object{{"f", Object{{"f", "hi"}, {"F", 5}}}, {"\n", 56.0}};
-    value["10"] = Object{};
+    value["1"]["f"]["f"] = "hi";
+    value["1"]["f"]["F"] = 5;
+    value["1"]["\n"] = 56.0;
+    value["10"] = Object ();
     value[""] = "empty";
-    value["a"] = Object{};
-    value["111"] = Array{Object{{"e", "yes"}, {"E", "no"}}};
-    value["A"] = Object{};
+    value["a"] = Object ();
+    Value& element = value["111"].pushBack (Object ());
+    element["e"] = "yes";
+    element["E"] = "no";
+    value["A"] = Object ();
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
@@ -199,9 +212,15 @@ TEST (JsonCanonicalizer, unicode)
 TEST (JsonCanonicalizer, values)
 {
     Value value;
-    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value["numbers"].pushBack (333333333.33333329);
+    value["numbers"].pushBack (1E30);
+    value["numbers"].pushBack (4.50);
+    value["numbers"].pushBack (2e-3);
+    value["numbers"].pushBack (0.000000000000000000000000001);
     value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
-    value["literals"] = Array{nullptr, true, false};
+    value["literals"].pushBack (nullptr);
+    value["literals"].pushBack (true);
+    value["literals"].pushBack (false);
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
@@ -250,12 +269,14 @@ TEST (JsonCanonicalizer, invalid)
     ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 
-    value = Object{{"a", "\xF0"}};
+    value = nullptr;
+    value["a"] = "\xF0";
     out.str ("");
     ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 
-    value = Array{"\xFF"};
+    value = nullptr;
+    value.pushBack ("\xFF");
     out.str ("");
     ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
@@ -267,7 +288,8 @@ TEST (JsonCanonicalizer, invalid)
 TEST (JsonCanonicalizer, document)
 {
     Value value;
-    value = Object{{Value (1), "One"}, {"a", "Ascii"}};
+    value[1] = "One";
+    value["a"] = "Ascii";
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
@@ -279,7 +301,9 @@ TEST (JsonCanonicalizer, document)
     EXPECT_EQ (writer.setNull (), 0);
     EXPECT_EQ (out.str (), "null");
 
-    value = Object{{"b", 1}, {"a", Array{1}}};
+    value = nullptr;
+    value["b"] = 1;
+    value["a"].pushBack (1);
     out.str ("");
     JsonCanonicalizer indented (out, 2);
     EXPECT_EQ (value.serialize (indented), 0) << join::lastError.message ();

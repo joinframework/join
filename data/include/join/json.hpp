@@ -499,8 +499,8 @@ namespace join
          * @param object object to write.
          * @return object members in insertion order.
          */
-        template <JsonWriteMode Mode = WriteMode>
-        const Object& members (const Object& object) const noexcept
+        template <typename Type, JsonWriteMode Mode = WriteMode>
+        const View<Type>& members (const View<Type>& object) const noexcept
             requires (Mode == JsonWriteMode::None)
         {
             return object;
@@ -511,12 +511,12 @@ namespace join
          * @param object object to write.
          * @return sorted object members.
          */
-        template <JsonWriteMode Mode = WriteMode>
-        std::vector<std::reference_wrapper<const Member>> members (const Object& object) const
+        template <typename Type, JsonWriteMode Mode = WriteMode>
+        std::vector<std::reference_wrapper<const Type>> members (const View<Type>& object) const
             requires (Mode == JsonWriteMode::Canonical)
         {
-            std::vector<std::reference_wrapper<const Member>> sorted (object.begin (), object.end ());
-            std::sort (sorted.begin (), sorted.end (), [] (const Member& a, const Member& b) {
+            std::vector<std::reference_wrapper<const Type>> sorted (object.begin (), object.end ());
+            std::sort (sorted.begin (), sorted.end (), [] (const Type& a, const Type& b) {
                 if (!a.first.isString () || !b.first.isString ())
                 {
                     return !a.first.isString () && b.first.isString ();
@@ -783,27 +783,32 @@ namespace join
                                                    1000000000000000000ULL,
                                                    10000000000000000000ULL};
 
-            uint64_t high = value / 100000000;
-            uint64_t top = high / 100000000;
-            uint32_t mid = static_cast<uint32_t> (high - top * 100000000);
-            uint32_t low = static_cast<uint32_t> (value - high * 100000000);
-
-            char buffer[40];
-            std::memcpy (buffer, &details::digitPairs[(top / 100) * 2], 2);
-            std::memcpy (buffer + 2, &details::digitPairs[(top % 100) * 2], 2);
-            std::memcpy (buffer + 4, &details::digitPairs[(mid / 1000000) * 2], 2);
-            std::memcpy (buffer + 6, &details::digitPairs[(mid / 10000 % 100) * 2], 2);
-            std::memcpy (buffer + 8, &details::digitPairs[(mid / 100 % 100) * 2], 2);
-            std::memcpy (buffer + 10, &details::digitPairs[(mid % 100) * 2], 2);
-            std::memcpy (buffer + 12, &details::digitPairs[(low / 1000000) * 2], 2);
-            std::memcpy (buffer + 14, &details::digitPairs[(low / 10000 % 100) * 2], 2);
-            std::memcpy (buffer + 16, &details::digitPairs[(low / 100 % 100) * 2], 2);
-            std::memcpy (buffer + 18, &details::digitPairs[(low % 100) * 2], 2);
-
             size_t length = ((64 - __builtin_clzll (value | 1)) * 1233) >> 12;
             length += (value >= pow10[length]) + (value == 0);
 
-            appendDigits (buffer + 20 - length, length);
+            if (JOIN_UNLIKELY (sizeof (_buffer) - _size < 20))
+            {
+                flush ();
+            }
+
+            char* out = _buffer + _size + length;
+            while (value >= 100)
+            {
+                out -= 2;
+                std::memcpy (out, &details::digitPairs[(value % 100) * 2], 2);
+                value /= 100;
+            }
+
+            if (value >= 10)
+            {
+                std::memcpy (out - 2, &details::digitPairs[value * 2], 2);
+            }
+            else
+            {
+                *(out - 1) = static_cast<char> ('0' + value);
+            }
+
+            _size += length;
         }
 
         /**
@@ -929,21 +934,6 @@ namespace join
             }
             std::memcpy (_buffer + _size, data, size);
             _size += size;
-        }
-
-        /**
-         * @brief append the digits of a number, read 20 bytes at a time.
-         * @param digits digits followed by enough readable bytes to read 20.
-         * @param length number of digits.
-         */
-        inline void appendDigits (const char* digits, size_t length)
-        {
-            if (JOIN_UNLIKELY (sizeof (_buffer) - _size < 20))
-            {
-                flush ();
-            }
-            std::memcpy (_buffer + _size, digits, 20);
-            _size += length;
         }
 
         /**
@@ -1299,10 +1289,15 @@ namespace join
          * @param value value receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ProbeType>
-        int read (ProbeType& document, Value& value)
+        template <typename ProbeType, typename Allocator>
+        int read (ProbeType& document, BasicValue<Allocator>& value)
         {
-            return read (document, ValueBuilder (value));
+            int result = read (document, ValueBuilder (value));
+            if (JOIN_UNLIKELY (result != 0))
+            {
+                value = nullptr;
+            }
+            return result;
         }
 
         /**

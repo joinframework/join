@@ -159,7 +159,8 @@ namespace join
          * @param object object to write.
          * @return object members in insertion order.
          */
-        const Object& members (const Object& object) const noexcept
+        template <typename Type>
+        const View<Type>& members (const View<Type>& object) const noexcept
         {
             return object;
         }
