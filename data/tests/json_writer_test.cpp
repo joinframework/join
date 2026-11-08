@@ -319,7 +319,10 @@ TEST (JsonWriter, members)
 {
     std::stringstream stream;
     JsonWriter jsonWriter (stream);
-    Object object{{"b", 1}, {"a", 2}};
+    Value members;
+    members["b"] = 1;
+    members["a"] = 2;
+    const Object& object = members.getObject ();
     EXPECT_EQ (&jsonWriter.members (object), &object);
 }
 
@@ -456,7 +459,7 @@ TEST (JsonWriter, document)
     EXPECT_EQ (value.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[null,true,1,2,3,4,1.23456789e-13,\"test\"]");
 
-    value = Array{};
+    value = Array ();
     std::string expected = "[";
     for (int i = 0; i < 1000; ++i)
     {
@@ -470,41 +473,49 @@ TEST (JsonWriter, document)
     EXPECT_EQ (value.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), expected);
 
-    value = Object{{Value (1), "One"}};
+    value = nullptr;
+    value[1] = "One";
     stream.str ("");
     EXPECT_EQ (value.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (stream.str (), "");
 
-    value = Object{{"a", Object{{Value (1), "One"}}}};
+    value = nullptr;
+    value["a"][1] = "One";
     stream.str ("");
     EXPECT_EQ (value.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
 
-    value = Array{1, 2};
+    value = nullptr;
+    value.pushBack (1);
+    value.pushBack (2);
     stream.str ("");
     EXPECT_EQ (value.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[1,2]");
 
-    value = Array{};
+    value = Array ();
+    Value* current = &value;
     for (int i = 0; i < 256; ++i)
     {
-        value = Array{value};
+        current = &current->pushBack (Array ());
     }
     stream.str ("");
     EXPECT_EQ (value.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::StackOverflow);
 
-    value = Object{};
+    value = Object ();
+    current = &value;
     for (int i = 0; i < 256; ++i)
     {
-        value = Object{{"a", value}};
+        current = &current->insert ("a", Object ());
     }
     stream.str ("");
     EXPECT_EQ (value.serialize (jsonWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::StackOverflow);
 
-    value = Array{1, 2};
+    value = nullptr;
+    value.pushBack (1);
+    value.pushBack (2);
     stream.str ("");
     EXPECT_EQ (value.serialize (jsonWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[1,2]");
@@ -512,9 +523,12 @@ TEST (JsonWriter, document)
     FailingBuffer buffer;
     std::ostream failing (&buffer);
     JsonWriter failingWriter (failing);
-    value = Array{std::string (2000, 'a')};
+    value = nullptr;
+    value.pushBack (std::string (2000, 'a'));
     EXPECT_THROW (value.serialize (failingWriter), std::runtime_error);
-    value = Array{1, 2};
+    value = nullptr;
+    value.pushBack (1);
+    value.pushBack (2);
     EXPECT_EQ (value.serialize (failingWriter), 0) << join::lastError.message ();
     EXPECT_EQ (buffer.written, "[1,2]");
 }

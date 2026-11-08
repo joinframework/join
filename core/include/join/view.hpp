@@ -68,7 +68,16 @@ namespace join
          * @brief get the first element.
          * @return pointer to the first element.
          */
-        constexpr Type* data () const noexcept
+        constexpr Type* data () noexcept
+        {
+            return _data;
+        }
+
+        /**
+         * @brief get the first element.
+         * @return pointer to the first element.
+         */
+        constexpr const Type* data () const noexcept
         {
             return _data;
         }
@@ -95,7 +104,16 @@ namespace join
          * @brief get an iterator to the first element.
          * @return iterator to the first element.
          */
-        constexpr Type* begin () const noexcept
+        constexpr Type* begin () noexcept
+        {
+            return _data;
+        }
+
+        /**
+         * @brief get an iterator to the first element.
+         * @return iterator to the first element.
+         */
+        constexpr const Type* begin () const noexcept
         {
             return _data;
         }
@@ -104,7 +122,16 @@ namespace join
          * @brief get an iterator past the last element.
          * @return iterator past the last element.
          */
-        constexpr Type* end () const noexcept
+        constexpr Type* end () noexcept
+        {
+            return _data + _size;
+        }
+
+        /**
+         * @brief get an iterator past the last element.
+         * @return iterator past the last element.
+         */
+        constexpr const Type* end () const noexcept
         {
             return _data + _size;
         }
@@ -114,7 +141,17 @@ namespace join
          * @param pos element position.
          * @return element.
          */
-        constexpr Type& operator[] (size_t pos) const noexcept
+        constexpr Type& operator[] (size_t pos) noexcept
+        {
+            return _data[pos];
+        }
+
+        /**
+         * @brief access an element.
+         * @param pos element position.
+         * @return element.
+         */
+        constexpr const Type& operator[] (size_t pos) const noexcept
         {
             return _data[pos];
         }

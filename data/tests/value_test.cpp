@@ -129,6 +129,13 @@ struct Counter : public join::SaxHandler
  */
 TEST (Value, create)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
+    static_assert (std::is_nothrow_default_constructible_v<Value>);
     Value defaultValue;
     ASSERT_TRUE (defaultValue.isNull ());
 
@@ -217,21 +224,14 @@ TEST (Value, create)
     ASSERT_TRUE (viewStringValue.isString ());
     ASSERT_EQ (viewStringValue.getString (), "quu");
 
-    Value arrayValue (Array{1});
+    Value arrayValue (array.getArray ());
     ASSERT_TRUE (arrayValue.isArray ());
+    ASSERT_EQ (arrayValue.size (), 1U);
+    ASSERT_EQ (arrayValue[0], 1);
 
-    const Array array{1, 2};
-    Value copiedArrayValue (array);
-    ASSERT_TRUE (copiedArrayValue.isArray ());
-    ASSERT_EQ (copiedArrayValue.size (), 2U);
-
-    Value objectValue (Object ({{"i", 1}}));
+    Value objectValue (object.getObject ());
     ASSERT_TRUE (objectValue.isObject ());
-
-    const Object object{{"a", 1}};
-    Value copiedObjectValue (object);
-    ASSERT_TRUE (copiedObjectValue.isObject ());
-    ASSERT_EQ (copiedObjectValue["a"], 1);
+    ASSERT_EQ (objectValue["i"], 1);
 }
 
 /**
@@ -239,6 +239,12 @@ TEST (Value, create)
  */
 TEST (Value, copy)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     Value defaultValue (value);
     ASSERT_TRUE (defaultValue.isNull ());
@@ -321,11 +327,11 @@ TEST (Value, copy)
     Value stringValue (value);
     ASSERT_TRUE (stringValue.isString ());
 
-    value = Array{1};
+    value = array.getArray ();
     Value arrayValue (value);
     ASSERT_TRUE (arrayValue.isArray ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     Value objectValue (value);
     ASSERT_TRUE (objectValue.isObject ());
 }
@@ -335,6 +341,12 @@ TEST (Value, copy)
  */
 TEST (Value, move)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     Value defaultValue (std::move (value));
     ASSERT_TRUE (defaultValue.isNull ());
@@ -417,11 +429,11 @@ TEST (Value, move)
     Value stringValue (std::move (value));
     ASSERT_TRUE (stringValue.isString ());
 
-    value = Array{1};
+    value = array.getArray ();
     Value arrayValue (std::move (value));
     ASSERT_TRUE (arrayValue.isArray ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     Value objectValue (std::move (value));
     ASSERT_TRUE (objectValue.isObject ());
 }
@@ -431,6 +443,12 @@ TEST (Value, move)
  */
 TEST (Value, isNull)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_TRUE (value.isNull ());
 
@@ -515,10 +533,10 @@ TEST (Value, isNull)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isNull ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isNull ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isNull ());
 }
 
@@ -527,6 +545,12 @@ TEST (Value, isNull)
  */
 TEST (Value, isBool)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isBool ());
 
@@ -611,10 +635,10 @@ TEST (Value, isBool)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isBool ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isBool ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isBool ());
 }
 
@@ -623,6 +647,12 @@ TEST (Value, isBool)
  */
 TEST (Value, isTrue)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isTrue ());
 
@@ -707,10 +737,10 @@ TEST (Value, isTrue)
     value = "127.0.0.1";
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.isTrue (), std::bad_cast);
 }
 
@@ -719,6 +749,12 @@ TEST (Value, isTrue)
  */
 TEST (Value, isFalse)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_TRUE (value.isFalse ());
 
@@ -803,10 +839,10 @@ TEST (Value, isFalse)
     value = "127.0.0.1";
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.isFalse (), std::bad_cast);
 }
 
@@ -815,6 +851,12 @@ TEST (Value, isFalse)
  */
 TEST (Value, isNumber)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isNumber ());
 
@@ -899,10 +941,10 @@ TEST (Value, isNumber)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isNumber ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isNumber ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isNumber ());
 }
 
@@ -911,6 +953,12 @@ TEST (Value, isNumber)
  */
 TEST (Value, isInt8)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isInt8 ());
 
@@ -995,10 +1043,10 @@ TEST (Value, isInt8)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt8 ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isInt8 ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isInt8 ());
 }
 
@@ -1007,6 +1055,12 @@ TEST (Value, isInt8)
  */
 TEST (Value, isUint8)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isUint8 ());
 
@@ -1091,10 +1145,10 @@ TEST (Value, isUint8)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint8 ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isUint8 ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isUint8 ());
 }
 
@@ -1103,6 +1157,12 @@ TEST (Value, isUint8)
  */
 TEST (Value, isInt16)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isInt16 ());
 
@@ -1187,10 +1247,10 @@ TEST (Value, isInt16)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt16 ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isInt16 ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isInt16 ());
 }
 
@@ -1199,6 +1259,12 @@ TEST (Value, isInt16)
  */
 TEST (Value, isUint16)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isUint16 ());
 
@@ -1283,10 +1349,10 @@ TEST (Value, isUint16)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint16 ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isUint16 ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isUint16 ());
 }
 
@@ -1295,6 +1361,12 @@ TEST (Value, isUint16)
  */
 TEST (Value, isInt)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isInt ());
 
@@ -1379,10 +1451,10 @@ TEST (Value, isInt)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isInt ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isInt ());
 }
 
@@ -1391,6 +1463,12 @@ TEST (Value, isInt)
  */
 TEST (Value, isUint)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isUint ());
 
@@ -1475,10 +1553,10 @@ TEST (Value, isUint)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isUint ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isUint ());
 }
 
@@ -1487,6 +1565,12 @@ TEST (Value, isUint)
  */
 TEST (Value, isInt64)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isInt64 ());
 
@@ -1571,10 +1655,10 @@ TEST (Value, isInt64)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isInt64 ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isInt64 ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isInt64 ());
 }
 
@@ -1583,6 +1667,12 @@ TEST (Value, isInt64)
  */
 TEST (Value, isUint64)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isUint64 ());
 
@@ -1667,10 +1757,10 @@ TEST (Value, isUint64)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isUint64 ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isUint64 ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isUint64 ());
 }
 
@@ -1679,6 +1769,12 @@ TEST (Value, isUint64)
  */
 TEST (Value, isFloat)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isFloat ());
 
@@ -1763,10 +1859,10 @@ TEST (Value, isFloat)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isFloat ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isFloat ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isFloat ());
 }
 
@@ -1775,6 +1871,12 @@ TEST (Value, isFloat)
  */
 TEST (Value, isDouble)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isDouble ());
 
@@ -1859,10 +1961,10 @@ TEST (Value, isDouble)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isDouble ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isDouble ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isDouble ());
 }
 
@@ -1871,6 +1973,12 @@ TEST (Value, isDouble)
  */
 TEST (Value, isString)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isString ());
 
@@ -1955,10 +2063,10 @@ TEST (Value, isString)
     value = "127.0.0.1";
     ASSERT_TRUE (value.isString ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isString ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isString ());
 }
 
@@ -1967,6 +2075,12 @@ TEST (Value, isString)
  */
 TEST (Value, isArray)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isArray ());
 
@@ -2051,10 +2165,10 @@ TEST (Value, isArray)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isArray ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (value.isArray ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.isArray ());
 }
 
@@ -2063,6 +2177,12 @@ TEST (Value, isArray)
  */
 TEST (Value, isObject)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.isObject ());
 
@@ -2147,10 +2267,10 @@ TEST (Value, isObject)
     value = "127.0.0.1";
     ASSERT_FALSE (value.isObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.isObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (value.isObject ());
 }
 
@@ -2159,6 +2279,12 @@ TEST (Value, isObject)
  */
 TEST (Value, getBool)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_FALSE (value.getBool ());
     ASSERT_FALSE (static_cast<bool> (value));
@@ -2272,11 +2398,11 @@ TEST (Value, getBool)
     value = "127.0.0.1";
     ASSERT_THROW (value.getBool (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getBool (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getBool (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<bool> (value)), std::bad_cast);
 }
@@ -2286,6 +2412,12 @@ TEST (Value, getBool)
  */
 TEST (Value, getInt8)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     int8_t tmp = 0;
     (void)tmp;
 
@@ -2413,11 +2545,11 @@ TEST (Value, getInt8)
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getInt8 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int8_t> (value)), std::bad_cast);
 }
@@ -2427,6 +2559,12 @@ TEST (Value, getInt8)
  */
 TEST (Value, getUint8)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     uint8_t tmp = 0;
     (void)tmp;
 
@@ -2554,11 +2692,11 @@ TEST (Value, getUint8)
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getUint8 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint8_t> (value)), std::bad_cast);
 }
@@ -2568,6 +2706,12 @@ TEST (Value, getUint8)
  */
 TEST (Value, getInt16)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     int16_t tmp = 0;
     (void)tmp;
 
@@ -2695,11 +2839,11 @@ TEST (Value, getInt16)
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getInt16 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int16_t> (value)), std::bad_cast);
 }
@@ -2709,6 +2853,12 @@ TEST (Value, getInt16)
  */
 TEST (Value, getUint16)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     uint16_t tmp = 0;
     (void)tmp;
 
@@ -2836,11 +2986,11 @@ TEST (Value, getUint16)
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getUint16 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint16_t> (value)), std::bad_cast);
 }
@@ -2850,6 +3000,12 @@ TEST (Value, getUint16)
  */
 TEST (Value, getInt)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     int32_t tmp = 0;
     (void)tmp;
 
@@ -2973,11 +3129,11 @@ TEST (Value, getInt)
     ASSERT_THROW (value.getInt (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getInt (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int32_t> (value)), std::bad_cast);
 }
@@ -2987,6 +3143,12 @@ TEST (Value, getInt)
  */
 TEST (Value, getUint)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     uint32_t tmp = 0;
     (void)tmp;
 
@@ -3110,11 +3272,11 @@ TEST (Value, getUint)
     ASSERT_THROW (value.getUint (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getUint (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint32_t> (value)), std::bad_cast);
 }
@@ -3124,6 +3286,12 @@ TEST (Value, getUint)
  */
 TEST (Value, getInt64)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     int64_t tmp = 0;
     (void)tmp;
 
@@ -3243,11 +3411,11 @@ TEST (Value, getInt64)
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getInt64 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<int64_t> (value)), std::bad_cast);
 }
@@ -3257,6 +3425,12 @@ TEST (Value, getInt64)
  */
 TEST (Value, getUint64)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     uint64_t tmp = 0;
     (void)tmp;
 
@@ -3376,11 +3550,11 @@ TEST (Value, getUint64)
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getUint64 (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<uint64_t> (value)), std::bad_cast);
 }
@@ -3390,6 +3564,12 @@ TEST (Value, getUint64)
  */
 TEST (Value, getFloat)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     float tmp = 0.0f;
     (void)tmp;
 
@@ -3505,11 +3685,11 @@ TEST (Value, getFloat)
     ASSERT_THROW (value.getFloat (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getFloat (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getFloat (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<float> (value)), std::bad_cast);
 }
@@ -3519,6 +3699,12 @@ TEST (Value, getFloat)
  */
 TEST (Value, getDouble)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     double tmp = 0.0;
     (void)tmp;
 
@@ -3634,11 +3820,11 @@ TEST (Value, getDouble)
     ASSERT_THROW (value.getDouble (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getDouble (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getDouble (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<double> (value)), std::bad_cast);
 }
@@ -3648,6 +3834,12 @@ TEST (Value, getDouble)
  */
 TEST (Value, getString)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     std::string_view tmp;
     (void)tmp;
 
@@ -3763,11 +3955,11 @@ TEST (Value, getString)
     ASSERT_EQ (value.getString (), "127.0.0.1");
     ASSERT_EQ (static_cast<std::string_view> (value), "127.0.0.1");
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getString (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getString (), std::bad_cast);
     ASSERT_THROW ((tmp = static_cast<std::string_view> (value)), std::bad_cast);
 }
@@ -3777,6 +3969,12 @@ TEST (Value, getString)
  */
 TEST (Value, getArray)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
@@ -3861,10 +4059,10 @@ TEST (Value, getArray)
     value = "127.0.0.1";
     ASSERT_THROW (value.getArray (), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_NO_THROW (value.getArray ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.getArray (), std::bad_cast);
 }
 
@@ -3873,6 +4071,12 @@ TEST (Value, getArray)
  */
 TEST (Value, getObject)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
@@ -3957,10 +4161,10 @@ TEST (Value, getObject)
     value = "127.0.0.1";
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.getObject (), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_NO_THROW (value.getObject ());
 }
 
@@ -3969,6 +4173,12 @@ TEST (Value, getObject)
  */
 TEST (Value, index)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -4067,7 +4277,7 @@ TEST (Value, index)
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::NullValue));
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::BooleanValue));
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::IntegerValue));
@@ -4079,7 +4289,7 @@ TEST (Value, index)
     ASSERT_EQ (value.index (), static_cast<size_t> (Value::Index::ArrayValue));
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::ObjectValue));
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::NullValue));
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::BooleanValue));
     ASSERT_NE (value.index (), static_cast<size_t> (Value::Index::IntegerValue));
@@ -4114,10 +4324,10 @@ TEST (Value, at)
     value.pushBack ("foobar");
     ASSERT_TRUE (value.at (4).isString ());
 
-    value.pushBack (Array ({1, 2, 3, 4}));
+    value.pushBack (Array ());
     ASSERT_TRUE (value.at (5).isArray ());
 
-    value.pushBack (Object ({{"foo", 1}, {"bar", 2}}));
+    value.pushBack (Object ());
     ASSERT_TRUE (value.at (6).isObject ());
 
     ASSERT_THROW (value.at (7), std::out_of_range);
@@ -4139,16 +4349,23 @@ TEST (Value, at)
     value["string"] = "foobar";
     ASSERT_TRUE (value.at ("string").isString ());
 
-    value["array"] = Array{1, 2, 3, 4};
+    value["array"] = Array ();
     ASSERT_TRUE (value.at ("array").isArray ());
 
-    value["object"] = Object{{"foo", 1}, {"bar", 2}};
+    value["object"] = Object ();
     ASSERT_TRUE (value.at ("object").isObject ());
 
     ASSERT_THROW (value.at ("non existing path"), std::out_of_range);
 
-    value = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
-                   {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    value = nullptr;
+    value[nullptr] = 0;
+    value[true] = 1;
+    value[int32_t (-2)] = 2;
+    value[uint32_t (3)] = 3;
+    value[int64_t (-4)] = 4;
+    value[uint64_t (5)] = 5;
+    value[6.5] = 6;
+    value["seven"] = 7;
     const Value& constant = value;
     ASSERT_EQ (value.at (nullptr), 0);
     ASSERT_EQ (constant.at (nullptr), 0);
@@ -4174,7 +4391,8 @@ TEST (Value, at)
     ASSERT_THROW (constant.at (8), std::out_of_range);
     ASSERT_THROW (constant.at ("eight"), std::out_of_range);
 
-    value = Object{{"seven", 7}};
+    value = nullptr;
+    value["seven"] = 7;
     ASSERT_THROW (value.at (nullptr), std::out_of_range);
     ASSERT_THROW (constant.at (nullptr), std::out_of_range);
     ASSERT_THROW (value.at (true), std::out_of_range);
@@ -4188,7 +4406,11 @@ TEST (Value, at)
     ASSERT_THROW (value.at (6.5), std::out_of_range);
     ASSERT_THROW (constant.at (6.5), std::out_of_range);
 
-    value = Array{0, 1, 2, 3};
+    value = nullptr;
+    value.pushBack (0);
+    value.pushBack (1);
+    value.pushBack (2);
+    value.pushBack (3);
     ASSERT_EQ (value.at (int32_t (0)), 0);
     ASSERT_EQ (constant.at (int32_t (0)), 0);
     ASSERT_EQ (value.at (uint32_t (1)), 1);
@@ -4259,7 +4481,11 @@ TEST (Value, subscript)
     value[6.5] = 6;
     ASSERT_TRUE (value.isObject ());
 
-    value = Array{0, 1, 2, 3};
+    value = nullptr;
+    value.pushBack (0);
+    value.pushBack (1);
+    value.pushBack (2);
+    value.pushBack (3);
     ASSERT_EQ (value[int32_t (0)], 0);
     ASSERT_EQ (value[uint32_t (1)], 1);
     ASSERT_EQ (value[int64_t (2)], 2);
@@ -4296,21 +4522,21 @@ TEST (Value, assign)
     value["string"] = "foobar";
     ASSERT_TRUE (value["string"].isString ());
 
-    value["array"] = Array{1, 2, 3, 4};
+    value["array"] = Array ();
     ASSERT_TRUE (value["array"].isArray ());
 
-    value["object"] = Object{{"foo", 1}, {"bar", 2}};
+    value["object"] = Object ();
     ASSERT_TRUE (value["object"].isObject ());
-
-    value["braced"] = {};
-    ASSERT_TRUE (value["braced"].isNull ());
-
-    value["braced"] = {1};
-    ASSERT_TRUE (value["braced"].isInt ());
 
     const std::string string ("foo");
     value["braced"] = {string};
     ASSERT_TRUE (value["braced"].isString ());
+
+    Value root;
+    root.pushBack (2);
+    value["moved"] = std::move (root);
+    ASSERT_EQ (value["moved"][0], 2);
+    ASSERT_TRUE (root.isNull ());
 }
 
 /**
@@ -4318,6 +4544,12 @@ TEST (Value, assign)
  */
 TEST (Value, empty)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.empty (), std::bad_cast);
 
@@ -4402,16 +4634,16 @@ TEST (Value, empty)
     value = "127.0.0.1";
     ASSERT_FALSE (value.empty ());
 
-    value = Array{};
+    value = Array ();
     ASSERT_TRUE (value.empty ());
 
-    value = Array{1, 2, 3, 4};
+    value = array.getArray ();
     ASSERT_FALSE (value.empty ());
 
-    value = Object ({});
+    value = Object ();
     ASSERT_TRUE (value.empty ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.empty ());
 }
 
@@ -4420,6 +4652,12 @@ TEST (Value, empty)
  */
 TEST (Value, size)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.size (), std::bad_cast);
 
@@ -4504,10 +4742,10 @@ TEST (Value, size)
     value = "127.0.0.1";
     ASSERT_EQ (value.size (), 9);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_EQ (value.size (), 1);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_EQ (value.size (), 1);
 }
 
@@ -4516,6 +4754,12 @@ TEST (Value, size)
  */
 TEST (Value, reserve)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.reserve (12), std::bad_cast);
 
@@ -4600,11 +4844,17 @@ TEST (Value, reserve)
     value = "127.0.0.1";
     ASSERT_NO_THROW (value.reserve (12));
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_NO_THROW (value.reserve (12));
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_NO_THROW (value.reserve (12));
+
+    value = "foo";
+    ASSERT_THROW (value.reserve (std::numeric_limits<uint32_t>::max ()), std::bad_alloc);
+
+    value = array.getArray ();
+    ASSERT_THROW (value.reserve (size_t (std::numeric_limits<uint32_t>::max ()) + 1), std::bad_alloc);
 }
 
 /**
@@ -4612,6 +4862,12 @@ TEST (Value, reserve)
  */
 TEST (Value, clear)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.clear (), std::bad_cast);
 
@@ -4704,12 +4960,12 @@ TEST (Value, clear)
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value.empty ());
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.empty ());
     ASSERT_NO_THROW (value.clear ());
     ASSERT_TRUE (value.empty ());
@@ -4720,6 +4976,12 @@ TEST (Value, clear)
  */
 TEST (Value, insert)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
@@ -4804,10 +5066,10 @@ TEST (Value, insert)
     value = "127.0.0.1";
     ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.insert (Member{"i", 1}), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_NO_THROW (value.insert (Member{"i", 1}));
 }
 
@@ -4816,6 +5078,12 @@ TEST (Value, insert)
  */
 TEST (Value, erase)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
@@ -4900,15 +5168,24 @@ TEST (Value, erase)
     value = "127.0.0.1";
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_THROW (value.erase ("i"), std::bad_cast);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_EQ (value.erase ("i"), 1);
     ASSERT_EQ (value.erase ("j"), 0);
 
-    value = Object{{nullptr, 0},      {true, 1}, {int32_t (-2), 2}, {uint32_t (3), 3}, {int64_t (-4), 4},
-                   {uint64_t (5), 5}, {6.5, 6},  {"seven", 7},      {"eight", 8},      {"nine", 9}};
+    value = nullptr;
+    value[nullptr] = 0;
+    value[true] = 1;
+    value[int32_t (-2)] = 2;
+    value[uint32_t (3)] = 3;
+    value[int64_t (-4)] = 4;
+    value[uint64_t (5)] = 5;
+    value[6.5] = 6;
+    value["seven"] = 7;
+    value["eight"] = 8;
+    value["nine"] = 9;
     ASSERT_EQ (value.erase (nullptr), 1);
     ASSERT_EQ (value.erase (nullptr), 0);
     ASSERT_EQ (value.erase (true), 1);
@@ -4952,6 +5229,12 @@ TEST (Value, emplaceBack)
  */
 TEST (Value, pushBack)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_NO_THROW (value.pushBack (1));
 
@@ -5036,10 +5319,10 @@ TEST (Value, pushBack)
     value = "127.0.0.1";
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_NO_THROW (value.pushBack (1));
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.pushBack (1), std::bad_cast);
 }
 
@@ -5048,6 +5331,12 @@ TEST (Value, pushBack)
  */
 TEST (Value, popBack)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
@@ -5132,10 +5421,13 @@ TEST (Value, popBack)
     value = "127.0.0.1";
     ASSERT_THROW (value.popBack (), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_NO_THROW (value.popBack ());
+    ASSERT_TRUE (value.empty ());
+    ASSERT_NO_THROW (value.popBack ());
+    ASSERT_TRUE (value.empty ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_THROW (value.popBack (), std::bad_cast);
 }
 
@@ -5144,6 +5436,12 @@ TEST (Value, popBack)
  */
 TEST (Value, contains)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
@@ -5256,24 +5554,31 @@ TEST (Value, contains)
     ASSERT_THROW (value.contains (0), std::bad_cast);
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = Array{};
+    value = Array ();
     ASSERT_FALSE (value.contains (0));
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (value.contains (0));
     ASSERT_THROW (value.contains ("i"), std::bad_cast);
 
-    value = Object ({});
+    value = Object ();
     ASSERT_FALSE (value.contains (0));
     ASSERT_FALSE (value.contains ("i"));
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value.contains (0));
     ASSERT_TRUE (value.contains ("i"));
 
-    value = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
-                   {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    value = nullptr;
+    value[nullptr] = 0;
+    value[true] = 1;
+    value[int32_t (-2)] = 2;
+    value[uint32_t (3)] = 3;
+    value[int64_t (-4)] = 4;
+    value[uint64_t (5)] = 5;
+    value[6.5] = 6;
+    value["seven"] = 7;
     ASSERT_TRUE (value.contains (nullptr));
     ASSERT_TRUE (value.contains (true));
     ASSERT_TRUE (value.contains (int32_t (-2)));
@@ -5287,14 +5592,17 @@ TEST (Value, contains)
     ASSERT_FALSE (value.contains (false));
     ASSERT_FALSE (value.contains (std::string_view ("eight")));
 
-    value = Object{{"seven", 7}};
+    value = nullptr;
+    value["seven"] = 7;
     ASSERT_FALSE (value.contains (nullptr));
     ASSERT_FALSE (value.contains (uint32_t (3)));
     ASSERT_FALSE (value.contains (int64_t (-4)));
     ASSERT_FALSE (value.contains (uint64_t (5)));
     ASSERT_FALSE (value.contains (6.5));
 
-    value = Array{0, 1};
+    value = nullptr;
+    value.pushBack (0);
+    value.pushBack (1);
     ASSERT_TRUE (value.contains (int32_t (1)));
     ASSERT_FALSE (value.contains (int32_t (2)));
     ASSERT_FALSE (value.contains (int32_t (-1)));
@@ -5315,9 +5623,15 @@ TEST (Value, contains)
  */
 TEST (Value, swap)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value = nullptr;
 
-    Value other = Array{1};
+    Value other = array.getArray ();
     ASSERT_TRUE (value.isNull ());
     ASSERT_TRUE (other.isArray ());
     value.swap (other);
@@ -5380,19 +5694,26 @@ TEST (Value, swap)
     ASSERT_TRUE (value.isString ());
     ASSERT_TRUE (other.isDouble ());
 
-    other = Array{1};
+    other = array.getArray ();
     ASSERT_TRUE (value.isString ());
     ASSERT_TRUE (other.isArray ());
     value.swap (other);
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (other.isString ());
 
-    other = Object{{"i", 1}};
+    other = object.getObject ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_TRUE (other.isObject ());
     value.swap (other);
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (other.isArray ());
+
+    value = nullptr;
+    value["a"] = 1;
+    value["b"] = "foo";
+    value["a"].swap (value["b"]);
+    ASSERT_EQ (value["a"], "foo");
+    ASSERT_EQ (value["b"], 1);
 }
 
 /**
@@ -5400,8 +5721,18 @@ TEST (Value, swap)
  */
 TEST (Value, serialize)
 {
-    Value keys = Object{{nullptr, 0},      {true, 1},         {int32_t (-2), 2}, {uint32_t (3), 3},
-                        {int64_t (-4), 4}, {uint64_t (5), 5}, {6.5, 6},          {"seven", 7}};
+    Value array;
+    array.pushBack (1);
+
+    Value keys;
+    keys[nullptr] = 0;
+    keys[true] = 1;
+    keys[int32_t (-2)] = 2;
+    keys[uint32_t (3)] = 3;
+    keys[int64_t (-4)] = 4;
+    keys[uint64_t (5)] = 5;
+    keys[6.5] = 6;
+    keys["seven"] = 7;
     Value copy;
     join::ValueBuilder builder (copy);
     ASSERT_EQ (keys.serialize (builder), 0) << join::lastError.message ();
@@ -5445,10 +5776,16 @@ TEST (Value, serialize)
     ASSERT_EQ (value.serialize (counter), 0) << join::lastError.message ();
     EXPECT_EQ (counter.values, 5U);
 
-    value = Object{};
-    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
+    value = Object ();
+    value["numbers"].pushBack (333333333.33333329);
+    value["numbers"].pushBack (1E30);
+    value["numbers"].pushBack (4.50);
+    value["numbers"].pushBack (2e-3);
+    value["numbers"].pushBack (0.000000000000000000000000001);
     value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
-    value["literals"] = Array{nullptr, true, false};
+    value["literals"].pushBack (nullptr);
+    value["literals"].pushBack (true);
+    value["literals"].pushBack (false);
 
     out.str ("");
     ASSERT_EQ (value.serialize<JsonCanonicalizer> (out), 0) << join::lastError.message ();
@@ -5456,22 +5793,27 @@ TEST (Value, serialize)
                "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
                "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
 
-    value = Object{{Array{1}, 1}};
+    value = Object ();
+    value.insert (array, 1);
     out.str ("");
     ASSERT_EQ (value.serialize (packWriter), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidKey);
     ASSERT_EQ (out.str (), "");
 
-    value = Array{7};
+    value = nullptr;
+    value.pushBack (7);
     ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     ASSERT_EQ (out.str (), std::string ({'\x91', '\x07'}));
 
     FailingBuffer buffer;
     std::ostream failing (&buffer);
     JsonWriter failingWriter (failing);
-    value = Array{std::string (2000, 'a')};
+    value = nullptr;
+    value.pushBack (std::string (2000, 'a'));
     ASSERT_THROW (value.serialize (failingWriter), std::runtime_error);
-    value = Array{1, 2};
+    value = nullptr;
+    value.pushBack (1);
+    value.pushBack (2);
     ASSERT_EQ (value.serialize (failingWriter), 0) << join::lastError.message ();
     ASSERT_EQ (buffer.written, "[1,2]");
 }
@@ -5483,14 +5825,21 @@ TEST (Value, deserialize)
 {
     Value value;
     ASSERT_EQ (value.deserialize<JsonReader> (std::string ("[1,{\"a\":\"b\"}]")), 0) << join::lastError.message ();
-    ASSERT_EQ (value, (Array{1, Object{{"a", "b"}}}));
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value.at (0), 1);
+    ASSERT_EQ (value.at (1).at ("a"), "b");
 
     const char json[] = "{\"c\":[true,null]}";
     ASSERT_EQ (value.deserialize<JsonReader> (json, sizeof (json) - 1), 0) << join::lastError.message ();
-    ASSERT_EQ (value, (Object{{"c", Array{true, nullptr}}}));
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_EQ (value.at ("c").size (), 2U);
+    ASSERT_EQ (value.at ("c").at (0), true);
+    ASSERT_EQ (value.at ("c").at (1), nullptr);
 
     ASSERT_EQ (value.deserialize<JsonReader> (&json[5], &json[sizeof (json) - 2]), 0) << join::lastError.message ();
-    ASSERT_EQ (value, (Array{true, nullptr}));
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value.at (0), true);
+    ASSERT_EQ (value.at (1), nullptr);
 
     std::stringstream stream ("42");
     ASSERT_EQ (value.deserialize<JsonReader> (stream), 0) << join::lastError.message ();
@@ -5501,349 +5850,17 @@ TEST (Value, deserialize)
     ASSERT_EQ (value, 1.5);
 
     ASSERT_EQ (value.deserialize<JsonReader> (std::string ("[1, [2, ")), -1);
-    ASSERT_EQ (value, 1.5);
+    ASSERT_TRUE (value.isNull ());
 
     ASSERT_EQ (value.deserialize<PackReader> (std::string ({'\x92', '\x01', '\xa1', '\x61'})), 0)
         << join::lastError.message ();
-    ASSERT_EQ (value, (Array{1, "a"}));
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value.at (0), 1);
+    ASSERT_EQ (value.at (1), "a");
 
     ASSERT_EQ (value.deserialize<PackReader> (std::string ({'\x92', '\x01'})), -1);
     ASSERT_EQ (join::lastError, SaxErrc::Truncated);
-    ASSERT_EQ (value, (Array{1, "a"}));
-}
-
-/**
- * @brief packRead method.
- */
-TEST (Value, packRead)
-{
-    Value value;
-
-    std::string str ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb', '\x3d', '\x41',
-                      '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'});
-
-    ASSERT_NE (value.packRead (str), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    ASSERT_NE (value.packRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    ASSERT_NE (value.packRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::stringstream sstream (str);
-    ASSERT_NE (value.packRead (sstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::istringstream isstream (str);
-    ASSERT_NE (value.packRead (isstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::ofstream out ("/tmp/fstream.pack", std::ios::binary);
-    out << str;
-    out.close ();
-
-    std::fstream fstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
-    ASSERT_NE (value.packRead (fstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-    fstream.close ();
-
-    std::ifstream ifstream ("/tmp/fstream.pack", std::ios::in | std::ios::binary);
-    ASSERT_NE (value.packRead (ifstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-    ifstream.close ();
-
-    std::stringbuf iosbuf (str, std::ios::in);
-    std::iostream iostream (&iosbuf);
-    ASSERT_NE (value.packRead (iostream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::stringbuf isbuf (str);
-    std::istream istream (&isbuf);
-    ASSERT_NE (value.packRead (istream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-}
-
-/**
- * @brief packWrite method.
- */
-TEST (Value, packWrite)
-{
-    Value value;
-    value.pushBack (1);
-    value.pushBack (nullptr);
-    value.pushBack (true);
-    value.pushBack ("test");
-    value.pushBack (1.23456789e-13);
-
-    std::stringstream out;
-    ASSERT_NE (value.packWrite (out), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), std::string ({'\x95', '\x01', '\xc0', '\xc3', '\xa4', '\x74', '\x65', '\x73', '\x74', '\xcb',
-                                         '\x3d', '\x41', '\x5f', '\xff', '\xe5', '\x3a', '\x68', '\x5d'}));
-}
-
-/**
- * @brief jsonRead method.
- */
-TEST (Value, jsonRead)
-{
-    Value value;
-
-    std::string str = "[1,null,true,\"test\",1.23456789e-13]";
-    ASSERT_NE (value.jsonRead (str), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    ASSERT_NE (value.jsonRead (str.c_str (), str.size ()), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    ASSERT_NE (value.jsonRead (str.data (), str.data () + str.size ()), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::stringstream sstream (str);
-    ASSERT_NE (value.jsonRead (sstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::istringstream isstream (str);
-    ASSERT_NE (value.jsonRead (isstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::ofstream out ("/tmp/fstream.json");
-    out << str;
-    out.close ();
-
-    std::fstream fstream ("/tmp/fstream.json", std::ios::in);
-    ASSERT_NE (value.jsonRead (fstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-    fstream.close ();
-
-    std::ifstream ifstream ("/tmp/fstream.json");
-    ASSERT_NE (value.jsonRead (ifstream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-    ifstream.close ();
-
-    std::stringbuf iosbuf (str, std::ios::in);
-    std::iostream iostream (&iosbuf);
-    ASSERT_NE (value.jsonRead (iostream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-
-    std::stringbuf isbuf (str);
-    std::istream istream (&isbuf);
-    ASSERT_NE (value.jsonRead (istream), -1) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_TRUE (value[0].isInt ());
-    ASSERT_EQ (value[0], 1);
-    ASSERT_TRUE (value[1].isNull ());
-    ASSERT_EQ (value[1], nullptr);
-    ASSERT_TRUE (value[2].isBool ());
-    ASSERT_EQ (value[2], true);
-    ASSERT_TRUE (value[3].isString ());
-    ASSERT_EQ (value[3], "test");
-    ASSERT_TRUE (value[4].isDouble ());
-    ASSERT_EQ (value[4], 1.23456789e-13);
-}
-
-/**
- * @brief jsonWrite method.
- */
-TEST (Value, jsonWrite)
-{
-    Value value;
-    value.pushBack (1);
-    value.pushBack (nullptr);
-    value.pushBack (true);
-    value.pushBack ("test");
-    value.pushBack (1.23456789e-13);
-
-    std::stringstream out;
-    ASSERT_NE (value.jsonWrite (out), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), "[1,null,true,\"test\",1.23456789e-13]");
-}
-
-/**
- * @brief jsonCanonicalize method.
- */
-TEST (Value, jsonCanonicalize)
-{
-    Value value;
-    value["numbers"] = Array{333333333.33333329, 1E30, 4.50, 2e-3, 0.000000000000000000000000001};
-    value["string"] = "\u20ac$\u000F\u000aA'\u0042\u0022\u005c\\\"/";
-    value["literals"] = Array{nullptr, true, false};
-
-    std::stringstream out;
-    ASSERT_NE (value.jsonCanonicalize (out), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (),
-               "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
-               "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
+    ASSERT_TRUE (value.isNull ());
 }
 
 /**
@@ -5851,6 +5868,12 @@ TEST (Value, jsonCanonicalize)
  */
 TEST (Value, equal)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -5868,8 +5891,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = bool (true);
     ASSERT_FALSE (value == nullptr);
@@ -5886,8 +5909,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (value == nullptr);
@@ -5904,8 +5927,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (value == nullptr);
@@ -5922,8 +5945,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (value == nullptr);
@@ -5940,8 +5963,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (value == nullptr);
@@ -5958,8 +5981,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == nullptr);
@@ -5976,8 +5999,8 @@ TEST (Value, equal)
     ASSERT_TRUE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
     value = std::string ("foo");
     ASSERT_FALSE (value == nullptr);
@@ -5995,10 +6018,10 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_TRUE (value == "foo");
     ASSERT_FALSE (value == "bar");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
@@ -6013,10 +6036,10 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_TRUE (value == Array{1});
-    ASSERT_FALSE (value == Object ({{"i", 1}}));
+    ASSERT_TRUE (value == array.getArray ());
+    ASSERT_FALSE (value == object.getObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value == nullptr);
     ASSERT_FALSE (value == true);
     ASSERT_FALSE (value == false);
@@ -6031,8 +6054,8 @@ TEST (Value, equal)
     ASSERT_FALSE (value == std::numeric_limits<double>::min ());
     ASSERT_FALSE (value == std::numeric_limits<double>::max ());
     ASSERT_FALSE (value == "foo");
-    ASSERT_FALSE (value == Array{1});
-    ASSERT_TRUE (value == Object ({{"i", 1}}));
+    ASSERT_FALSE (value == array.getArray ());
+    ASSERT_TRUE (value == object.getObject ());
 
     value = nullptr;
     ASSERT_TRUE (nullptr == value);
@@ -6049,8 +6072,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = bool (true);
     ASSERT_FALSE (nullptr == value);
@@ -6067,8 +6090,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (nullptr == value);
@@ -6085,8 +6108,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (nullptr == value);
@@ -6103,8 +6126,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (nullptr == value);
@@ -6121,8 +6144,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (nullptr == value);
@@ -6139,8 +6162,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_FALSE (nullptr == value);
@@ -6157,8 +6180,8 @@ TEST (Value, equal)
     ASSERT_TRUE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
     value = std::string ("foo");
     ASSERT_FALSE (nullptr == value);
@@ -6176,10 +6199,10 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_TRUE ("foo" == value);
     ASSERT_FALSE ("bar" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
@@ -6194,10 +6217,10 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_TRUE (Array{1} == value);
-    ASSERT_FALSE (Object ({{"i", 1}}) == value);
+    ASSERT_TRUE (array.getArray () == value);
+    ASSERT_FALSE (object.getObject () == value);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (nullptr == value);
     ASSERT_FALSE (true == value);
     ASSERT_FALSE (false == value);
@@ -6212,8 +6235,8 @@ TEST (Value, equal)
     ASSERT_FALSE (std::numeric_limits<double>::min () == value);
     ASSERT_FALSE (std::numeric_limits<double>::max () == value);
     ASSERT_FALSE ("foo" == value);
-    ASSERT_FALSE (Array{1} == value);
-    ASSERT_TRUE (Object ({{"i", 1}}) == value);
+    ASSERT_FALSE (array.getArray () == value);
+    ASSERT_TRUE (object.getObject () == value);
 }
 
 /**
@@ -6221,6 +6244,12 @@ TEST (Value, equal)
  */
 TEST (Value, notEqual)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -6238,8 +6267,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = bool (true);
     ASSERT_TRUE (value != nullptr);
@@ -6256,8 +6285,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (value != nullptr);
@@ -6274,8 +6303,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_TRUE (value != nullptr);
@@ -6292,8 +6321,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_TRUE (value != nullptr);
@@ -6310,8 +6339,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_TRUE (value != nullptr);
@@ -6328,8 +6357,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != nullptr);
@@ -6346,8 +6375,8 @@ TEST (Value, notEqual)
     ASSERT_FALSE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
     value = std::string ("foo");
     ASSERT_TRUE (value != nullptr);
@@ -6364,10 +6393,10 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_FALSE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (value != nullptr);
     ASSERT_TRUE (value != true);
     ASSERT_TRUE (value != false);
@@ -6382,10 +6411,10 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_FALSE (value != Array{1});
-    ASSERT_TRUE (value != Object ({{"i", 1}}));
+    ASSERT_FALSE (value != array.getArray ());
+    ASSERT_TRUE (value != object.getObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (value != nullptr);
     ASSERT_TRUE (value != true);
     ASSERT_TRUE (value != false);
@@ -6400,8 +6429,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (value != std::numeric_limits<double>::min ());
     ASSERT_TRUE (value != std::numeric_limits<double>::max ());
     ASSERT_TRUE (value != "foo");
-    ASSERT_TRUE (value != Array{1});
-    ASSERT_FALSE (value != Object ({{"i", 1}}));
+    ASSERT_TRUE (value != array.getArray ());
+    ASSERT_FALSE (value != object.getObject ());
 
     value = nullptr;
     ASSERT_FALSE (nullptr != value);
@@ -6418,8 +6447,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = bool (true);
     ASSERT_TRUE (nullptr != value);
@@ -6436,8 +6465,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (nullptr != value);
@@ -6454,8 +6483,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_TRUE (nullptr != value);
@@ -6472,8 +6501,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_TRUE (nullptr != value);
@@ -6490,8 +6519,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_TRUE (nullptr != value);
@@ -6508,8 +6537,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_TRUE (nullptr != value);
@@ -6526,8 +6555,8 @@ TEST (Value, notEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
     value = std::string ("foo");
     ASSERT_TRUE (nullptr != value);
@@ -6545,10 +6574,10 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_FALSE ("foo" != value);
     ASSERT_TRUE ("bar" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (nullptr != value);
     ASSERT_TRUE (true != value);
     ASSERT_TRUE (false != value);
@@ -6563,10 +6592,10 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_FALSE (Array{1} != value);
-    ASSERT_TRUE (Object ({{"i", 1}}) != value);
+    ASSERT_FALSE (array.getArray () != value);
+    ASSERT_TRUE (object.getObject () != value);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (nullptr != value);
     ASSERT_TRUE (true != value);
     ASSERT_TRUE (false != value);
@@ -6581,8 +6610,8 @@ TEST (Value, notEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () != value);
     ASSERT_TRUE (std::numeric_limits<double>::max () != value);
     ASSERT_TRUE ("foo" != value);
-    ASSERT_TRUE (Array{1} != value);
-    ASSERT_FALSE (Object ({{"i", 1}}) != value);
+    ASSERT_TRUE (array.getArray () != value);
+    ASSERT_FALSE (object.getObject () != value);
 }
 
 /**
@@ -6590,6 +6619,12 @@ TEST (Value, notEqual)
  */
 TEST (Value, lower)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -6607,8 +6642,8 @@ TEST (Value, lower)
     ASSERT_TRUE (value < std::numeric_limits<double>::min ());
     ASSERT_TRUE (value < std::numeric_limits<double>::max ());
     ASSERT_TRUE (value < "foo");
-    ASSERT_TRUE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
     value = bool (true);
     ASSERT_FALSE (value < nullptr);
@@ -6625,8 +6660,8 @@ TEST (Value, lower)
     ASSERT_TRUE (value < std::numeric_limits<double>::min ());
     ASSERT_TRUE (value < std::numeric_limits<double>::max ());
     ASSERT_TRUE (value < "foo");
-    ASSERT_TRUE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (value < nullptr);
@@ -6643,8 +6678,8 @@ TEST (Value, lower)
     ASSERT_TRUE (value < std::numeric_limits<double>::min ());
     ASSERT_TRUE (value < std::numeric_limits<double>::max ());
     ASSERT_TRUE (value < "foo");
-    ASSERT_TRUE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
     value = int64_t (std::numeric_limits<int64_t>::max ());
     ASSERT_FALSE (value < nullptr);
@@ -6661,8 +6696,8 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits<double>::min ());
     ASSERT_TRUE (value < std::numeric_limits<double>::max ());
     ASSERT_TRUE (value < "foo");
-    ASSERT_TRUE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_FALSE (value < nullptr);
@@ -6679,8 +6714,8 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits<double>::min ());
     ASSERT_TRUE (value < std::numeric_limits<double>::max ());
     ASSERT_TRUE (value < "foo");
-    ASSERT_TRUE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
     value = std::string ("foo");
     ASSERT_FALSE (value < nullptr);
@@ -6697,10 +6732,10 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits<double>::min ());
     ASSERT_FALSE (value < std::numeric_limits<double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_TRUE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_TRUE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
@@ -6715,10 +6750,10 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits<double>::min ());
     ASSERT_FALSE (value < std::numeric_limits<double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_FALSE (value < Array{1});
-    ASSERT_TRUE (value < Object ({{"i", 1}}));
+    ASSERT_FALSE (value < array.getArray ());
+    ASSERT_TRUE (value < object.getObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value < nullptr);
     ASSERT_FALSE (value < true);
     ASSERT_FALSE (value < false);
@@ -6733,8 +6768,8 @@ TEST (Value, lower)
     ASSERT_FALSE (value < std::numeric_limits<double>::min ());
     ASSERT_FALSE (value < std::numeric_limits<double>::max ());
     ASSERT_FALSE (value < "foo");
-    ASSERT_FALSE (value < Array{1});
-    ASSERT_FALSE (value < Object ({{"i", 1}}));
+    ASSERT_FALSE (value < array.getArray ());
+    ASSERT_FALSE (value < object.getObject ());
 
     value = nullptr;
     ASSERT_FALSE (nullptr < value);
@@ -6751,8 +6786,8 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits<double>::min () < value);
     ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
     value = bool (true);
     ASSERT_TRUE (nullptr < value);
@@ -6769,8 +6804,8 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits<double>::min () < value);
     ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (nullptr < value);
@@ -6787,8 +6822,8 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits<double>::min () < value);
     ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
     value = int64_t (std::numeric_limits<int64_t>::max ());
     ASSERT_TRUE (nullptr < value);
@@ -6805,8 +6840,8 @@ TEST (Value, lower)
     ASSERT_TRUE (std::numeric_limits<double>::min () < value);
     ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_TRUE (nullptr < value);
@@ -6823,8 +6858,8 @@ TEST (Value, lower)
     ASSERT_FALSE (std::numeric_limits<double>::min () < value);
     ASSERT_FALSE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
     value = std::string ("foo");
     ASSERT_TRUE (nullptr < value);
@@ -6841,10 +6876,10 @@ TEST (Value, lower)
     ASSERT_TRUE (std::numeric_limits<double>::min () < value);
     ASSERT_TRUE (std::numeric_limits<double>::max () < value);
     ASSERT_FALSE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (nullptr < value);
     ASSERT_TRUE (true < value);
     ASSERT_TRUE (false < value);
@@ -6859,10 +6894,10 @@ TEST (Value, lower)
     ASSERT_TRUE (std::numeric_limits<double>::min () < value);
     ASSERT_TRUE (std::numeric_limits<double>::max () < value);
     ASSERT_TRUE ("foo" < value);
-    ASSERT_FALSE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_FALSE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (nullptr < value);
     ASSERT_TRUE (true < value);
     ASSERT_TRUE (false < value);
@@ -6877,8 +6912,8 @@ TEST (Value, lower)
     ASSERT_TRUE (std::numeric_limits<double>::min () < value);
     ASSERT_TRUE (std::numeric_limits<double>::max () < value);
     ASSERT_TRUE ("foo" < value);
-    ASSERT_TRUE (Array{1} < value);
-    ASSERT_FALSE (Object ({{"i", 1}}) < value);
+    ASSERT_TRUE (array.getArray () < value);
+    ASSERT_FALSE (object.getObject () < value);
 }
 
 /**
@@ -6886,6 +6921,12 @@ TEST (Value, lower)
  */
 TEST (Value, greater)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -6903,8 +6944,8 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits<double>::min ());
     ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
     value = bool (true);
     ASSERT_TRUE (value > nullptr);
@@ -6921,8 +6962,8 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits<double>::min ());
     ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (value > nullptr);
@@ -6939,8 +6980,8 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits<double>::min ());
     ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
     value = int64_t (std::numeric_limits<int64_t>::max ());
     ASSERT_TRUE (value > nullptr);
@@ -6957,8 +6998,8 @@ TEST (Value, greater)
     ASSERT_TRUE (value > std::numeric_limits<double>::min ());
     ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_TRUE (value > nullptr);
@@ -6975,8 +7016,8 @@ TEST (Value, greater)
     ASSERT_FALSE (value > std::numeric_limits<double>::min ());
     ASSERT_FALSE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
     value = std::string ("foo");
     ASSERT_TRUE (value > nullptr);
@@ -6993,10 +7034,10 @@ TEST (Value, greater)
     ASSERT_TRUE (value > std::numeric_limits<double>::min ());
     ASSERT_TRUE (value > std::numeric_limits<double>::max ());
     ASSERT_FALSE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (value > nullptr);
     ASSERT_TRUE (value > true);
     ASSERT_TRUE (value > false);
@@ -7011,10 +7052,10 @@ TEST (Value, greater)
     ASSERT_TRUE (value > std::numeric_limits<double>::min ());
     ASSERT_TRUE (value > std::numeric_limits<double>::max ());
     ASSERT_TRUE (value > "foo");
-    ASSERT_FALSE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_FALSE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (value > nullptr);
     ASSERT_TRUE (value > true);
     ASSERT_TRUE (value > false);
@@ -7029,8 +7070,8 @@ TEST (Value, greater)
     ASSERT_TRUE (value > std::numeric_limits<double>::min ());
     ASSERT_TRUE (value > std::numeric_limits<double>::max ());
     ASSERT_TRUE (value > "foo");
-    ASSERT_TRUE (value > Array{1});
-    ASSERT_FALSE (value > Object ({{"i", 1}}));
+    ASSERT_TRUE (value > array.getArray ());
+    ASSERT_FALSE (value > object.getObject ());
 
     value = nullptr;
     ASSERT_FALSE (nullptr > value);
@@ -7047,8 +7088,8 @@ TEST (Value, greater)
     ASSERT_TRUE (std::numeric_limits<double>::min () > value);
     ASSERT_TRUE (std::numeric_limits<double>::max () > value);
     ASSERT_TRUE ("foo" > value);
-    ASSERT_TRUE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
     value = bool (true);
     ASSERT_FALSE (nullptr > value);
@@ -7065,8 +7106,8 @@ TEST (Value, greater)
     ASSERT_TRUE (std::numeric_limits<double>::min () > value);
     ASSERT_TRUE (std::numeric_limits<double>::max () > value);
     ASSERT_TRUE ("foo" > value);
-    ASSERT_TRUE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (nullptr > value);
@@ -7083,8 +7124,8 @@ TEST (Value, greater)
     ASSERT_TRUE (std::numeric_limits<double>::min () > value);
     ASSERT_TRUE (std::numeric_limits<double>::max () > value);
     ASSERT_TRUE ("foo" > value);
-    ASSERT_TRUE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
     value = int64_t (std::numeric_limits<int64_t>::max ());
     ASSERT_FALSE (nullptr > value);
@@ -7101,8 +7142,8 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits<double>::min () > value);
     ASSERT_TRUE (std::numeric_limits<double>::max () > value);
     ASSERT_TRUE ("foo" > value);
-    ASSERT_TRUE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_FALSE (nullptr > value);
@@ -7119,8 +7160,8 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits<double>::min () > value);
     ASSERT_TRUE (std::numeric_limits<double>::max () > value);
     ASSERT_TRUE ("foo" > value);
-    ASSERT_TRUE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
     value = std::string ("foo");
     ASSERT_FALSE (nullptr > value);
@@ -7137,10 +7178,10 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits<double>::min () > value);
     ASSERT_FALSE (std::numeric_limits<double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_TRUE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_TRUE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
@@ -7155,10 +7196,10 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits<double>::min () > value);
     ASSERT_FALSE (std::numeric_limits<double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_FALSE (Array{1} > value);
-    ASSERT_TRUE (Object ({{"i", 1}}) > value);
+    ASSERT_FALSE (array.getArray () > value);
+    ASSERT_TRUE (object.getObject () > value);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (nullptr > value);
     ASSERT_FALSE (true > value);
     ASSERT_FALSE (false > value);
@@ -7173,8 +7214,8 @@ TEST (Value, greater)
     ASSERT_FALSE (std::numeric_limits<double>::min () > value);
     ASSERT_FALSE (std::numeric_limits<double>::max () > value);
     ASSERT_FALSE ("foo" > value);
-    ASSERT_FALSE (Array{1} > value);
-    ASSERT_FALSE (Object ({{"i", 1}}) > value);
+    ASSERT_FALSE (array.getArray () > value);
+    ASSERT_FALSE (object.getObject () > value);
 }
 
 /**
@@ -7182,6 +7223,12 @@ TEST (Value, greater)
  */
 TEST (Value, lowerOrEqual)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -7199,8 +7246,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = bool (true);
     ASSERT_FALSE (value <= nullptr);
@@ -7217,8 +7264,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (value <= nullptr);
@@ -7235,8 +7282,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (value <= nullptr);
@@ -7253,8 +7300,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (value <= nullptr);
@@ -7271,8 +7318,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (value <= nullptr);
@@ -7289,8 +7336,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_FALSE (value <= nullptr);
@@ -7307,8 +7354,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (value <= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = std::string ("foo");
     ASSERT_FALSE (value <= nullptr);
@@ -7325,10 +7372,10 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value <= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
@@ -7343,10 +7390,10 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value <= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value <= "foo");
-    ASSERT_TRUE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_TRUE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (value <= nullptr);
     ASSERT_FALSE (value <= true);
     ASSERT_FALSE (value <= false);
@@ -7361,8 +7408,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (value <= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value <= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value <= "foo");
-    ASSERT_FALSE (value <= Array{1});
-    ASSERT_TRUE (value <= Object ({{"i", 1}}));
+    ASSERT_FALSE (value <= array.getArray ());
+    ASSERT_TRUE (value <= object.getObject ());
 
     value = nullptr;
     ASSERT_TRUE (nullptr <= value);
@@ -7380,8 +7427,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = bool (true);
     ASSERT_TRUE (nullptr <= value);
@@ -7398,8 +7445,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (nullptr <= value);
@@ -7416,8 +7463,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_TRUE (nullptr <= value);
@@ -7434,8 +7481,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_TRUE (nullptr <= value);
@@ -7452,8 +7499,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_TRUE (nullptr <= value);
@@ -7470,8 +7517,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_TRUE (nullptr <= value);
@@ -7488,8 +7535,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () <= value);
     ASSERT_FALSE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
     value = std::string ("foo");
     ASSERT_TRUE (nullptr <= value);
@@ -7506,10 +7553,10 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () <= value);
     ASSERT_TRUE ("foo" <= value);
-    ASSERT_FALSE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_FALSE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (nullptr <= value);
     ASSERT_TRUE (true <= value);
     ASSERT_TRUE (false <= value);
@@ -7524,10 +7571,10 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () <= value);
     ASSERT_TRUE ("foo" <= value);
-    ASSERT_TRUE (Array{1} <= value);
-    ASSERT_FALSE (Object ({{"i", 1}}) <= value);
+    ASSERT_TRUE (array.getArray () <= value);
+    ASSERT_FALSE (object.getObject () <= value);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (nullptr <= value);
     ASSERT_TRUE (true <= value);
     ASSERT_TRUE (false <= value);
@@ -7542,8 +7589,8 @@ TEST (Value, lowerOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () <= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () <= value);
     ASSERT_TRUE ("foo" <= value);
-    ASSERT_TRUE (Array{1} <= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) <= value);
+    ASSERT_TRUE (array.getArray () <= value);
+    ASSERT_TRUE (object.getObject () <= value);
 
     value = std::numeric_limits<double>::quiet_NaN ();
     ASSERT_FALSE (value <= value);
@@ -7555,6 +7602,12 @@ TEST (Value, lowerOrEqual)
  */
 TEST (Value, greaterOrEqual)
 {
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
     Value value;
 
     value = nullptr;
@@ -7572,8 +7625,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = bool (true);
     ASSERT_TRUE (value >= nullptr);
@@ -7590,8 +7643,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_TRUE (value >= nullptr);
@@ -7608,8 +7661,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_TRUE (value >= nullptr);
@@ -7626,8 +7679,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_TRUE (value >= nullptr);
@@ -7644,8 +7697,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_TRUE (value >= nullptr);
@@ -7662,8 +7715,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_TRUE (value >= nullptr);
@@ -7680,8 +7733,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
     ASSERT_FALSE (value >= std::numeric_limits<double>::max ());
     ASSERT_FALSE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
     value = std::string ("foo");
     ASSERT_TRUE (value >= nullptr);
@@ -7698,10 +7751,10 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value >= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value >= "foo");
-    ASSERT_FALSE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_FALSE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_TRUE (value >= nullptr);
     ASSERT_TRUE (value >= true);
     ASSERT_TRUE (value >= false);
@@ -7716,10 +7769,10 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value >= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value >= "foo");
-    ASSERT_TRUE (value >= Array{1});
-    ASSERT_FALSE (value >= Object ({{"i", 1}}));
+    ASSERT_TRUE (value >= array.getArray ());
+    ASSERT_FALSE (value >= object.getObject ());
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_TRUE (value >= nullptr);
     ASSERT_TRUE (value >= true);
     ASSERT_TRUE (value >= false);
@@ -7734,8 +7787,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (value >= std::numeric_limits<double>::min ());
     ASSERT_TRUE (value >= std::numeric_limits<double>::max ());
     ASSERT_TRUE (value >= "foo");
-    ASSERT_TRUE (value >= Array{1});
-    ASSERT_TRUE (value >= Object ({{"i", 1}}));
+    ASSERT_TRUE (value >= array.getArray ());
+    ASSERT_TRUE (value >= object.getObject ());
 
     value = nullptr;
     ASSERT_TRUE (nullptr >= value);
@@ -7752,8 +7805,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = bool (true);
     ASSERT_FALSE (nullptr >= value);
@@ -7770,8 +7823,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = int32_t (std::numeric_limits<int32_t>::min ());
     ASSERT_FALSE (nullptr >= value);
@@ -7788,8 +7841,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = uint32_t (std::numeric_limits<uint32_t>::max ());
     ASSERT_FALSE (nullptr >= value);
@@ -7806,8 +7859,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = int64_t (std::numeric_limits<int64_t>::min ());
     ASSERT_FALSE (nullptr >= value);
@@ -7824,8 +7877,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = uint64_t (std::numeric_limits<uint64_t>::max ());
     ASSERT_FALSE (nullptr >= value);
@@ -7842,8 +7895,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = double (std::numeric_limits<double>::min ());
     ASSERT_FALSE (nullptr >= value);
@@ -7860,8 +7913,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_TRUE (std::numeric_limits<double>::min () >= value);
     ASSERT_TRUE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
     value = std::string ("foo");
     ASSERT_FALSE (nullptr >= value);
@@ -7878,10 +7931,10 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () >= value);
     ASSERT_TRUE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
-    value = Array{1};
+    value = array.getArray ();
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
@@ -7896,10 +7949,10 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () >= value);
     ASSERT_FALSE ("foo" >= value);
-    ASSERT_TRUE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_TRUE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 
-    value = Object{{"i", 1}};
+    value = object.getObject ();
     ASSERT_FALSE (nullptr >= value);
     ASSERT_FALSE (true >= value);
     ASSERT_FALSE (false >= value);
@@ -7914,8 +7967,8 @@ TEST (Value, greaterOrEqual)
     ASSERT_FALSE (std::numeric_limits<double>::min () >= value);
     ASSERT_FALSE (std::numeric_limits<double>::max () >= value);
     ASSERT_FALSE ("foo" >= value);
-    ASSERT_FALSE (Array{1} >= value);
-    ASSERT_TRUE (Object ({{"i", 1}}) >= value);
+    ASSERT_FALSE (array.getArray () >= value);
+    ASSERT_TRUE (object.getObject () >= value);
 }
 
 /**

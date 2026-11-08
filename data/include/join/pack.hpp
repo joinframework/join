@@ -410,7 +410,8 @@ namespace join
          * @param object object to write.
          * @return object members in insertion order.
          */
-        const Object& members (const Object& object) const noexcept
+        template <typename Type>
+        const View<Type>& members (const View<Type>& object) const noexcept
         {
             return object;
         }
@@ -827,10 +828,15 @@ namespace join
          * @param value value receiving the document.
          * @return 0 on success, -1 otherwise.
          */
-        template <typename ProbeType>
-        int read (ProbeType& document, Value& value)
+        template <typename ProbeType, typename Allocator>
+        int read (ProbeType& document, BasicValue<Allocator>& value)
         {
-            return read (document, ValueBuilder (value));
+            int result = read (document, ValueBuilder (value));
+            if (JOIN_UNLIKELY (result != 0))
+            {
+                value = nullptr;
+            }
+            return result;
         }
 
         /**
@@ -971,7 +977,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int readArray (ProbeType& document, Handler& handler, size_t depth)
+        __attribute__ ((noinline)) int readArray (ProbeType& document, Handler& handler, size_t depth)
         {
             if (JOIN_UNLIKELY (depth == saxMaxDepth))
             {
@@ -1026,7 +1032,7 @@ namespace join
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int readObject (ProbeType& document, Handler& handler, size_t depth)
+        __attribute__ ((noinline)) int readObject (ProbeType& document, Handler& handler, size_t depth)
         {
             if (JOIN_UNLIKELY (depth == saxMaxDepth))
             {
@@ -1159,6 +1165,19 @@ namespace join
             else
             {
                 len = static_cast<uint8_t> (document.get ()) & ~0xa0u;
+            }
+
+            if constexpr (std::is_same_v<ProbeType, dconv::StringProbe>)
+            {
+                if (JOIN_UNLIKELY (static_cast<size_t> (document.end () - document.tell ()) < len))
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                    return -1;
+                }
+
+                std::string_view output (document.tell (), len);
+                document.seek (document.tell () + len);
+                return isKey ? handler.setKey (output) : handler.setString (output);
             }
 
             thread_local std::string cache;

@@ -17,7 +17,6 @@ set(PUBLIC_HEADERS
 )
 
 set(SOURCES
-    src/value.cpp
     src/sax_error.cpp
     src/json.cpp
     src/zstream.cpp

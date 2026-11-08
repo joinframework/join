@@ -469,7 +469,10 @@ TEST (PackWriter, members)
 {
     std::stringstream stream;
     PackWriter packWriter (stream);
-    Object object{{"b", 1}, {"a", 2}};
+    Value members;
+    members["b"] = 1;
+    members["a"] = 2;
+    const Object& object = members.getObject ();
     EXPECT_EQ (&packWriter.members (object), &object);
 }
 
@@ -641,18 +644,23 @@ TEST (PackWriter, document)
                std::string ({'\x98', '\xC0', '\xC3', '\x01', '\x02', '\x03', '\x04', '\xCB', '\x3D', '\x41', '\x5F',
                              '\xFF', '\xE5', '\x3A', '\x68', '\x5D', '\xA4', '\x74', '\x65', '\x73', '\x74'}));
 
-    value = Object{{"a", 1}};
+    value = nullptr;
+    value["a"] = 1;
     stream.str ("");
     EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), std::string ({'\x81', '\xA1', 'a', '\x01'}));
 
-    value = Object{{Array{1}, 1}};
+    Value key;
+    key.pushBack (1);
+    value = Object ();
+    value.insert (key, 1);
     stream.str ("");
     EXPECT_EQ (value.serialize (packWriter), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (stream.str (), "");
 
-    value = Array{7};
+    value = nullptr;
+    value.pushBack (7);
     EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), std::string ({'\x91', '\x07'}));
 }

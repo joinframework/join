@@ -168,7 +168,10 @@ TEST (SaxHandler, startObject)
 TEST (SaxHandler, members)
 {
     SaxHandler handler;
-    Object object{{"b", 1}, {"a", 2}};
+    Value members;
+    members["b"] = 1;
+    members["a"] = 2;
+    const Object& object = members.getObject ();
     EXPECT_EQ (&handler.members (object), &object);
 }
 

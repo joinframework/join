@@ -68,6 +68,10 @@ TEST (View, data)
     int values[] = {1, 2, 3};
     EXPECT_EQ (View<int> ().data (), nullptr);
     EXPECT_EQ (View<int> (values, 3).data (), values);
+
+    const View<int> constant (values, 3);
+    static_assert (std::is_same_v<decltype (constant.data ()), const int*>);
+    EXPECT_EQ (constant.data (), values);
 }
 
 /**
@@ -100,6 +104,10 @@ TEST (View, begin)
     View<int> view (values, 3);
     EXPECT_EQ (view.begin (), values);
     EXPECT_EQ (*view.begin (), 1);
+
+    const View<int> constant (values, 3);
+    static_assert (std::is_same_v<decltype (constant.begin ()), const int*>);
+    EXPECT_EQ (constant.begin (), values);
 }
 
 /**
@@ -110,6 +118,10 @@ TEST (View, end)
     int values[] = {1, 2, 3};
     View<int> view (values, 3);
     EXPECT_EQ (view.end (), values + 3);
+
+    const View<int> constant (values, 3);
+    static_assert (std::is_same_v<decltype (constant.end ()), const int*>);
+    EXPECT_EQ (constant.end (), values + 3);
 
     int sum = 0;
     for (int value : view)
@@ -130,6 +142,10 @@ TEST (View, at)
     EXPECT_EQ (view[2], 3);
     view[1] = 5;
     EXPECT_EQ (values[1], 5);
+
+    const View<int> constant (values, 3);
+    static_assert (std::is_same_v<decltype (constant[1]), const int&>);
+    EXPECT_EQ (constant[1], 5);
 }
 
 /**

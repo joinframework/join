@@ -49,9 +49,9 @@ using join::SaxErrc;
 /**
  * @brief value builder derived by a user.
  */
-struct Derived : public ValueBuilder
+struct Derived : public ValueBuilder<Value>
 {
-    using ValueBuilder::ValueBuilder;
+    using ValueBuilder<Value>::ValueBuilder;
 };
 
 /**
@@ -86,18 +86,23 @@ TEST (ValueBuilder, create)
             ASSERT_EQ (innerBuilder.setInt (2), 0);
             ASSERT_EQ (innerBuilder.stopArray (), 0);
         }
-        ASSERT_EQ (inner, Array{2});
+        ASSERT_EQ (inner.size (), 1U);
+        ASSERT_EQ (inner[0], 2);
 
         ASSERT_EQ (builder.setInt (3), 0);
         ASSERT_EQ (builder.stopArray (), 0);
     }
-    ASSERT_EQ (value, (Array{1, 3}));
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value[0], 1);
+    ASSERT_EQ (value[1], 3);
 
     Nested nested;
     ASSERT_EQ (JsonReader ().deserialize (std::string ("[\"[1,{\\\"a\\\":2}]\", \"3\"]"), nested), 0)
         << join::lastError.message ();
     ASSERT_EQ (nested.values.size (), 2U);
-    ASSERT_EQ (nested.values[0], (Array{1, Object{{"a", 2}}}));
+    ASSERT_EQ (nested.values[0].size (), 2U);
+    ASSERT_EQ (nested.values[0][0], 1);
+    ASSERT_EQ (nested.values[0][1].at ("a"), 2);
     ASSERT_EQ (nested.values[1], 3);
 }
 
@@ -108,14 +113,15 @@ TEST (ValueBuilder, setNull)
 {
     Value value;
     ValueBuilder builder (value);
-    value = Array{};
+    value = Array ();
     ASSERT_EQ (builder.setNull (), 0);
     ASSERT_TRUE (value.isNull ());
 
     ASSERT_EQ (builder.startArray (), 0);
     ASSERT_EQ (builder.setNull (), 0);
     ASSERT_EQ (builder.stopArray (), 0);
-    ASSERT_EQ (value, Array{nullptr});
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_TRUE (value[0].isNull ());
 }
 
 /**
@@ -132,7 +138,9 @@ TEST (ValueBuilder, setBool)
     ASSERT_EQ (builder.setBool (true), 0);
     ASSERT_EQ (builder.setBool (false), 0);
     ASSERT_EQ (builder.stopArray (), 0);
-    ASSERT_EQ (value, (Array{true, false}));
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value[0], true);
+    ASSERT_EQ (value[1], false);
 }
 
 /**
@@ -219,7 +227,8 @@ TEST (ValueBuilder, setDouble)
     ASSERT_EQ (builder.startArray (), 0);
     ASSERT_EQ (builder.setDouble (1.5), 0);
     ASSERT_EQ (builder.stopArray (), 0);
-    ASSERT_EQ (value, Array{1.5});
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_EQ (value[0], 1.5);
 }
 
 /**
@@ -237,7 +246,9 @@ TEST (ValueBuilder, setString)
     ASSERT_EQ (builder.setString ("a"), 0);
     ASSERT_EQ (builder.setString (b), 0);
     ASSERT_EQ (builder.stopArray (), 0);
-    ASSERT_EQ (value, (Array{"a", "b"}));
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value[0], "a");
+    ASSERT_EQ (value[1], "b");
 }
 
 /**
@@ -259,7 +270,9 @@ TEST (ValueBuilder, startArray)
     ASSERT_EQ (builder.startArray (), 0);
     ASSERT_EQ (builder.stopArray (), 0);
     ASSERT_EQ (builder.stopArray (), 0);
-    ASSERT_EQ (value, Array{Value (Array{})});
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_TRUE (value[0].isArray ());
+    ASSERT_TRUE (value[0].empty ());
 }
 
 /**
@@ -275,7 +288,19 @@ TEST (ValueBuilder, stopArray)
     ASSERT_EQ (builder.startArray (), 0);
     ASSERT_EQ (builder.setInt (1), 0);
     ASSERT_EQ (builder.stopArray (), 0);
-    ASSERT_EQ (value, Array{1});
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_EQ (value[0], 1);
+
+    value.pushBack (2);
+    value.pushBack (3);
+    ASSERT_EQ (builder.startArray (), 0);
+    ASSERT_EQ (builder.setInt (4), 0);
+    ASSERT_EQ (builder.stopArray (), 0);
+    const Value* first = &value[0];
+    value.pushBack (5);
+    ASSERT_NE (&value[0], first);
+    ASSERT_EQ (value.size (), 2U);
+    ASSERT_EQ (value[1], 5);
 }
 
 /**
@@ -299,7 +324,9 @@ TEST (ValueBuilder, startObject)
     ASSERT_EQ (builder.startObject (), 0);
     ASSERT_EQ (builder.stopObject (), 0);
     ASSERT_EQ (builder.stopObject (), 0);
-    ASSERT_EQ (value, (Object{{"a", Object{}}}));
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_TRUE (value.at ("a").isObject ());
+    ASSERT_TRUE (value.at ("a").empty ());
 }
 
 /**
@@ -309,12 +336,17 @@ TEST (ValueBuilder, members)
 {
     Value value;
     ValueBuilder builder (value);
-    Object object{{"b", 1}, {"a", 2}};
+    Value members;
+    members["b"] = 1;
+    members["a"] = 2;
+    const Object& object = members.getObject ();
     EXPECT_EQ (&builder.members (object), &object);
 
     Value copy;
     ValueBuilder copyBuilder (copy);
-    value = Object{{"b", 1}, {"a", Array{2}}};
+    value = nullptr;
+    value["b"] = 1;
+    value["a"].pushBack (2);
     ASSERT_EQ (value.serialize (copyBuilder), 0) << join::lastError.message ();
     EXPECT_EQ (copy, value);
 
@@ -399,13 +431,17 @@ TEST (ValueBuilder, stopObject)
     ASSERT_EQ (builder.setKey ("a"), 0);
     ASSERT_EQ (builder.setInt (1), 0);
     ASSERT_EQ (builder.stopObject (), 0);
-    ASSERT_EQ (value, (Object{{"a", 1}}));
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_EQ (value.at ("a"), 1);
 
     std::string pack;
     {
         std::stringstream out;
         PackWriter writer (out);
-        Value source = Object{{"a", Array{1, 2}}, {"b", nullptr}};
+        Value source;
+        source["a"].pushBack (1);
+        source["a"].pushBack (2);
+        source["b"] = nullptr;
         ASSERT_EQ (source.serialize (writer), 0) << join::lastError.message ();
         pack = out.str ();
     }
