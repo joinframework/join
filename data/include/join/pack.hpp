@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <sstream>
 #include <fstream>
+#include <span>
 
 // C.
 #include <cstring>
@@ -343,7 +344,7 @@ namespace join
          * @param value binary value to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setBinary (Binary value)
+        int setBinary (std::span<const uint8_t> value)
         {
             if (value.size () < 256)
             {
@@ -1261,7 +1262,7 @@ namespace join
                     return -1;
                 }
 
-                Binary output (reinterpret_cast<const uint8_t*> (document.tell ()), len);
+                std::span<const uint8_t> output (reinterpret_cast<const uint8_t*> (document.tell ()), len);
                 document.seek (document.tell () + len);
                 return handler.setBinary (output);
             }
@@ -1274,7 +1275,8 @@ namespace join
                 return -1;
             }
 
-            int result = handler.setBinary (Binary (reinterpret_cast<const uint8_t*> (output.data ()), output.size ()));
+            int result = handler.setBinary (
+                std::span<const uint8_t> (reinterpret_cast<const uint8_t*> (output.data ()), output.size ()));
             cache = std::move (output);
             return result;
         }

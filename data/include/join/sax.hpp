@@ -31,6 +31,7 @@
 
 // C++.
 #include <string_view>
+#include <span>
 
 // C.
 #include <cstdint>
@@ -130,7 +131,7 @@ namespace join
          * @param value binary value to set.
          * @return 0.
          */
-        int setBinary ([[maybe_unused]] Binary value) noexcept
+        int setBinary ([[maybe_unused]] std::span<const uint8_t> value) noexcept
         {
             return 0;
         }

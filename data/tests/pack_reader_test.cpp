@@ -30,16 +30,17 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <algorithm>
 #include <stdexcept>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <span>
 
 // C.
 #include <cmath>
 
 using join::Array;
-using join::Binary;
 using join::Member;
 using join::Object;
 using join::Value;
@@ -1370,7 +1371,7 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBinary ());
-    EXPECT_EQ (value[0].getBinary (), Binary (hello, 5));
+    EXPECT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (hello, 5)));
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x0b', '\x48',
@@ -1379,14 +1380,14 @@ TEST (PackReader, bin)
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBinary ());
-    EXPECT_EQ (value[0].getBinary (), Binary (hello, sizeof (hello)));
+    EXPECT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (hello, sizeof (hello))));
 
     ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc4', '\x02', '\x00', '\xff'}), value), 0)
         << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
     ASSERT_TRUE (value[0].isBinary ());
-    EXPECT_EQ (value[0].getBinary (), Binary (bytes, sizeof (bytes)));
+    EXPECT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
 
     ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc4', '\x05', '\x00', '\xff'}), value), -1);
     EXPECT_EQ (join::lastError, SaxErrc::Truncated);

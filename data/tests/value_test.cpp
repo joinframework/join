@@ -33,13 +33,14 @@
 
 // C++.
 #include <string_view>
+#include <algorithm>
 #include <stdexcept>
 #include <sstream>
 #include <fstream>
 #include <limits>
+#include <span>
 
 using join::Array;
-using join::Binary;
 using join::Member;
 using join::Object;
 using join::Value;
@@ -225,6 +226,11 @@ TEST (Value, create)
     ASSERT_TRUE (viewStringValue.isString ());
     ASSERT_EQ (viewStringValue.getString (), "quu");
 
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    Value binaryValue (std::span<const uint8_t> (bytes, sizeof (bytes)));
+    ASSERT_TRUE (binaryValue.isBinary ());
+    ASSERT_TRUE (std::ranges::equal (binaryValue.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+
     Value arrayValue (array.getArray ());
     ASSERT_TRUE (arrayValue.isArray ());
     ASSERT_EQ (arrayValue.size (), 1U);
@@ -233,11 +239,6 @@ TEST (Value, create)
     Value objectValue (object.getObject ());
     ASSERT_TRUE (objectValue.isObject ());
     ASSERT_EQ (objectValue["i"], 1);
-
-    const uint8_t bytes[] = {0x00, 0x01, 0xff};
-    Value binaryValue (Binary (bytes, sizeof (bytes)));
-    ASSERT_TRUE (binaryValue.isBinary ());
-    ASSERT_EQ (binaryValue.getBinary (), Binary (bytes, sizeof (bytes)));
 }
 
 /**
@@ -333,6 +334,12 @@ TEST (Value, copy)
     Value stringValue (value);
     ASSERT_TRUE (stringValue.isString ());
 
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    Value binaryValue (value);
+    ASSERT_TRUE (binaryValue.isBinary ());
+    ASSERT_TRUE (std::ranges::equal (binaryValue.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+
     value = array.getArray ();
     Value arrayValue (value);
     ASSERT_TRUE (arrayValue.isArray ());
@@ -340,12 +347,6 @@ TEST (Value, copy)
     value = object.getObject ();
     Value objectValue (value);
     ASSERT_TRUE (objectValue.isObject ());
-
-    const uint8_t bytes[] = {0x00, 0x01, 0xff};
-    value = Binary (bytes, sizeof (bytes));
-    Value binaryValue (value);
-    ASSERT_TRUE (binaryValue.isBinary ());
-    ASSERT_EQ (binaryValue.getBinary (), Binary (bytes, sizeof (bytes)));
 }
 
 /**
@@ -2083,6 +2084,113 @@ TEST (Value, isString)
 }
 
 /**
+ * @brief Test isBinary method.
+ */
+TEST (Value, isBinary)
+{
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+
+    Value value;
+    ASSERT_FALSE (value.isBinary ());
+
+    value = nullptr;
+    ASSERT_FALSE (value.isBinary ());
+
+    value = true;
+    ASSERT_FALSE (value.isBinary ());
+
+    value = false;
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int64_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<uint64_t>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<float>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<float>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<double>::min ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::numeric_limits<double>::max ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = "";
+    ASSERT_FALSE (value.isBinary ());
+
+    value = "foo";
+    ASSERT_FALSE (value.isBinary ());
+
+    value = "02:42:64:2f:6a:d0";
+    ASSERT_FALSE (value.isBinary ());
+
+    value = "127.0.0.1";
+    ASSERT_FALSE (value.isBinary ());
+
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_TRUE (value.isBinary ());
+
+    value = array.getArray ();
+    ASSERT_FALSE (value.isBinary ());
+
+    value = object.getObject ();
+    ASSERT_FALSE (value.isBinary ());
+}
+
+/**
  * @brief Test isArray method.
  */
 TEST (Value, isArray)
@@ -2284,113 +2392,6 @@ TEST (Value, isObject)
 
     value = object.getObject ();
     ASSERT_TRUE (value.isObject ());
-}
-
-/**
- * @brief Test isBinary method.
- */
-TEST (Value, isBinary)
-{
-    Value array;
-    array.pushBack (1);
-
-    Value object;
-    object["i"] = 1;
-
-    const uint8_t bytes[] = {0x00, 0x01, 0xff};
-
-    Value value;
-    ASSERT_FALSE (value.isBinary ());
-
-    value = nullptr;
-    ASSERT_FALSE (value.isBinary ());
-
-    value = true;
-    ASSERT_FALSE (value.isBinary ());
-
-    value = false;
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int8_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int8_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint8_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint8_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int16_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int16_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint16_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint16_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int32_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int32_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint32_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint32_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int64_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<int64_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint64_t>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<uint64_t>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<float>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<float>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<double>::min ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = std::numeric_limits<double>::max ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = "";
-    ASSERT_FALSE (value.isBinary ());
-
-    value = "foo";
-    ASSERT_FALSE (value.isBinary ());
-
-    value = "02:42:64:2f:6a:d0";
-    ASSERT_FALSE (value.isBinary ());
-
-    value = "127.0.0.1";
-    ASSERT_FALSE (value.isBinary ());
-
-    value = array.getArray ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = object.getObject ();
-    ASSERT_FALSE (value.isBinary ());
-
-    value = Binary (bytes, sizeof (bytes));
-    ASSERT_TRUE (value.isBinary ());
 }
 
 /**
@@ -4084,6 +4085,113 @@ TEST (Value, getString)
 }
 
 /**
+ * @brief Test getBinary method.
+ */
+TEST (Value, getBinary)
+{
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+
+    Value value;
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = nullptr;
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = true;
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = false;
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int64_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<uint64_t>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<float>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<float>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<double>::min ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::numeric_limits<double>::max ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = "";
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = "foo";
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = "02:42:64:2f:6a:d0";
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = "127.0.0.1";
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_TRUE (std::ranges::equal (value.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+
+    value = array.getArray ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+
+    value = object.getObject ();
+    ASSERT_THROW (value.getBinary (), std::bad_cast);
+}
+
+/**
  * @brief Test getArray method.
  */
 TEST (Value, getArray)
@@ -4285,113 +4393,6 @@ TEST (Value, getObject)
 
     value = object.getObject ();
     ASSERT_NO_THROW (value.getObject ());
-}
-
-/**
- * @brief Test getBinary method.
- */
-TEST (Value, getBinary)
-{
-    Value array;
-    array.pushBack (1);
-
-    Value object;
-    object["i"] = 1;
-
-    const uint8_t bytes[] = {0x00, 0x01, 0xff};
-
-    Value value;
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = nullptr;
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = true;
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = false;
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int8_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int8_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint8_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint8_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int16_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int16_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint16_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint16_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int32_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int32_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint32_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint32_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int64_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<int64_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint64_t>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<uint64_t>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<float>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<float>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<double>::min ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = std::numeric_limits<double>::max ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = "";
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = "foo";
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = "02:42:64:2f:6a:d0";
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = "127.0.0.1";
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = array.getArray ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = object.getObject ();
-    ASSERT_THROW (value.getBinary (), std::bad_cast);
-
-    value = Binary (bytes, sizeof (bytes));
-    ASSERT_EQ (value.getBinary (), Binary (bytes, sizeof (bytes)));
 }
 
 /**
@@ -4748,16 +4749,16 @@ TEST (Value, assign)
     value["string"] = "foobar";
     ASSERT_TRUE (value["string"].isString ());
 
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    value["binary"] = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_TRUE (value["binary"].isBinary ());
+    ASSERT_TRUE (std::ranges::equal (value["binary"].getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+
     value["array"] = Array ();
     ASSERT_TRUE (value["array"].isArray ());
 
     value["object"] = Object ();
     ASSERT_TRUE (value["object"].isObject ());
-
-    const uint8_t bytes[] = {0x00, 0x01, 0xff};
-    value["binary"] = Binary (bytes, sizeof (bytes));
-    ASSERT_TRUE (value["binary"].isBinary ());
-    ASSERT_EQ (value["binary"].getBinary (), Binary (bytes, sizeof (bytes)));
 
     const std::string string ("foo");
     value["braced"] = {string};
@@ -5558,8 +5559,8 @@ TEST (Value, pushBack)
 
     const uint8_t bytes[] = {0x00, 0x01, 0xff};
     value = Array ();
-    ASSERT_TRUE (value.pushBack (Binary (bytes, sizeof (bytes))).isBinary ());
-    ASSERT_EQ (value[0].getBinary (), Binary (bytes, sizeof (bytes)));
+    ASSERT_TRUE (value.pushBack (std::span<const uint8_t> (bytes, sizeof (bytes))).isBinary ());
+    ASSERT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
 }
 
 /**
@@ -5999,7 +6000,7 @@ TEST (Value, serialize)
 
     const uint8_t bytes[] = {0x00, 0xff};
     Value binary;
-    binary.pushBack (Binary (bytes, sizeof (bytes)));
+    binary.pushBack (std::span<const uint8_t> (bytes, sizeof (bytes)));
     out.str ("");
     ASSERT_EQ (binary.serialize<PackWriter> (out), 0) << join::lastError.message ();
     EXPECT_EQ (out.str (), std::string ({'\x91', '\xc4', '\x02', '\x00', '\xff'}));

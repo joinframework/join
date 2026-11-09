@@ -34,6 +34,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <span>
 
 // C.
 #include <cstddef>
@@ -186,7 +187,7 @@ namespace join
          * @param value binary value to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setBinary (Binary value)
+        int setBinary (std::span<const uint8_t> value)
         {
             return emplaceValue (_root.copyBinary (value));
         }

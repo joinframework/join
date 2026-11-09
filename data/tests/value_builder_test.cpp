@@ -33,12 +33,13 @@
 
 // C++.
 #include <string_view>
+#include <algorithm>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <span>
 
 using join::Array;
-using join::Binary;
 using join::Object;
 using join::Value;
 using join::ValueBuilder;
@@ -260,16 +261,16 @@ TEST (ValueBuilder, setBinary)
     const uint8_t data[] = {0x01, 0x02};
     Value value;
     ValueBuilder builder (value);
-    ASSERT_EQ (builder.setBinary (Binary (data, sizeof (data))), 0);
+    ASSERT_EQ (builder.setBinary (std::span<const uint8_t> (data, sizeof (data))), 0);
     ASSERT_TRUE (value.isBinary ());
-    ASSERT_EQ (value.getBinary (), Binary (data, sizeof (data)));
+    ASSERT_TRUE (std::ranges::equal (value.getBinary (), std::span<const uint8_t> (data, sizeof (data))));
     ASSERT_NE (value.getBinary ().data (), data);
 
     ASSERT_EQ (builder.startArray (), 0);
-    ASSERT_EQ (builder.setBinary (Binary (data, 1)), 0);
+    ASSERT_EQ (builder.setBinary (std::span<const uint8_t> (data, 1)), 0);
     ASSERT_EQ (builder.stopArray (), 0);
     ASSERT_EQ (value.size (), 1U);
-    ASSERT_EQ (value[0].getBinary (), Binary (data, 1));
+    ASSERT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (data, 1)));
 }
 
 /**

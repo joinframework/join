@@ -32,9 +32,9 @@
 // C++.
 #include <type_traits>
 #include <string>
+#include <span>
 
 using join::Value;
-using join::Binary;
 using join::Object;
 using join::SaxHandler;
 using join::JsonReader;
@@ -140,7 +140,7 @@ TEST (SaxHandler, setString)
 TEST (SaxHandler, setBinary)
 {
     SaxHandler handler;
-    EXPECT_EQ (handler.setBinary (Binary ()), 0);
+    EXPECT_EQ (handler.setBinary (std::span<const uint8_t> ()), 0);
 }
 
 /**

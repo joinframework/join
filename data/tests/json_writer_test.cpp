@@ -31,11 +31,11 @@
 // C++.
 #include <stdexcept>
 #include <sstream>
+#include <span>
 
 using join::JsonWriter;
 using join::Value;
 using join::Array;
-using join::Binary;
 using join::Object;
 using join::SaxErrc;
 
@@ -244,7 +244,7 @@ TEST (JsonWriter, setBinary)
     JsonWriter jsonWriter (stream);
     const uint8_t data[] = {0x01};
 
-    EXPECT_EQ (jsonWriter.setBinary (Binary (data, sizeof (data))), -1);
+    EXPECT_EQ (jsonWriter.setBinary (std::span<const uint8_t> (data, sizeof (data))), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
 }
 

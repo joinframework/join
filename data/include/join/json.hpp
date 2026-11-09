@@ -45,6 +45,7 @@
 #include <fstream>
 #include <memory>
 #include <vector>
+#include <span>
 
 // C.
 #include <cstring>
@@ -435,7 +436,7 @@ namespace join
          * @param value binary value to set.
          * @return -1.
          */
-        int setBinary ([[maybe_unused]] Binary value)
+        int setBinary ([[maybe_unused]] std::span<const uint8_t> value)
         {
             join::lastError = make_error_code (SaxErrc::InvalidValue);
             reset ();
