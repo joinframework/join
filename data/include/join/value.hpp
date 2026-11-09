@@ -64,6 +64,9 @@ namespace join
     /// string.
     using String = View<const char>;
 
+    /// binary.
+    using Binary = View<const uint8_t>;
+
     /**
      * @brief member.
      */
@@ -123,8 +126,9 @@ namespace join
             Unsigned64Value = 5, /**< index of the 64 bits unsigned integer alternative. */
             RealValue = 6,       /**< index of the real alternative. */
             StringValue = 7,     /**< index of the string alternative. */
-            ArrayValue = 8,      /**< index of the array alternative. */
-            ObjectValue = 9,     /**< index of the object alternative. */
+            BinaryValue = 8,     /**< index of the binary alternative. */
+            ArrayValue = 9,      /**< index of the array alternative. */
+            ObjectValue = 10,    /**< index of the object alternative. */
         };
 
         /**
@@ -374,6 +378,27 @@ namespace join
         }
 
         /**
+         * @brief constructs a binary value.
+         * @param value binary value.
+         */
+        BasicValue (Binary value)
+        : BasicValue (nullptr)
+        {
+            _data.template set<BinaryValue> (copyBinary (value));
+        }
+
+        /**
+         * @brief constructs a binary value using an allocator owned by the caller.
+         * @param value binary value.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (Binary value, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<BinaryValue> (copyBinary (value));
+        }
+
+        /**
          * @brief copy constructor.
          * @param other object to copy.
          */
@@ -576,6 +601,24 @@ namespace join
             }
 
             _data.template set<ObjectValue> (copyObject (value));
+            _capacity = 0;
+
+            return *this;
+        }
+
+        /**
+         * @brief assign a binary value.
+         * @param value binary value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (Binary value)
+        {
+            if (_owner || (_allocator == nullptr))
+            {
+                return *this = BasicValue (value);
+            }
+
+            _data.template set<BinaryValue> (copyBinary (value));
             _capacity = 0;
 
             return *this;
@@ -1439,6 +1482,25 @@ namespace join
         constexpr const Object& getObject () const
         {
             return _data.template get<ObjectValue> ();
+        }
+
+        /**
+         * @brief check if the variable held by value is a binary value.
+         * @return true if the variable held by value is a binary value, false otherwise.
+         */
+        constexpr bool isBinary () const
+        {
+            return _data.index () == BinaryValue;
+        }
+
+        /**
+         * @brief get variable held by value as a binary value.
+         * @return variable held by value as a binary value.
+         * @throw std::bad_cast.
+         */
+        constexpr const Binary& getBinary () const
+        {
+            return _data.template get<BinaryValue> ();
         }
 
         /**
@@ -2610,6 +2672,17 @@ namespace join
         }
 
         /**
+         * @brief appends a binary value at the end of the nested container.
+         * @param value the element to append.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (Binary value)
+        {
+            return pushBack (Value (value, *allocator ()));
+        }
+
+        /**
          * @brief appends a value at the end of the nested container.
          * @param value the element to append.
          * @return a reference to the pushed object.
@@ -3095,7 +3168,8 @@ namespace join
 
     private:
         /// variant type holding the value.
-        using Data = Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, String, Array, Object>;
+        using Data =
+            Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, String, Binary, Array, Object>;
 
         // friendship with value builder.
         friend class ValueBuilder<BasicValue>;
@@ -3165,6 +3239,18 @@ namespace join
             std::copy_n (value.data (), value.size (), data);
             data[value.size ()] = '\0';
             return String (data, value.size ());
+        }
+
+        /**
+         * @brief copy binary data into the allocator.
+         * @param value binary data to copy.
+         * @return copied binary data.
+         */
+        Binary copyBinary (Binary value)
+        {
+            uint8_t* data = allocate<uint8_t> (value.size ());
+            std::copy_n (value.data (), value.size (), data);
+            return Binary (data, value.size ());
         }
 
         /**
@@ -3252,6 +3338,10 @@ namespace join
 
                 case ObjectValue:
                     _data.template set<ObjectValue> (copyObject (other.getObject ()));
+                    break;
+
+                case BinaryValue:
+                    _data.template set<BinaryValue> (copyBinary (other.getBinary ()));
                     break;
 
                 default:
@@ -3404,6 +3494,9 @@ namespace join
 
                 case Value::ObjectValue:
                     return setObject (value.getObject (), handler);
+
+                case Value::BinaryValue:
+                    return handler.setBinary (value.getBinary ());
 
                 default:
                     return handler.setNull ();

@@ -38,6 +38,7 @@
 #include <string>
 
 using join::Array;
+using join::Binary;
 using join::Object;
 using join::Value;
 using join::ValueBuilder;
@@ -249,6 +250,26 @@ TEST (ValueBuilder, setString)
     ASSERT_EQ (value.size (), 2U);
     ASSERT_EQ (value[0], "a");
     ASSERT_EQ (value[1], "b");
+}
+
+/**
+ * @brief Test setBinary method.
+ */
+TEST (ValueBuilder, setBinary)
+{
+    const uint8_t data[] = {0x01, 0x02};
+    Value value;
+    ValueBuilder builder (value);
+    ASSERT_EQ (builder.setBinary (Binary (data, sizeof (data))), 0);
+    ASSERT_TRUE (value.isBinary ());
+    ASSERT_EQ (value.getBinary (), Binary (data, sizeof (data)));
+    ASSERT_NE (value.getBinary ().data (), data);
+
+    ASSERT_EQ (builder.startArray (), 0);
+    ASSERT_EQ (builder.setBinary (Binary (data, 1)), 0);
+    ASSERT_EQ (builder.stopArray (), 0);
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_EQ (value[0].getBinary (), Binary (data, 1));
 }
 
 /**

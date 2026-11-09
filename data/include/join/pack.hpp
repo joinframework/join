@@ -339,6 +339,33 @@ namespace join
         }
 
         /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setBinary (Binary value)
+        {
+            if (value.size () < 256)
+            {
+                append (0xc4);
+                pack (static_cast<uint8_t> (value.size ()));
+            }
+            else if (value.size () < 65536)
+            {
+                append (0xc5);
+                pack (static_cast<uint16_t> (value.size ()));
+            }
+            else
+            {
+                append (0xc6);
+                pack (static_cast<uint32_t> (value.size ()));
+            }
+            append (reinterpret_cast<const char*> (value.data ()), static_cast<uint32_t> (value.size ()));
+            endValue ();
+            return 0;
+        }
+
+        /**
          * @brief start array.
          * @param size array size.
          * @return 0 on success, -1 otherwise.
@@ -1226,6 +1253,19 @@ namespace join
                 }
             }
 
+            if constexpr (std::is_same_v<ProbeType, dconv::StringProbe>)
+            {
+                if (JOIN_UNLIKELY (static_cast<size_t> (document.end () - document.tell ()) < len))
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                    return -1;
+                }
+
+                Binary output (reinterpret_cast<const uint8_t*> (document.tell ()), len);
+                document.seek (document.tell () + len);
+                return handler.setBinary (output);
+            }
+
             thread_local std::string cache;
             std::string output = std::move (cache);
             output.clear ();
@@ -1234,7 +1274,7 @@ namespace join
                 return -1;
             }
 
-            int result = handler.setString (output);
+            int result = handler.setBinary (Binary (reinterpret_cast<const uint8_t*> (output.data ()), output.size ()));
             cache = std::move (output);
             return result;
         }

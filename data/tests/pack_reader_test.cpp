@@ -39,6 +39,7 @@
 #include <cmath>
 
 using join::Array;
+using join::Binary;
 using join::Member;
 using join::Object;
 using join::Value;
@@ -1349,6 +1350,8 @@ TEST (PackReader, str)
  */
 TEST (PackReader, bin)
 {
+    const uint8_t hello[] = {0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x0a, 0x57, 0x6f, 0x72, 0x6c, 0x64};
+    const uint8_t bytes[] = {0x00, 0xff};
     std::stringstream stream;
     Value value;
 
@@ -1357,8 +1360,8 @@ TEST (PackReader, bin)
     ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "");
+    ASSERT_TRUE (value[0].isBinary ());
+    EXPECT_TRUE (value[0].getBinary ().empty ());
 
     stream.clear ();
     stream.str (std::string (
@@ -1366,8 +1369,8 @@ TEST (PackReader, bin)
     ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "Hello");
+    ASSERT_TRUE (value[0].isBinary ());
+    EXPECT_EQ (value[0].getBinary (), Binary (hello, 5));
 
     stream.clear ();
     stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x0b', '\x48',
@@ -1375,67 +1378,18 @@ TEST (PackReader, bin)
     ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isArray ());
     ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "Hello\nWorld");
+    ASSERT_TRUE (value[0].isBinary ());
+    EXPECT_EQ (value[0].getBinary (), Binary (hello, sizeof (hello)));
 
-    stream.clear ();
-    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x0b', '\x48', '\x65', '\x6c', '\x6c',
-                              '\x6f', '\x00', '\x57', '\x6f', '\x72', '\x6c', '\x64'}));
-    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), std::string_view ("Hello\0World", 11));
-
-    stream.clear ();
-    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x08', '\x22', '\x5c', '\x2f',
-                              '\x08', '\x0c', '\x0a', '\x0d', '\x09'}));
-    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "\"\\/\b\f\n\r\t");
-
-    stream.clear ();
-    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x01', '\x24'}));
-    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "\x24");
-
-    stream.clear ();
-    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc4', '\x02', '\xc2', '\xa2'}));
-    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "\xC2\xA2");
-
-    stream.clear ();
-    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc5', '\x00', '\x03', '\xe2', '\x82', '\xac'}));
-    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "\xE2\x82\xAC");
-
-    stream.clear ();
-    stream.str (std::string ({'\xdd', '\x00', '\x00', '\x00', '\x01', '\xc6', '\x00', '\x00', '\x00', '\x04', '\xf0',
-                              '\x9d', '\x84', '\x9e'}));
-    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isString ());
-    EXPECT_EQ (value[0].getString (), "\xF0\x9D\x84\x9E");
-
-    Nested nested;
-    ASSERT_EQ (
-        PackReader ().deserialize (std::string ({'\x91', '\xc4', '\x05', '\x91', '\xc4', '\x02', 'a', 'b'}), nested), 0)
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc4', '\x02', '\x00', '\xff'}), value), 0)
         << join::lastError.message ();
-    ASSERT_EQ (nested.strings.size (), 2);
-    EXPECT_EQ (nested.strings[0], "ab");
-    EXPECT_EQ (nested.strings[1], std::string ({'\x91', '\xc4', '\x02', 'a', 'b'}));
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_FALSE (value.empty ());
+    ASSERT_TRUE (value[0].isBinary ());
+    EXPECT_EQ (value[0].getBinary (), Binary (bytes, sizeof (bytes)));
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc4', '\x05', '\x00', '\xff'}), value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
 }
 
 /**

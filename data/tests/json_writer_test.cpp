@@ -35,6 +35,7 @@
 using join::JsonWriter;
 using join::Value;
 using join::Array;
+using join::Binary;
 using join::Object;
 using join::SaxErrc;
 
@@ -232,6 +233,19 @@ TEST (JsonWriter, setString)
     stream.str ("");
     EXPECT_EQ (jsonWriter.setString ("\"\\\b\f\n\r\t\x19"), 0);
     EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\"");
+}
+
+/**
+ * @brief Test setBinary method.
+ */
+TEST (JsonWriter, setBinary)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+    const uint8_t data[] = {0x01};
+
+    EXPECT_EQ (jsonWriter.setBinary (Binary (data, sizeof (data))), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
 }
 
 /**

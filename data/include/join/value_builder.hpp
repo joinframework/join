@@ -182,6 +182,16 @@ namespace join
         }
 
         /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setBinary (Binary value)
+        {
+            return emplaceValue (_root.copyBinary (value));
+        }
+
+        /**
          * @brief start array.
          * @param size array size (ignored).
          * @return 0 on success, -1 otherwise.

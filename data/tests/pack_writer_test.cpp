@@ -31,10 +31,12 @@
 
 // C++.
 #include <sstream>
+#include <vector>
 
 using join::PackWriter;
 using join::Value;
 using join::Array;
+using join::Binary;
 using join::Object;
 using join::SaxErrc;
 
@@ -376,6 +378,32 @@ TEST (PackWriter, setString)
     stream.str ("");
     EXPECT_EQ (packWriter.setString (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (0, 6, std::string ({'\xDB', '\x00', '\x01', '\x00', '\x00', '\x78'})), 0);
+}
+
+/**
+ * @brief Test setBinary method.
+ */
+TEST (PackWriter, setBinary)
+{
+    std::stringstream stream;
+    PackWriter packWriter (stream);
+    const std::vector<uint8_t> data (65536, 0x78);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setBinary (Binary (data.data (), 255)), 0);
+    EXPECT_EQ (stream.str ().compare (0, 4, std::string ({'\xC4', '\xFF', '\x78', '\x78'})), 0);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setBinary (Binary (data.data (), 256)), 0);
+    EXPECT_EQ (stream.str ().compare (0, 5, std::string ({'\xC5', '\x01', '\x00', '\x78', '\x78'})), 0);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setBinary (Binary (data.data (), 65535)), 0);
+    EXPECT_EQ (stream.str ().compare (0, 5, std::string ({'\xC5', '\xFF', '\xFF', '\x78', '\x78'})), 0);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setBinary (Binary (data.data (), 65536)), 0);
+    EXPECT_EQ (stream.str ().compare (0, 7, std::string ({'\xC6', '\x00', '\x01', '\x00', '\x00', '\x78', '\x78'})), 0);
 }
 
 /**

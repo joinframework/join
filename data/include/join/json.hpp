@@ -431,6 +431,18 @@ namespace join
         }
 
         /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @return -1.
+         */
+        int setBinary ([[maybe_unused]] Binary value)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidValue);
+            reset ();
+            return -1;
+        }
+
+        /**
          * @brief start array.
          * @param size array size (ignored).
          * @return 0 on success, -1 otherwise.

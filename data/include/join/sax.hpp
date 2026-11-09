@@ -126,6 +126,16 @@ namespace join
         }
 
         /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @return 0.
+         */
+        int setBinary ([[maybe_unused]] Binary value) noexcept
+        {
+            return 0;
+        }
+
+        /**
          * @brief start array.
          * @param size array size, absent when called by the JSON reader.
          * @return 0.

@@ -34,6 +34,7 @@
 #include <string>
 
 using join::Value;
+using join::Binary;
 using join::Object;
 using join::SaxHandler;
 using join::JsonReader;
@@ -131,6 +132,15 @@ TEST (SaxHandler, setString)
     ASSERT_EQ (JsonReader ().deserialize (std::string (R"({"a":["b",1,null,{"c":"d"}]})"), counter), 0)
         << join::lastError.message ();
     EXPECT_EQ (counter.strings, 2U);
+}
+
+/**
+ * @brief Test setBinary method.
+ */
+TEST (SaxHandler, setBinary)
+{
+    SaxHandler handler;
+    EXPECT_EQ (handler.setBinary (Binary ()), 0);
 }
 
 /**
