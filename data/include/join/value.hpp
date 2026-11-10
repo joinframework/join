@@ -39,11 +39,13 @@
 #include <stdexcept>
 #include <algorithm>
 #include <concepts>
+#include <optional>
 #include <compare>
 #include <ostream>
 #include <memory>
 #include <string>
 #include <limits>
+#include <span>
 #include <new>
 
 // C.
@@ -63,6 +65,32 @@ namespace join
 
     /// string.
     using String = View<const char>;
+
+    /**
+     * @brief binary.
+     */
+    struct Binary
+    {
+        /**
+         * @brief compare binaries.
+         * @param other binary to compare to.
+         * @return true if equal.
+         */
+        constexpr bool operator== (const Binary& other) const = default;
+
+        /**
+         * @brief three-way compare binaries.
+         * @param other binary to compare to.
+         * @return ordering of this binary relative to other.
+         */
+        constexpr std::partial_ordering operator<=> (const Binary& other) const = default;
+
+        /// binary data.
+        View<const uint8_t> data;
+
+        /// binary subtype.
+        std::optional<int8_t> subtype;
+    };
 
     /**
      * @brief member.
@@ -123,8 +151,9 @@ namespace join
             Unsigned64Value = 5, /**< index of the 64 bits unsigned integer alternative. */
             RealValue = 6,       /**< index of the real alternative. */
             StringValue = 7,     /**< index of the string alternative. */
-            ArrayValue = 8,      /**< index of the array alternative. */
-            ObjectValue = 9,     /**< index of the object alternative. */
+            BinaryValue = 8,     /**< index of the binary alternative. */
+            ArrayValue = 9,      /**< index of the array alternative. */
+            ObjectValue = 10,    /**< index of the object alternative. */
         };
 
         /**
@@ -329,6 +358,29 @@ namespace join
         BasicValue (const std::string& value)
         : BasicValue (std::string_view (value))
         {
+        }
+
+        /**
+         * @brief constructs a binary value.
+         * @param value binary value.
+         * @param subtype binary subtype.
+         */
+        BasicValue (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
+        : BasicValue (nullptr)
+        {
+            _data.template set<BinaryValue> (copyBinary (value, subtype));
+        }
+
+        /**
+         * @brief constructs a binary value using an allocator owned by the caller.
+         * @param value binary value.
+         * @param subtype binary subtype.
+         * @param allocator allocator providing the memory of the value.
+         */
+        BasicValue (std::span<const uint8_t> value, std::optional<int8_t> subtype, Allocator& allocator)
+        : BasicValue (allocator)
+        {
+            _data.template set<BinaryValue> (copyBinary (value, subtype));
         }
 
         /**
@@ -543,6 +595,24 @@ namespace join
         Value& operator= (const std::string& value)
         {
             return *this = std::string_view (value);
+        }
+
+        /**
+         * @brief assign a binary value.
+         * @param value binary value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (std::span<const uint8_t> value)
+        {
+            if (_owner || (_allocator == nullptr))
+            {
+                return *this = BasicValue (value);
+            }
+
+            _data.template set<BinaryValue> (copyBinary (value, std::nullopt));
+            _capacity = 0;
+
+            return *this;
         }
 
         /**
@@ -1401,6 +1471,36 @@ namespace join
         explicit operator std::string_view () const
         {
             return getString ();
+        }
+
+        /**
+         * @brief check if the variable held by value is a binary value.
+         * @return true if the variable held by value is a binary value, false otherwise.
+         */
+        constexpr bool isBinary () const
+        {
+            return _data.index () == BinaryValue;
+        }
+
+        /**
+         * @brief get variable held by value as a binary value.
+         * @return variable held by value as a binary value.
+         * @throw std::bad_cast.
+         */
+        constexpr std::span<const uint8_t> getBinary () const
+        {
+            const Binary& value = _data.template get<BinaryValue> ();
+            return std::span<const uint8_t> (value.data.data (), value.data.size ());
+        }
+
+        /**
+         * @brief get the subtype of the binary value held by value.
+         * @return subtype of the binary value, std::nullopt if none.
+         * @throw std::bad_cast.
+         */
+        constexpr std::optional<int8_t> getSubtype () const
+        {
+            return _data.template get<BinaryValue> ().subtype;
         }
 
         /**
@@ -2588,6 +2688,18 @@ namespace join
         }
 
         /**
+         * @brief appends a binary value at the end of the nested container.
+         * @param value the element to append.
+         * @param subtype binary subtype.
+         * @return a reference to the pushed object.
+         * @throw std::bad_cast.
+         */
+        Value& pushBack (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
+        {
+            return pushBack (Value (value, subtype, *allocator ()));
+        }
+
+        /**
          * @brief appends an array value at the end of the nested container.
          * @param value the element to append.
          * @return a reference to the pushed object.
@@ -3095,7 +3207,8 @@ namespace join
 
     private:
         /// variant type holding the value.
-        using Data = Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, String, Array, Object>;
+        using Data =
+            Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, String, Binary, Array, Object>;
 
         // friendship with value builder.
         friend class ValueBuilder<BasicValue>;
@@ -3165,6 +3278,19 @@ namespace join
             std::copy_n (value.data (), value.size (), data);
             data[value.size ()] = '\0';
             return String (data, value.size ());
+        }
+
+        /**
+         * @brief copy binary data into the allocator.
+         * @param value binary data to copy.
+         * @param subtype binary subtype.
+         * @return copied binary data.
+         */
+        Binary copyBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype)
+        {
+            uint8_t* data = allocate<uint8_t> (value.size ());
+            std::copy_n (value.data (), value.size (), data);
+            return Binary{View<const uint8_t> (data, value.size ()), subtype};
         }
 
         /**
@@ -3244,6 +3370,10 @@ namespace join
             {
                 case StringValue:
                     _data.template set<StringValue> (copyString (other.getString ()));
+                    break;
+
+                case BinaryValue:
+                    _data.template set<BinaryValue> (copyBinary (other.getBinary (), other.getSubtype ()));
                     break;
 
                 case ArrayValue:
@@ -3399,6 +3529,9 @@ namespace join
                 case Value::StringValue:
                     return handler.setString (value.getString ());
 
+                case Value::BinaryValue:
+                    return handler.setBinary (value.getBinary (), value.getSubtype ());
+
                 case Value::ArrayValue:
                     return setArray (value.getArray (), handler);
 
@@ -3485,9 +3618,17 @@ namespace join
                             result = handler.setKey (member.first.getDouble ());
                             break;
 
+                        case Value::BinaryValue:
+                            result = handler.setKey (member.first.getBinary (), member.first.getSubtype ());
+                            break;
+
                         case Value::ArrayValue:
                         case Value::ObjectValue:
-                            join::lastError = make_error_code (SaxErrc::InvalidKey);
+                            result = handler.startKey ();
+                            if (result == 0)
+                            {
+                                result = setValue (member.first, handler);
+                            }
                             break;
 
                         default:

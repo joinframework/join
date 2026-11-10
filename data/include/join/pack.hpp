@@ -36,8 +36,10 @@
 
 // C++.
 #include <algorithm>
+#include <optional>
 #include <sstream>
 #include <fstream>
+#include <span>
 
 // C.
 #include <cstring>
@@ -339,6 +341,78 @@ namespace join
         }
 
         /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @param subtype binary subtype.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
+        {
+            if (subtype)
+            {
+                switch (value.size ())
+                {
+                    case 1:
+                        append (0xd4);
+                        break;
+
+                    case 2:
+                        append (0xd5);
+                        break;
+
+                    case 4:
+                        append (0xd6);
+                        break;
+
+                    case 8:
+                        append (0xd7);
+                        break;
+
+                    case 16:
+                        append (0xd8);
+                        break;
+
+                    default:
+                        if (value.size () < 256)
+                        {
+                            append (0xc7);
+                            pack (static_cast<uint8_t> (value.size ()));
+                        }
+                        else if (value.size () < 65536)
+                        {
+                            append (0xc8);
+                            pack (static_cast<uint16_t> (value.size ()));
+                        }
+                        else
+                        {
+                            append (0xc9);
+                            pack (static_cast<uint32_t> (value.size ()));
+                        }
+                        break;
+                }
+                pack (*subtype);
+            }
+            else if (value.size () < 256)
+            {
+                append (0xc4);
+                pack (static_cast<uint8_t> (value.size ()));
+            }
+            else if (value.size () < 65536)
+            {
+                append (0xc5);
+                pack (static_cast<uint16_t> (value.size ()));
+            }
+            else
+            {
+                append (0xc6);
+                pack (static_cast<uint32_t> (value.size ()));
+            }
+            append (reinterpret_cast<const char*> (value.data ()), static_cast<uint32_t> (value.size ()));
+            endValue ();
+            return 0;
+        }
+
+        /**
          * @brief start array.
          * @param size array size.
          * @return 0 on success, -1 otherwise.
@@ -552,6 +626,38 @@ namespace join
         int setKey (const char* key)
         {
             return setKey (std::string_view (key));
+        }
+
+        /**
+         * @brief set binary key.
+         * @param key object key.
+         * @param subtype binary subtype.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (std::span<const uint8_t> key, std::optional<int8_t> subtype = std::nullopt)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return setBinary (key, subtype);
+        }
+
+        /**
+         * @brief start an array or object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int startKey ()
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                reset ();
+                return -1;
+            }
+            return 0;
         }
 
         /**
@@ -1068,7 +1174,7 @@ namespace join
 
             while (len)
             {
-                if (JOIN_UNLIKELY (readKey (document, handler) == -1))
+                if (JOIN_UNLIKELY (readKey (document, handler, depth + 1) == -1))
                 {
                     return -1;
                 }
@@ -1088,10 +1194,11 @@ namespace join
          * @brief parse a key of any type.
          * @param document document to parse.
          * @param handler handler receiving the document.
+         * @param depth number of enclosing containers.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int readKey (ProbeType& document, Handler& handler)
+        int readKey (ProbeType& document, Handler& handler, size_t depth)
         {
             int ch = document.peek ();
             if (JOIN_UNLIKELY (ch == std::char_traits<char>::eof ()))
@@ -1118,9 +1225,21 @@ namespace join
             {
                 return readString (document, handler, true);
             }
+            else if (isBin (head))
+            {
+                return readBin (document, handler, true);
+            }
             else if (isNumber (head))
             {
                 return readNumber (document, handler, true);
+            }
+            else if (isArray (head) || isObject (head))
+            {
+                if (JOIN_UNLIKELY (handler.startKey () == -1))
+                {
+                    return -1;
+                }
+                return readValue (document, handler, depth);
             }
             else
             {
@@ -1197,12 +1316,14 @@ namespace join
          * @brief parse binary data.
          * @param document document to parse.
          * @param handler handler receiving the document.
+         * @param isKey indicate whether the element to parse is a key or not.
          * @return 0 on success, -1 otherwise.
          */
         template <typename ProbeType, typename Handler>
-        int readBin (ProbeType& document, Handler& handler)
+        int readBin (ProbeType& document, Handler& handler, bool isKey = false)
         {
             uint32_t len = 0;
+            std::optional<int8_t> subtype;
 
             if (document.getIf (0xc6))
             {
@@ -1225,6 +1346,70 @@ namespace join
                     return -1;
                 }
             }
+            else
+            {
+                if (document.getIf (0xd4))
+                {
+                    len = 1;
+                }
+                else if (document.getIf (0xd5))
+                {
+                    len = 2;
+                }
+                else if (document.getIf (0xd6))
+                {
+                    len = 4;
+                }
+                else if (document.getIf (0xd7))
+                {
+                    len = 8;
+                }
+                else if (document.getIf (0xd8))
+                {
+                    len = 16;
+                }
+                else if (document.getIf (0xc9))
+                {
+                    if (JOIN_UNLIKELY (unpack<uint32_t> (document, len) == -1))
+                    {
+                        return -1;
+                    }
+                }
+                else if (document.getIf (0xc8))
+                {
+                    if (JOIN_UNLIKELY (unpack<uint16_t> (document, len) == -1))
+                    {
+                        return -1;
+                    }
+                }
+                else if (document.getIf (0xc7))
+                {
+                    if (JOIN_UNLIKELY (unpack<uint8_t> (document, len) == -1))
+                    {
+                        return -1;
+                    }
+                }
+
+                int8_t type = 0;
+                if (JOIN_UNLIKELY (unpack<int8_t> (document, type) == -1))
+                {
+                    return -1;
+                }
+                subtype = type;
+            }
+
+            if constexpr (std::is_same_v<ProbeType, dconv::StringProbe>)
+            {
+                if (JOIN_UNLIKELY (static_cast<size_t> (document.end () - document.tell ()) < len))
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                    return -1;
+                }
+
+                std::span<const uint8_t> output (reinterpret_cast<const uint8_t*> (document.tell ()), len);
+                document.seek (document.tell () + len);
+                return isKey ? handler.setKey (output, subtype) : handler.setBinary (output, subtype);
+            }
 
             thread_local std::string cache;
             std::string output = std::move (cache);
@@ -1234,7 +1419,8 @@ namespace join
                 return -1;
             }
 
-            int result = handler.setString (output);
+            std::span<const uint8_t> bytes (reinterpret_cast<const uint8_t*> (output.data ()), output.size ());
+            int result = isKey ? handler.setKey (bytes, subtype) : handler.setBinary (bytes, subtype);
             cache = std::move (output);
             return result;
         }
@@ -1512,7 +1698,7 @@ namespace join
          */
         constexpr bool isBin (uint8_t c)
         {
-            return (c == 0xc4) || (c == 0xc5) || (c == 0xc6);
+            return ((c >= 0xc4) && (c <= 0xc9)) || ((c >= 0xd4) && (c <= 0xd8));
         }
 
         /**

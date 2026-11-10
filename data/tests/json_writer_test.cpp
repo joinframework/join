@@ -31,6 +31,7 @@
 // C++.
 #include <stdexcept>
 #include <sstream>
+#include <span>
 
 using join::JsonWriter;
 using join::Value;
@@ -235,6 +236,21 @@ TEST (JsonWriter, setString)
 }
 
 /**
+ * @brief Test setBinary method.
+ */
+TEST (JsonWriter, setBinary)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+    const uint8_t data[] = {0x01};
+
+    EXPECT_EQ (jsonWriter.setBinary (std::span<const uint8_t> (data, sizeof (data))), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_EQ (jsonWriter.setBinary (std::span<const uint8_t> (data, sizeof (data)), -1), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+}
+
+/**
  * @brief Test startArray method.
  */
 TEST (JsonWriter, startArray)
@@ -360,6 +376,8 @@ TEST (JsonWriter, setKey)
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (invalid (6.5), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
+    EXPECT_EQ (invalid (std::span<const uint8_t> ()), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
     EXPECT_EQ (stream.str (), "");
 
     jsonWriter.reset ();
@@ -382,6 +400,19 @@ TEST (JsonWriter, setKey)
     EXPECT_EQ (jsonWriter.setKey ("\"\\\b\f\n\r\t\x19"), 0);
     jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "{\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
+}
+
+/**
+ * @brief Test startKey method.
+ */
+TEST (JsonWriter, startKey)
+{
+    std::stringstream stream;
+    JsonWriter jsonWriter (stream);
+
+    EXPECT_EQ (jsonWriter.startObject (), 0);
+    EXPECT_EQ (jsonWriter.startKey (), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
 }
 
 /**

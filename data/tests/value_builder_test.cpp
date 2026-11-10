@@ -33,9 +33,12 @@
 
 // C++.
 #include <string_view>
+#include <algorithm>
+#include <optional>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <span>
 
 using join::Array;
 using join::Object;
@@ -252,6 +255,31 @@ TEST (ValueBuilder, setString)
 }
 
 /**
+ * @brief Test setBinary method.
+ */
+TEST (ValueBuilder, setBinary)
+{
+    const uint8_t data[] = {0x01, 0x02};
+    Value value;
+    ValueBuilder builder (value);
+    ASSERT_EQ (builder.setBinary (std::span<const uint8_t> (data, sizeof (data))), 0);
+    ASSERT_TRUE (value.isBinary ());
+    ASSERT_TRUE (std::ranges::equal (value.getBinary (), std::span<const uint8_t> (data, sizeof (data))));
+    ASSERT_NE (value.getBinary ().data (), data);
+
+    ASSERT_EQ (builder.startArray (), 0);
+    ASSERT_EQ (builder.setBinary (std::span<const uint8_t> (data, 1)), 0);
+    ASSERT_EQ (builder.stopArray (), 0);
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (data, 1)));
+
+    ASSERT_EQ (builder.setBinary (std::span<const uint8_t> (data, sizeof (data)), -1), 0);
+    ASSERT_TRUE (value.isBinary ());
+    ASSERT_TRUE (std::ranges::equal (value.getBinary (), std::span<const uint8_t> (data, sizeof (data))));
+    ASSERT_EQ (value.getSubtype (), -1);
+}
+
+/**
  * @brief Test startArray method.
  */
 TEST (ValueBuilder, startArray)
@@ -273,6 +301,18 @@ TEST (ValueBuilder, startArray)
     ASSERT_EQ (value.size (), 1U);
     ASSERT_TRUE (value[0].isArray ());
     ASSERT_TRUE (value[0].empty ());
+
+    builder.reset ();
+    ASSERT_EQ (builder.startObject (), 0);
+    ASSERT_EQ (builder.startArray (), 0);
+    ASSERT_EQ (builder.setInt (1), 0);
+    ASSERT_EQ (builder.stopArray (), 0);
+    ASSERT_EQ (builder.setInt (2), 0);
+    ASSERT_EQ (builder.stopObject (), 0);
+    ASSERT_EQ (value.size (), 1U);
+    ASSERT_TRUE (value.getObject ()[0].first.isArray ());
+    ASSERT_EQ (value.getObject ()[0].first.at (0), 1);
+    ASSERT_EQ (value.getObject ()[0].second, 2);
 }
 
 /**
@@ -378,7 +418,10 @@ TEST (ValueBuilder, setKey)
     ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
     ASSERT_EQ (builder.setKey (6.5), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+    ASSERT_EQ (builder.setKey (std::span<const uint8_t> ()), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
 
+    const uint8_t data[] = {0x01, 0x02};
     ASSERT_EQ (builder.startObject (), 0);
     ASSERT_EQ (builder.setKey (nullptr), 0);
     ASSERT_EQ (builder.setInt (0), 0);
@@ -398,8 +441,12 @@ TEST (ValueBuilder, setKey)
     ASSERT_EQ (builder.setInt (7), 0);
     ASSERT_EQ (builder.setKey ("eight"), 0);
     ASSERT_EQ (builder.setInt (8), 0);
+    ASSERT_EQ (builder.setKey (std::span<const uint8_t> (data, sizeof (data))), 0);
+    ASSERT_EQ (builder.setInt (9), 0);
+    ASSERT_EQ (builder.setKey (std::span<const uint8_t> (data, sizeof (data)), -1), 0);
+    ASSERT_EQ (builder.setInt (10), 0);
     ASSERT_EQ (builder.stopObject (), 0);
-    ASSERT_EQ (value.size (), 9U);
+    ASSERT_EQ (value.size (), 11U);
     ASSERT_TRUE (value.getObject ()[0].first.isNull ());
     ASSERT_TRUE (value.getObject ()[1].first.isBool ());
     ASSERT_TRUE (value.getObject ()[2].first.isInt ());
@@ -409,6 +456,22 @@ TEST (ValueBuilder, setKey)
     ASSERT_TRUE (value.getObject ()[6].first.isDouble ());
     ASSERT_EQ (value["seven"], 7);
     ASSERT_EQ (value["eight"], 8);
+    ASSERT_EQ (value[Value (std::span<const uint8_t> (data, sizeof (data)))], 9);
+    ASSERT_EQ (value[Value (std::span<const uint8_t> (data, sizeof (data)), -1)], 10);
+}
+
+/**
+ * @brief Test startKey method.
+ */
+TEST (ValueBuilder, startKey)
+{
+    Value value;
+    ValueBuilder builder (value);
+    ASSERT_EQ (builder.startKey (), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidParent);
+
+    ASSERT_EQ (builder.startObject (), 0);
+    ASSERT_EQ (builder.startKey (), 0);
 }
 
 /**

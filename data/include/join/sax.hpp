@@ -31,6 +31,8 @@
 
 // C++.
 #include <string_view>
+#include <optional>
+#include <span>
 
 // C.
 #include <cstdint>
@@ -121,6 +123,18 @@ namespace join
          * @return 0.
          */
         int setString ([[maybe_unused]] std::string_view value) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @param subtype binary subtype.
+         * @return 0.
+         */
+        int setBinary ([[maybe_unused]] std::span<const uint8_t> value,
+                       [[maybe_unused]] std::optional<int8_t> subtype = std::nullopt) noexcept
         {
             return 0;
         }
@@ -251,6 +265,27 @@ namespace join
          * @return 0.
          */
         int setKey ([[maybe_unused]] const char* key) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief set binary key.
+         * @param key object key.
+         * @param subtype binary subtype.
+         * @return 0.
+         */
+        int setKey ([[maybe_unused]] std::span<const uint8_t> key,
+                    [[maybe_unused]] std::optional<int8_t> subtype = std::nullopt) noexcept
+        {
+            return 0;
+        }
+
+        /**
+         * @brief start an array or object key.
+         * @return 0.
+         */
+        int startKey () noexcept
         {
             return 0;
         }

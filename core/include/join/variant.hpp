@@ -716,7 +716,7 @@ namespace join
         alignas (Ts...) unsigned char _data[std::max ({sizeof (Ts)...})];
 
         /// index of the alternative that is currently held by the variant.
-        uint32_t _which = 0;
+        uint16_t _which = 0;
     };
 
     /**

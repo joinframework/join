@@ -41,10 +41,12 @@
 #include <type_traits>
 #include <functional>
 #include <algorithm>
+#include <optional>
 #include <sstream>
 #include <fstream>
 #include <memory>
 #include <vector>
+#include <span>
 
 // C.
 #include <cstring>
@@ -431,6 +433,19 @@ namespace join
         }
 
         /**
+         * @brief set binary value.
+         * @param value binary value to set.
+         * @return -1.
+         */
+        int setBinary ([[maybe_unused]] std::span<const uint8_t> value,
+                       [[maybe_unused]] std::optional<int8_t> subtype = std::nullopt)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidValue);
+            reset ();
+            return -1;
+        }
+
+        /**
          * @brief start array.
          * @param size array size (ignored).
          * @return 0 on success, -1 otherwise.
@@ -654,6 +669,31 @@ namespace join
         int setKey (const char* key)
         {
             return setKey (std::string_view (key));
+        }
+
+        /**
+         * @brief set binary key.
+         * @param key object key.
+         * @param subtype binary subtype.
+         * @return -1.
+         */
+        int setKey ([[maybe_unused]] std::span<const uint8_t> key,
+                    [[maybe_unused]] std::optional<int8_t> subtype = std::nullopt)
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
+        }
+
+        /**
+         * @brief start an array or object key.
+         * @return -1.
+         */
+        int startKey ()
+        {
+            join::lastError = make_error_code (SaxErrc::InvalidKey);
+            reset ();
+            return -1;
         }
 
         /**
