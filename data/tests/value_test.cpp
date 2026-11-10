@@ -35,6 +35,7 @@
 #include <string_view>
 #include <algorithm>
 #include <stdexcept>
+#include <optional>
 #include <sstream>
 #include <fstream>
 #include <limits>
@@ -230,6 +231,12 @@ TEST (Value, create)
     Value binaryValue (std::span<const uint8_t> (bytes, sizeof (bytes)));
     ASSERT_TRUE (binaryValue.isBinary ());
     ASSERT_TRUE (std::ranges::equal (binaryValue.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+    ASSERT_EQ (binaryValue.getSubtype (), std::nullopt);
+
+    Value extensionValue (std::span<const uint8_t> (bytes, sizeof (bytes)), -1);
+    ASSERT_TRUE (extensionValue.isBinary ());
+    ASSERT_TRUE (std::ranges::equal (extensionValue.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+    ASSERT_EQ (extensionValue.getSubtype (), -1);
 
     Value arrayValue (array.getArray ());
     ASSERT_TRUE (arrayValue.isArray ());
@@ -339,6 +346,12 @@ TEST (Value, copy)
     Value binaryValue (value);
     ASSERT_TRUE (binaryValue.isBinary ());
     ASSERT_TRUE (std::ranges::equal (binaryValue.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+
+    value = Value (std::span<const uint8_t> (bytes, sizeof (bytes)), -1);
+    Value extensionValue (value);
+    ASSERT_TRUE (extensionValue.isBinary ());
+    ASSERT_TRUE (std::ranges::equal (extensionValue.getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+    ASSERT_EQ (extensionValue.getSubtype (), -1);
 
     value = array.getArray ();
     Value arrayValue (value);
@@ -4192,6 +4205,116 @@ TEST (Value, getBinary)
 }
 
 /**
+ * @brief Test getSubtype method.
+ */
+TEST (Value, getSubtype)
+{
+    Value array;
+    array.pushBack (1);
+
+    Value object;
+    object["i"] = 1;
+
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+
+    Value value;
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = nullptr;
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = true;
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = false;
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int8_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int8_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint8_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint8_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int16_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int16_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint16_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint16_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int32_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int32_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint32_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint32_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int64_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<int64_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint64_t>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<uint64_t>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<float>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<float>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<double>::min ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::numeric_limits<double>::max ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = "";
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = "foo";
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = "02:42:64:2f:6a:d0";
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = "127.0.0.1";
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_EQ (value.getSubtype (), std::nullopt);
+
+    value = Value (std::span<const uint8_t> (bytes, sizeof (bytes)), -1);
+    ASSERT_EQ (value.getSubtype (), -1);
+
+    value = array.getArray ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+
+    value = object.getObject ();
+    ASSERT_THROW (value.getSubtype (), std::bad_cast);
+}
+
+/**
  * @brief Test getArray method.
  */
 TEST (Value, getArray)
@@ -4717,6 +4840,7 @@ TEST (Value, subscript)
     ASSERT_EQ (value[uint32_t (1)], 1);
     ASSERT_EQ (value[int64_t (2)], 2);
     ASSERT_EQ (value[uint64_t (3)], 3);
+    ASSERT_EQ (value[Value (uint64_t (3))], 3);
     ASSERT_THROW (value[nullptr], std::bad_cast);
     ASSERT_THROW (value[true], std::bad_cast);
     ASSERT_THROW (value[1.0], std::bad_cast);
@@ -5561,6 +5685,8 @@ TEST (Value, pushBack)
     value = Array ();
     ASSERT_TRUE (value.pushBack (std::span<const uint8_t> (bytes, sizeof (bytes))).isBinary ());
     ASSERT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+    ASSERT_EQ (value.pushBack (std::span<const uint8_t> (bytes, sizeof (bytes)), -1).getSubtype (), -1);
+    ASSERT_TRUE (std::ranges::equal (value[1].getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
 }
 
 /**
@@ -5836,6 +5962,8 @@ TEST (Value, contains)
     ASSERT_FALSE (value.contains (int64_t (-4)));
     ASSERT_FALSE (value.contains (uint64_t (5)));
     ASSERT_FALSE (value.contains (6.5));
+    ASSERT_TRUE (value.contains (Value ("seven")));
+    ASSERT_FALSE (value.contains (Value ("eight")));
 
     value = nullptr;
     value.pushBack (0);
@@ -5850,6 +5978,8 @@ TEST (Value, contains)
     ASSERT_FALSE (value.contains (int64_t (-1)));
     ASSERT_TRUE (value.contains (uint64_t (1)));
     ASSERT_FALSE (value.contains (uint64_t (2)));
+    ASSERT_TRUE (value.contains (Value (1)));
+    ASSERT_FALSE (value.contains (Value (2)));
     ASSERT_THROW (value.contains (nullptr), std::bad_cast);
     ASSERT_THROW (value.contains (true), std::bad_cast);
     ASSERT_THROW (value.contains (1.0), std::bad_cast);
@@ -5961,6 +6091,9 @@ TEST (Value, serialize)
     Value array;
     array.pushBack (1);
 
+    Value object;
+    object["i"] = 1;
+
     Value keys;
     keys[nullptr] = 0;
     keys[true] = 1;
@@ -6005,6 +6138,18 @@ TEST (Value, serialize)
     ASSERT_EQ (binary.serialize<PackWriter> (out), 0) << join::lastError.message ();
     EXPECT_EQ (out.str (), std::string ({'\x91', '\xc4', '\x02', '\x00', '\xff'}));
 
+    Value extension;
+    extension.pushBack (std::span<const uint8_t> (bytes, sizeof (bytes)), -1);
+    out.str ("");
+    ASSERT_EQ (extension.serialize<PackWriter> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x91', '\xd5', '\xff', '\x00', '\xff'}));
+
+    Value binaryKey;
+    binaryKey[Value (std::span<const uint8_t> (bytes, sizeof (bytes)), -1)] = 1;
+    out.str ("");
+    ASSERT_EQ (binaryKey.serialize<PackWriter> (out), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x81', '\xd5', '\xff', '\x00', '\xff', '\x01'}));
+
     out.str ("");
     PackWriter packWriter (out);
     ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
@@ -6040,9 +6185,18 @@ TEST (Value, serialize)
     value = Object ();
     value.insert (array, 1);
     out.str ("");
-    ASSERT_EQ (value.serialize (packWriter), -1);
+    ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x81', '\x91', '\x01', '\x01'}));
+
+    value = Object ();
+    value.insert (object, 1);
+    out.str ("");
+    ASSERT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), std::string ({'\x81', '\x81', '\xa1', '\x69', '\x01', '\x01'}));
+
+    out.str ("");
+    ASSERT_EQ (value.serialize<JsonWriter> (out), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidKey);
-    ASSERT_EQ (out.str (), "");
 
     value = nullptr;
     value.pushBack (7);
@@ -6481,6 +6635,15 @@ TEST (Value, equal)
     ASSERT_FALSE ("foo" == value);
     ASSERT_FALSE (array.getArray () == value);
     ASSERT_TRUE (object.getObject () == value);
+
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_TRUE (value == Value (std::span<const uint8_t> (bytes, sizeof (bytes))));
+    ASSERT_FALSE (value == Value (std::span<const uint8_t> (bytes, sizeof (bytes)), 0));
+
+    value = Value (std::span<const uint8_t> (bytes, sizeof (bytes)), 0);
+    ASSERT_TRUE (value == Value (std::span<const uint8_t> (bytes, sizeof (bytes)), 0));
+    ASSERT_FALSE (value == Value (std::span<const uint8_t> (bytes, sizeof (bytes)), -1));
 }
 
 /**
@@ -7158,6 +7321,12 @@ TEST (Value, lower)
     ASSERT_TRUE ("foo" < value);
     ASSERT_TRUE (array.getArray () < value);
     ASSERT_FALSE (object.getObject () < value);
+
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    value = Value (std::span<const uint8_t> (bytes, sizeof (bytes)), 0);
+    ASSERT_TRUE (Value (std::span<const uint8_t> (bytes, sizeof (bytes))) < value);
+    ASSERT_TRUE (Value (std::span<const uint8_t> (bytes, sizeof (bytes)), -1) < value);
+    ASSERT_FALSE (Value (std::span<const uint8_t> (bytes, sizeof (bytes)), 1) < value);
 }
 
 /**

@@ -32,6 +32,7 @@
 // C++.
 #include <algorithm>
 #include <stdexcept>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -777,6 +778,11 @@ TEST (PackReader, fail)
     ASSERT_NE (PackReader ().deserialize (stream, value), 0);
 
     stream.clear ();
+    stream.str (std::string ({'\x91', '\xc1'}));
+    ASSERT_NE (PackReader ().deserialize (stream, value), 0);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
+
+    stream.clear ();
     stream.str (std::string ({'\x92', '\x01'}));
     ASSERT_NE (PackReader ().deserialize (stream, value), 0);
 
@@ -1394,10 +1400,64 @@ TEST (PackReader, bin)
 }
 
 /**
+ * @brief Test MessagePack parse ext.
+ */
+TEST (PackReader, ext)
+{
+    const std::vector<uint8_t> data (65536, 0x78);
+    const uint8_t bytes[] = {0x00, 0xff};
+    Value value;
+
+    auto ext = [&] (const std::string& head, size_t size) {
+        std::stringstream stream (head + std::string (size, 'x'));
+        if (PackReader ().deserialize (stream, value) == -1)
+        {
+            return false;
+        }
+        return value.isBinary () && (value.getSubtype () == -1) &&
+               std::ranges::equal (value.getBinary (), std::span<const uint8_t> (data.data (), size));
+    };
+
+    EXPECT_TRUE (ext (std::string ({'\xd4', '\xff'}), 1)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xd5', '\xff'}), 2)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xd6', '\xff'}), 4)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xd7', '\xff'}), 8)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xd8', '\xff'}), 16)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xc7', '\x00', '\xff'}), 0)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xc7', '\xff', '\xff'}), 255)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xc8', '\xff', '\xff', '\xff'}), 65535)) << join::lastError.message ();
+    EXPECT_TRUE (ext (std::string ({'\xc9', '\x00', '\x01', '\x00', '\x00', '\xff'}), 65536))
+        << join::lastError.message ();
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xd5', '\x01', '\x00', '\xff'}), value), 0)
+        << join::lastError.message ();
+    ASSERT_TRUE (value.isArray ());
+    ASSERT_TRUE (value[0].isBinary ());
+    EXPECT_EQ (value[0].getSubtype (), 1);
+    EXPECT_TRUE (std::ranges::equal (value[0].getBinary (), std::span<const uint8_t> (bytes, sizeof (bytes))));
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xd5', '\x01', '\x00'}), value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xd5'}), value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc7'}), value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc8', '\x00'}), value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x91', '\xc9', '\x00'}), value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+}
+
+/**
  * @brief Test MessagePack parse key.
  */
 TEST (PackReader, key)
 {
+    const uint8_t bytes[] = {0x00, 0xff};
     std::stringstream stream;
     Value value;
 
@@ -1462,14 +1522,41 @@ TEST (PackReader, key)
     ASSERT_TRUE (value.contains (1.0));
 
     stream.clear ();
+    stream.str (std::string ({'\x81', '\xc4', '\x02', '\x00', '\xff', '\x01'}));
+    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_TRUE (value.contains (Value (std::span<const uint8_t> (bytes, sizeof (bytes)))));
+
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x81', '\xd5', '\xff', '\x00', '\xff', '\x01'}), value), 0)
+        << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_TRUE (value.contains (Value (std::span<const uint8_t> (bytes, sizeof (bytes)), -1)));
+
+    Value arrayKey;
+    arrayKey.pushBack (1);
+    stream.clear ();
     stream.str (std::string ({'\x81', '\x91', '\x01', '\x01'}));
+    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_TRUE (value.contains (arrayKey));
+
+    Value objectKey;
+    objectKey["a"] = 1;
+    stream.clear ();
+    stream.str (std::string ({'\x81', '\x81', '\xa1', '\x61', '\x01', '\x01'}));
+    ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
+    ASSERT_TRUE (value.isObject ());
+    ASSERT_TRUE (value.contains (objectKey));
+
+    stream.clear ();
+    stream.str (std::string ({'\x81', '\xc1', '\x01'}));
     ASSERT_NE (PackReader ().deserialize (stream, value), 0);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
-    stream.clear ();
-    stream.str (std::string ({'\x81', '\x81', '\xa1', '\x61', '\x01', '\x01'}));
-    ASSERT_NE (PackReader ().deserialize (stream, value), 0);
-    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
+    std::stringstream out;
+    JsonWriter jsonWriter (out);
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\x81', '\x91', '\x01', '\x01'}), jsonWriter), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidKey);
 
     stream.clear ();
     stream.str (std::string ({'\x81', '\xcc'}));

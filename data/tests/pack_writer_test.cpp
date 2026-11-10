@@ -404,6 +404,25 @@ TEST (PackWriter, setBinary)
     stream.str ("");
     EXPECT_EQ (packWriter.setBinary (std::span<const uint8_t> (data.data (), 65536)), 0);
     EXPECT_EQ (stream.str ().compare (0, 7, std::string ({'\xC6', '\x00', '\x01', '\x00', '\x00', '\x78', '\x78'})), 0);
+
+    auto ext = [&] (size_t size) {
+        stream.str ("");
+        packWriter.setBinary (std::span<const uint8_t> (data.data (), size), -1);
+        packWriter.flush ();
+        return stream.str ().substr (0, stream.str ().size () - size);
+    };
+
+    EXPECT_EQ (ext (1), std::string ({'\xD4', '\xFF'}));
+    EXPECT_EQ (ext (2), std::string ({'\xD5', '\xFF'}));
+    EXPECT_EQ (ext (4), std::string ({'\xD6', '\xFF'}));
+    EXPECT_EQ (ext (8), std::string ({'\xD7', '\xFF'}));
+    EXPECT_EQ (ext (16), std::string ({'\xD8', '\xFF'}));
+    EXPECT_EQ (ext (0), std::string ({'\xC7', '\x00', '\xFF'}));
+    EXPECT_EQ (ext (3), std::string ({'\xC7', '\x03', '\xFF'}));
+    EXPECT_EQ (ext (255), std::string ({'\xC7', '\xFF', '\xFF'}));
+    EXPECT_EQ (ext (256), std::string ({'\xC8', '\x01', '\x00', '\xFF'}));
+    EXPECT_EQ (ext (65535), std::string ({'\xC8', '\xFF', '\xFF', '\xFF'}));
+    EXPECT_EQ (ext (65536), std::string ({'\xC9', '\x00', '\x01', '\x00', '\x00', '\xFF'}));
 }
 
 /**
@@ -512,11 +531,11 @@ TEST (PackWriter, setKey)
     std::stringstream stream;
     PackWriter packWriter (stream);
 
-    auto key = [&] (auto value) {
+    auto key = [&] (auto... value) {
         stream.str ("");
         packWriter.reset ();
         packWriter.startObject (1);
-        int result = packWriter.setKey (value);
+        int result = packWriter.setKey (value...);
         packWriter.flush ();
         return result;
     };
@@ -538,6 +557,8 @@ TEST (PackWriter, setKey)
     EXPECT_EQ (packWriter.setKey (std::string_view ("seven")), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
     EXPECT_EQ (packWriter.setKey ("eight"), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+    EXPECT_EQ (packWriter.setKey (std::span<const uint8_t> ()), -1);
     EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
 
     EXPECT_EQ (key (nullptr), 0);
@@ -594,6 +615,28 @@ TEST (PackWriter, setKey)
 
     EXPECT_EQ (key ("a"), 0);
     EXPECT_EQ (stream.str ().substr (1), std::string ({'\xA1', 'a'}));
+
+    const uint8_t bytes[] = {0x00, 0xff};
+    EXPECT_EQ (key (std::span<const uint8_t> (bytes, sizeof (bytes))), 0);
+    EXPECT_EQ (stream.str ().substr (1), std::string ({'\xC4', '\x02', '\x00', '\xFF'}));
+
+    EXPECT_EQ (key (std::span<const uint8_t> (bytes, sizeof (bytes)), -1), 0);
+    EXPECT_EQ (stream.str ().substr (1), std::string ({'\xD5', '\xFF', '\x00', '\xFF'}));
+}
+
+/**
+ * @brief Test startKey method.
+ */
+TEST (PackWriter, startKey)
+{
+    std::stringstream stream;
+    PackWriter packWriter (stream);
+
+    EXPECT_EQ (packWriter.startKey (), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidParent);
+
+    EXPECT_EQ (packWriter.startObject (1), 0);
+    EXPECT_EQ (packWriter.startKey (), 0);
 }
 
 /**
@@ -683,12 +726,12 @@ TEST (PackWriter, document)
     value = Object ();
     value.insert (key, 1);
     stream.str ("");
-    EXPECT_EQ (value.serialize (packWriter), -1);
-    EXPECT_EQ (join::lastError, SaxErrc::InvalidKey);
-    EXPECT_EQ (stream.str (), "");
+    EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), std::string ({'\x81', '\x91', '\x01', '\x01'}));
 
     value = nullptr;
     value.pushBack (7);
+    stream.str ("");
     EXPECT_EQ (value.serialize (packWriter), 0) << join::lastError.message ();
     EXPECT_EQ (stream.str (), std::string ({'\x91', '\x07'}));
 }

@@ -32,6 +32,7 @@
 
 // C++.
 #include <string_view>
+#include <optional>
 #include <utility>
 #include <vector>
 #include <span>
@@ -185,11 +186,12 @@ namespace join
         /**
          * @brief set binary value.
          * @param value binary value to set.
+         * @param subtype binary subtype.
          * @return 0 on success, -1 otherwise.
          */
-        int setBinary (std::span<const uint8_t> value)
+        int setBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
         {
-            return emplaceValue (_root.copyBinary (value));
+            return emplaceValue (_root.copyBinary (value, subtype));
         }
 
         /**
@@ -419,6 +421,40 @@ namespace join
         int setKey (const char* key)
         {
             return setKey (std::string_view (key));
+        }
+
+        /**
+         * @brief set binary key.
+         * @param key object key to set.
+         * @param subtype binary subtype.
+         * @return 0 on success, -1 otherwise.
+         */
+        int setKey (std::span<const uint8_t> key, std::optional<int8_t> subtype = std::nullopt)
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            _stack.emplace_back (_root.copyBinary (key, subtype));
+
+            return 0;
+        }
+
+        /**
+         * @brief start an array or object key.
+         * @return 0 on success, -1 otherwise.
+         */
+        int startKey ()
+        {
+            if (JOIN_UNLIKELY (_depth == 0))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidParent);
+                return -1;
+            }
+
+            return 0;
         }
 
         /**

@@ -141,6 +141,7 @@ TEST (SaxHandler, setBinary)
 {
     SaxHandler handler;
     EXPECT_EQ (handler.setBinary (std::span<const uint8_t> ()), 0);
+    EXPECT_EQ (handler.setBinary (std::span<const uint8_t> (), -1), 0);
 }
 
 /**
@@ -200,6 +201,17 @@ TEST (SaxHandler, setKey)
     EXPECT_EQ (handler.setKey (6.5), 0);
     EXPECT_EQ (handler.setKey (std::string_view ("seven")), 0);
     EXPECT_EQ (handler.setKey ("eight"), 0);
+    EXPECT_EQ (handler.setKey (std::span<const uint8_t> ()), 0);
+    EXPECT_EQ (handler.setKey (std::span<const uint8_t> (), -1), 0);
+}
+
+/**
+ * @brief Test startKey method.
+ */
+TEST (SaxHandler, startKey)
+{
+    SaxHandler handler;
+    EXPECT_EQ (handler.startKey (), 0);
 }
 
 /**

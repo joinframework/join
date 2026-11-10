@@ -39,6 +39,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <concepts>
+#include <optional>
 #include <compare>
 #include <ostream>
 #include <memory>
@@ -65,8 +66,31 @@ namespace join
     /// string.
     using String = View<const char>;
 
-    /// binary.
-    using Binary = View<const uint8_t>;
+    /**
+     * @brief binary.
+     */
+    struct Binary
+    {
+        /**
+         * @brief compare binaries.
+         * @param other binary to compare to.
+         * @return true if equal.
+         */
+        constexpr bool operator== (const Binary& other) const = default;
+
+        /**
+         * @brief three-way compare binaries.
+         * @param other binary to compare to.
+         * @return ordering of this binary relative to other.
+         */
+        constexpr std::partial_ordering operator<=> (const Binary& other) const = default;
+
+        /// binary data.
+        View<const uint8_t> data;
+
+        /// binary subtype.
+        std::optional<int8_t> subtype;
+    };
 
     /**
      * @brief member.
@@ -339,22 +363,24 @@ namespace join
         /**
          * @brief constructs a binary value.
          * @param value binary value.
+         * @param subtype binary subtype.
          */
-        BasicValue (std::span<const uint8_t> value)
+        BasicValue (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
         : BasicValue (nullptr)
         {
-            _data.template set<BinaryValue> (copyBinary (value));
+            _data.template set<BinaryValue> (copyBinary (value, subtype));
         }
 
         /**
          * @brief constructs a binary value using an allocator owned by the caller.
          * @param value binary value.
+         * @param subtype binary subtype.
          * @param allocator allocator providing the memory of the value.
          */
-        BasicValue (std::span<const uint8_t> value, Allocator& allocator)
+        BasicValue (std::span<const uint8_t> value, std::optional<int8_t> subtype, Allocator& allocator)
         : BasicValue (allocator)
         {
-            _data.template set<BinaryValue> (copyBinary (value));
+            _data.template set<BinaryValue> (copyBinary (value, subtype));
         }
 
         /**
@@ -583,7 +609,7 @@ namespace join
                 return *this = BasicValue (value);
             }
 
-            _data.template set<BinaryValue> (copyBinary (value));
+            _data.template set<BinaryValue> (copyBinary (value, std::nullopt));
             _capacity = 0;
 
             return *this;
@@ -1464,7 +1490,17 @@ namespace join
         constexpr std::span<const uint8_t> getBinary () const
         {
             const Binary& value = _data.template get<BinaryValue> ();
-            return std::span<const uint8_t> (value.data (), value.size ());
+            return std::span<const uint8_t> (value.data.data (), value.data.size ());
+        }
+
+        /**
+         * @brief get the subtype of the binary value held by value.
+         * @return subtype of the binary value, std::nullopt if none.
+         * @throw std::bad_cast.
+         */
+        constexpr std::optional<int8_t> getSubtype () const
+        {
+            return _data.template get<BinaryValue> ().subtype;
         }
 
         /**
@@ -2654,12 +2690,13 @@ namespace join
         /**
          * @brief appends a binary value at the end of the nested container.
          * @param value the element to append.
+         * @param subtype binary subtype.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
-        Value& pushBack (std::span<const uint8_t> value)
+        Value& pushBack (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
         {
-            return pushBack (Value (value, *allocator ()));
+            return pushBack (Value (value, subtype, *allocator ()));
         }
 
         /**
@@ -3246,13 +3283,14 @@ namespace join
         /**
          * @brief copy binary data into the allocator.
          * @param value binary data to copy.
+         * @param subtype binary subtype.
          * @return copied binary data.
          */
-        Binary copyBinary (std::span<const uint8_t> value)
+        Binary copyBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype)
         {
             uint8_t* data = allocate<uint8_t> (value.size ());
             std::copy_n (value.data (), value.size (), data);
-            return Binary (data, value.size ());
+            return Binary{View<const uint8_t> (data, value.size ()), subtype};
         }
 
         /**
@@ -3335,7 +3373,7 @@ namespace join
                     break;
 
                 case BinaryValue:
-                    _data.template set<BinaryValue> (copyBinary (other.getBinary ()));
+                    _data.template set<BinaryValue> (copyBinary (other.getBinary (), other.getSubtype ()));
                     break;
 
                 case ArrayValue:
@@ -3492,7 +3530,7 @@ namespace join
                     return handler.setString (value.getString ());
 
                 case Value::BinaryValue:
-                    return handler.setBinary (value.getBinary ());
+                    return handler.setBinary (value.getBinary (), value.getSubtype ());
 
                 case Value::ArrayValue:
                     return setArray (value.getArray (), handler);
@@ -3580,9 +3618,17 @@ namespace join
                             result = handler.setKey (member.first.getDouble ());
                             break;
 
+                        case Value::BinaryValue:
+                            result = handler.setKey (member.first.getBinary (), member.first.getSubtype ());
+                            break;
+
                         case Value::ArrayValue:
                         case Value::ObjectValue:
-                            join::lastError = make_error_code (SaxErrc::InvalidKey);
+                            result = handler.startKey ();
+                            if (result == 0)
+                            {
+                                result = setValue (member.first, handler);
+                            }
                             break;
 
                         default:
