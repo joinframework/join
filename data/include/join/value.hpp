@@ -2225,6 +2225,9 @@ namespace join
                 case StringValue:
                     return _data.template get<StringValue> ().empty ();
 
+                case BinaryValue:
+                    return _data.template get<BinaryValue> ().data.empty ();
+
                 case ArrayValue:
                     return _data.template get<ArrayValue> ().empty ();
 
@@ -2249,6 +2252,9 @@ namespace join
             {
                 case StringValue:
                     return _data.template get<StringValue> ().size ();
+
+                case BinaryValue:
+                    return _data.template get<BinaryValue> ().data.size ();
 
                 case ArrayValue:
                     return _data.template get<ArrayValue> ().size ();

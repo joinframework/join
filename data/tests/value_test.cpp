@@ -4990,6 +4990,13 @@ TEST (Value, empty)
     value = "127.0.0.1";
     ASSERT_FALSE (value.empty ());
 
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    value = std::span<const uint8_t> ();
+    ASSERT_TRUE (value.empty ());
+
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_FALSE (value.empty ());
+
     value = Array ();
     ASSERT_TRUE (value.empty ());
 
@@ -5097,6 +5104,13 @@ TEST (Value, size)
 
     value = "127.0.0.1";
     ASSERT_EQ (value.size (), 9);
+
+    const uint8_t bytes[] = {0x00, 0x01, 0xff};
+    value = std::span<const uint8_t> ();
+    ASSERT_EQ (value.size (), 0);
+
+    value = std::span<const uint8_t> (bytes, sizeof (bytes));
+    ASSERT_EQ (value.size (), 3);
 
     value = array.getArray ();
     ASSERT_EQ (value.size (), 1);
