@@ -545,83 +545,12 @@ namespace join
         }
 
         /**
-         * @brief set null key.
+         * @brief set scalar key.
          * @param key object key.
          * @return -1.
          */
-        int setKey ([[maybe_unused]] std::nullptr_t key)
-        {
-            join::lastError = make_error_code (SaxErrc::InvalidKey);
-            reset ();
-            return -1;
-        }
-
-        /**
-         * @brief set boolean key.
-         * @param key object key.
-         * @return -1.
-         */
-        int setKey ([[maybe_unused]] bool key)
-        {
-            join::lastError = make_error_code (SaxErrc::InvalidKey);
-            reset ();
-            return -1;
-        }
-
-        /**
-         * @brief set integer key.
-         * @param key object key.
-         * @return -1.
-         */
-        int setKey ([[maybe_unused]] int32_t key)
-        {
-            join::lastError = make_error_code (SaxErrc::InvalidKey);
-            reset ();
-            return -1;
-        }
-
-        /**
-         * @brief set unsigned integer key.
-         * @param key object key.
-         * @return -1.
-         */
-        int setKey ([[maybe_unused]] uint32_t key)
-        {
-            join::lastError = make_error_code (SaxErrc::InvalidKey);
-            reset ();
-            return -1;
-        }
-
-        /**
-         * @brief set 64 bits integer key.
-         * @param key object key.
-         * @return -1.
-         */
-        int setKey ([[maybe_unused]] int64_t key)
-        {
-            join::lastError = make_error_code (SaxErrc::InvalidKey);
-            reset ();
-            return -1;
-        }
-
-        /**
-         * @brief set unsigned 64 bits integer key.
-         * @param key object key.
-         * @return -1.
-         */
-        int setKey ([[maybe_unused]] uint64_t key)
-        {
-            join::lastError = make_error_code (SaxErrc::InvalidKey);
-            reset ();
-            return -1;
-        }
-
-        /**
-         * @brief set real key.
-         * @param key object key.
-         * @return -1.
-         */
-        int setKey ([[maybe_unused]] double key)
+        template <Scalar Key>
+        int setKey ([[maybe_unused]] Key key)
         {
             join::lastError = make_error_code (SaxErrc::InvalidKey);
             reset ();
@@ -659,16 +588,6 @@ namespace join
             space ();
             _first = true;
             return 0;
-        }
-
-        /**
-         * @brief set string key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (const char* key)
-        {
-            return setKey (std::string_view (key));
         }
 
         /**
@@ -1241,71 +1160,6 @@ namespace join
         int deserialize (std::string_view document, Handler& handler)
         {
             dconv::StringProbe in (document.data (), document.size ());
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::stringstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::istringstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::fstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::ifstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::iostream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 

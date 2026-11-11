@@ -63,9 +63,14 @@ namespace join
     template <typename Value>
     class ValueBuilder;
 
-    /// scalar type held by a value.
+    /// scalar alternative selected by overload resolution for a type.
     template <typename Type>
-    concept Scalar = std::is_arithmetic_v<Type> || std::same_as<Type, std::nullptr_t>;
+    using ScalarType = match_t<Type, std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double>;
+
+    /// type implicitly convertible to a single scalar alternative, object pointers excluded.
+    template <typename Type>
+    concept Scalar = (std::is_null_pointer_v<Type> || !std::convertible_to<Type, const volatile void*>) &&
+                     requires { typename ScalarType<Type>; };
 
     /// string.
     using String = View<const char>;
@@ -181,7 +186,7 @@ namespace join
          */
         template <Scalar Type>
         constexpr BasicValue (Type value)
-        : _data (value)
+        : _data (static_cast<ScalarType<Type>> (value))
         {
         }
 
@@ -194,7 +199,7 @@ namespace join
         BasicValue (Type value, Allocator& allocator)
         : BasicValue (allocator)
         {
-            _data = value;
+            _data = static_cast<ScalarType<Type>> (value);
         }
 
         /**
@@ -342,6 +347,18 @@ namespace join
         }
 
         /**
+         * @brief assign a null value.
+         * @param value null value.
+         * @return a reference of the current object.
+         */
+        Value& operator= (std::nullptr_t value)
+        {
+            reset ();
+            _data = value;
+            return *this;
+        }
+
+        /**
          * @brief assign a scalar value.
          * @param value scalar value.
          * @return a reference of the current object.
@@ -350,7 +367,7 @@ namespace join
         Value& operator= (Type value)
         {
             reset ();
-            _data = value;
+            _data = static_cast<ScalarType<Type>> (value);
             return *this;
         }
 
@@ -993,11 +1010,11 @@ namespace join
         template <Scalar Key>
         const Value& at (Key key) const
         {
-            if constexpr (std::integral<Key> && !std::same_as<Key, bool>)
+            if constexpr (std::integral<ScalarType<Key>> && !std::same_as<ScalarType<Key>, bool>)
             {
                 if (_data.index () == ArrayValue)
                 {
-                    return elementAt (key);
+                    return elementAt (static_cast<ScalarType<Key>> (key));
                 }
             }
 
@@ -1060,11 +1077,11 @@ namespace join
         template <Scalar Key>
         Value& operator[] (Key key)
         {
-            if constexpr (std::integral<Key> && !std::same_as<Key, bool>)
+            if constexpr (std::integral<ScalarType<Key>> && !std::same_as<ScalarType<Key>, bool>)
             {
                 if (_data.index () == ArrayValue)
                 {
-                    return _data.template get<ArrayValue> ()[key];
+                    return _data.template get<ArrayValue> ()[static_cast<ScalarType<Key>> (key)];
                 }
             }
 
@@ -1270,8 +1287,9 @@ namespace join
          * @return number of elements removed.
          * @throw std::bad_cast.
          */
-        template <Scalar Key>
-        size_t erase (Key key)
+        template <typename Key>
+            requires Scalar<Key> || std::same_as<Key, BasicValue>
+        size_t erase (const Key& key)
         {
             Member* member = findMember (key);
             if (member == nullptr)
@@ -1290,26 +1308,6 @@ namespace join
          * @throw std::bad_cast.
          */
         size_t erase (std::string_view key)
-        {
-            Member* member = findMember (key);
-            if (member == nullptr)
-            {
-                return 0;
-            }
-
-            eraseMember (member);
-            return 1;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        template <typename Key>
-            requires std::same_as<Key, BasicValue>
-        size_t erase (const Key& key)
         {
             Member* member = findMember (key);
             if (member == nullptr)
@@ -1435,19 +1433,20 @@ namespace join
         template <Scalar Key>
         bool contains (Key key) const
         {
-            if constexpr (std::integral<Key> && !std::same_as<Key, bool>)
+            if constexpr (std::integral<ScalarType<Key>> && !std::same_as<ScalarType<Key>, bool>)
             {
                 if (_data.index () == ArrayValue)
                 {
-                    if constexpr (std::is_signed_v<Key>)
+                    if constexpr (std::is_signed_v<ScalarType<Key>>)
                     {
-                        if (key < 0)
+                        if (static_cast<ScalarType<Key>> (key) < 0)
                         {
                             return false;
                         }
                     }
 
-                    return static_cast<uint64_t> (key) < _data.template get<ArrayValue> ().size ();
+                    return static_cast<uint64_t> (static_cast<ScalarType<Key>> (key)) <
+                           _data.template get<ArrayValue> ().size ();
                 }
             }
 
@@ -1882,22 +1881,23 @@ namespace join
         template <Scalar Key>
         constexpr bool matchKey (Key key) const
         {
-            if constexpr (std::same_as<Key, std::nullptr_t>)
+            using Type = ScalarType<Key>;
+
+            if constexpr (std::same_as<Type, std::nullptr_t>)
             {
                 return isNull ();
             }
-            else if constexpr (std::same_as<Key, bool>)
+            else if constexpr (std::same_as<Type, bool>)
             {
-                return isBool () && getBool () == key;
+                return isBool () && getBool () == static_cast<Type> (key);
             }
-            else if constexpr (std::floating_point<Key>)
+            else if constexpr (std::same_as<Type, double>)
             {
-                return isDouble () && getDouble () == key;
+                return isDouble () && getDouble () == static_cast<Type> (key);
             }
             else
             {
-                using Type = std::common_type_t<Key, int32_t>;
-                return isInteger<Type> () && convertInteger<Type> () == key;
+                return isInteger<Type> () && convertInteger<Type> () == static_cast<Type> (key);
             }
         }
 

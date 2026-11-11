@@ -491,11 +491,12 @@ namespace join
         }
 
         /**
-         * @brief set null key.
+         * @brief set scalar key.
          * @param key object key.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey ([[maybe_unused]] std::nullptr_t key)
+        template <Scalar Key>
+        int setKey ([[maybe_unused]] Key key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -503,103 +504,37 @@ namespace join
                 reset ();
                 return -1;
             }
-            return setNull ();
-        }
 
-        /**
-         * @brief set boolean key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (bool key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                reset ();
-                return -1;
-            }
-            return setBool (key);
-        }
+            using Type = ScalarType<Key>;
 
-        /**
-         * @brief set integer key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (int32_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
+            if constexpr (std::same_as<Type, std::nullptr_t>)
             {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                reset ();
-                return -1;
+                return setNull ();
             }
-            return setInt (key);
-        }
-
-        /**
-         * @brief set unsigned integer key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (uint32_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
+            else if constexpr (std::same_as<Type, bool>)
             {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                reset ();
-                return -1;
+                return setBool (static_cast<Type> (key));
             }
-            return setUint (key);
-        }
-
-        /**
-         * @brief set 64 bits integer key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (int64_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
+            else if constexpr (std::same_as<Type, int32_t>)
             {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                reset ();
-                return -1;
+                return setInt (static_cast<Type> (key));
             }
-            return setInt64 (key);
-        }
-
-        /**
-         * @brief set unsigned 64 bits integer key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (uint64_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
+            else if constexpr (std::same_as<Type, uint32_t>)
             {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                reset ();
-                return -1;
+                return setUint (static_cast<Type> (key));
             }
-            return setUint64 (key);
-        }
-
-        /**
-         * @brief set real key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (double key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
+            else if constexpr (std::same_as<Type, int64_t>)
             {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                reset ();
-                return -1;
+                return setInt64 (static_cast<Type> (key));
             }
-            return setDouble (key);
+            else if constexpr (std::same_as<Type, uint64_t>)
+            {
+                return setUint64 (static_cast<Type> (key));
+            }
+            else
+            {
+                return setDouble (static_cast<Type> (key));
+            }
         }
 
         /**
@@ -616,16 +551,6 @@ namespace join
                 return -1;
             }
             return setString (key);
-        }
-
-        /**
-         * @brief set string key.
-         * @param key object key.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (const char* key)
-        {
-            return setKey (std::string_view (key));
         }
 
         /**
@@ -846,71 +771,6 @@ namespace join
         int deserialize (std::string_view document, Handler& handler)
         {
             dconv::StringProbe in (document.data (), document.size ());
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::stringstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::istringstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::fstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::ifstream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
-            return read (in, handler);
-        }
-
-        /**
-         * @brief deserialize a document.
-         * @param document document to deserialize.
-         * @param handler handler receiving the document.
-         * @return 0 on success, -1 otherwise.
-         */
-        template <typename Handler>
-        int deserialize (std::iostream& document, Handler& handler)
-        {
-            dconv::StreamProbe in (document);
             return read (in, handler);
         }
 
