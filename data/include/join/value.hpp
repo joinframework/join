@@ -42,6 +42,7 @@
 #include <optional>
 #include <compare>
 #include <ostream>
+#include <utility>
 #include <memory>
 #include <string>
 #include <limits>
@@ -55,13 +56,16 @@
 
 namespace join
 {
-    /// forward declaration.
+    /// forward declarations.
     template <typename Allocator = HeapMem::BumpAllocator<4096, BumpPlain>>
     class BasicValue;
 
-    /// forward declaration.
     template <typename Value>
     class ValueBuilder;
+
+    /// scalar type held by a value.
+    template <typename Type>
+    concept Scalar = std::is_arithmetic_v<Type> || std::same_as<Type, std::nullptr_t>;
 
     /// string.
     using String = View<const char>;
@@ -172,143 +176,25 @@ namespace join
         }
 
         /**
-         * @brief constructs a null value.
-         * @param value null value.
+         * @brief constructs a scalar value.
+         * @param value scalar value.
          */
-        constexpr BasicValue (std::nullptr_t value)
-        : _data (std::in_place_index<NullValue>, value)
+        template <Scalar Type>
+        constexpr BasicValue (Type value)
+        : _data (value)
         {
         }
 
         /**
-         * @brief constructs a null value using an allocator owned by the caller.
-         * @param value null value.
+         * @brief constructs a scalar value using an allocator owned by the caller.
+         * @param value scalar value.
          * @param allocator allocator providing the memory of the value.
          */
-        BasicValue (std::nullptr_t value, Allocator& allocator)
+        template <Scalar Type>
+        BasicValue (Type value, Allocator& allocator)
         : BasicValue (allocator)
         {
-            _data.template set<NullValue> (value);
-        }
-
-        /**
-         * @brief constructs a boolean value.
-         * @param value boolean value.
-         */
-        constexpr BasicValue (bool value)
-        : _data (std::in_place_index<BooleanValue>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a boolean value using an allocator owned by the caller.
-         * @param value boolean value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (bool value, Allocator& allocator)
-        : BasicValue (allocator)
-        {
-            _data.template set<BooleanValue> (value);
-        }
-
-        /**
-         * @brief constructs a integer value.
-         * @param value integer value.
-         */
-        constexpr BasicValue (int32_t value)
-        : _data (std::in_place_index<IntegerValue>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a integer value using an allocator owned by the caller.
-         * @param value integer value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (int32_t value, Allocator& allocator)
-        : BasicValue (allocator)
-        {
-            _data.template set<IntegerValue> (value);
-        }
-
-        /**
-         * @brief constructs a unsigned integer value.
-         * @param value unsigned integer value.
-         */
-        constexpr BasicValue (uint32_t value)
-        : _data (std::in_place_index<UnsignedValue>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a unsigned integer value using an allocator owned by the caller.
-         * @param value unsigned integer value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (uint32_t value, Allocator& allocator)
-        : BasicValue (allocator)
-        {
-            _data.template set<UnsignedValue> (value);
-        }
-
-        /**
-         * @brief constructs a 64 bits integer value.
-         * @param value 64 bits integer value.
-         */
-        constexpr BasicValue (int64_t value)
-        : _data (std::in_place_index<Integer64Value>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a 64 bits integer value using an allocator owned by the caller.
-         * @param value 64 bits integer value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (int64_t value, Allocator& allocator)
-        : BasicValue (allocator)
-        {
-            _data.template set<Integer64Value> (value);
-        }
-
-        /**
-         * @brief constructs a 64 bits unsigned integer value.
-         * @param value 64 bits unsigned integer value.
-         */
-        constexpr BasicValue (uint64_t value)
-        : _data (std::in_place_index<Unsigned64Value>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a 64 bits unsigned integer value using an allocator owned by the caller.
-         * @param value 64 bits unsigned integer value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (uint64_t value, Allocator& allocator)
-        : BasicValue (allocator)
-        {
-            _data.template set<Unsigned64Value> (value);
-        }
-
-        /**
-         * @brief constructs a real value.
-         * @param value real value.
-         */
-        constexpr BasicValue (double value)
-        : _data (std::in_place_index<RealValue>, value)
-        {
-        }
-
-        /**
-         * @brief constructs a real value using an allocator owned by the caller.
-         * @param value real value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (double value, Allocator& allocator)
-        : BasicValue (allocator)
-        {
-            _data.template set<RealValue> (value);
+            _data = value;
         }
 
         /**
@@ -338,16 +224,6 @@ namespace join
          */
         BasicValue (const char* value)
         : BasicValue (std::string_view (value))
-        {
-        }
-
-        /**
-         * @brief constructs a string value from a C-style string using an allocator owned by the caller.
-         * @param value string value.
-         * @param allocator allocator providing the memory of the value.
-         */
-        BasicValue (const char* value, Allocator& allocator)
-        : BasicValue (std::string_view (value), allocator)
         {
         }
 
@@ -466,86 +342,15 @@ namespace join
         }
 
         /**
-         * @brief assign a null value.
-         * @param value null value.
+         * @brief assign a scalar value.
+         * @param value scalar value.
          * @return a reference of the current object.
          */
-        Value& operator= (std::nullptr_t value)
+        template <Scalar Type>
+        Value& operator= (Type value)
         {
             reset ();
-            _data.template set<NullValue> (value);
-            return *this;
-        }
-
-        /**
-         * @brief assign a boolean value.
-         * @param value boolean value.
-         * @return a reference of the current object.
-         */
-        Value& operator= (bool value)
-        {
-            reset ();
-            _data.template set<BooleanValue> (value);
-            return *this;
-        }
-
-        /**
-         * @brief assign a integer value.
-         * @param value integer value.
-         * @return a reference of the current object.
-         */
-        Value& operator= (int32_t value)
-        {
-            reset ();
-            _data.template set<IntegerValue> (value);
-            return *this;
-        }
-
-        /**
-         * @brief assign a unsigned integer value.
-         * @param value unsigned integer value.
-         * @return a reference of the current object.
-         */
-        Value& operator= (uint32_t value)
-        {
-            reset ();
-            _data.template set<UnsignedValue> (value);
-            return *this;
-        }
-
-        /**
-         * @brief assign a 64 bits integer value.
-         * @param value 64 bits integer value.
-         * @return a reference of the current object.
-         */
-        Value& operator= (int64_t value)
-        {
-            reset ();
-            _data.template set<Integer64Value> (value);
-            return *this;
-        }
-
-        /**
-         * @brief assign a 64 bits unsigned integer value.
-         * @param value 64 bits unsigned integer value.
-         * @return a reference of the current object.
-         */
-        Value& operator= (uint64_t value)
-        {
-            reset ();
-            _data.template set<Unsigned64Value> (value);
-            return *this;
-        }
-
-        /**
-         * @brief assign a real value.
-         * @param value real value.
-         * @return a reference of the current object.
-         */
-        Value& operator= (double value)
-        {
-            reset ();
-            _data.template set<RealValue> (value);
+            _data = value;
             return *this;
         }
 
@@ -771,13 +576,33 @@ namespace join
         }
 
         /**
-         * @brief explicit conversion function for boolean value.
-         * @return converted boolean value.
+         * @brief explicit conversion function for scalar value.
+         * @return converted value.
          * @throw std::bad_cast.
          */
-        explicit operator bool () const
+        template <typename Type>
+            requires std::same_as<Type, bool> || std::same_as<Type, int8_t> || std::same_as<Type, uint8_t> ||
+                     std::same_as<Type, int16_t> || std::same_as<Type, uint16_t> || std::same_as<Type, int32_t> ||
+                     std::same_as<Type, uint32_t> || std::same_as<Type, int64_t> || std::same_as<Type, uint64_t> ||
+                     std::same_as<Type, float> || std::same_as<Type, double>
+        explicit operator Type () const
         {
-            return getBool ();
+            if constexpr (std::same_as<Type, bool>)
+            {
+                return getBool ();
+            }
+            else if constexpr (std::same_as<Type, float>)
+            {
+                return getFloat ();
+            }
+            else if constexpr (std::same_as<Type, double>)
+            {
+                return getDouble ();
+            }
+            else
+            {
+                return convertInteger<Type> ();
+            }
         }
 
         /**
@@ -816,40 +641,7 @@ namespace join
          */
         constexpr bool isInt8 () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return _data.template get<IntegerValue> () >=
-                               static_cast<int32_t> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.template get<IntegerValue> () <=
-                               static_cast<int32_t> (std::numeric_limits<int8_t>::max ());
-
-                case UnsignedValue:
-                    return _data.template get<UnsignedValue> () <=
-                           static_cast<uint32_t> (std::numeric_limits<int8_t>::max ());
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >=
-                               static_cast<int64_t> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.template get<Integer64Value> () <=
-                               static_cast<int64_t> (std::numeric_limits<int8_t>::max ());
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<int8_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >=
-                               static_cast<double> (std::numeric_limits<int8_t>::min ()) &&
-                           _data.template get<RealValue> () <=
-                               static_cast<double> (std::numeric_limits<int8_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<int8_t> ();
         }
 
         /**
@@ -859,38 +651,7 @@ namespace join
          */
         constexpr int8_t getInt8 () const
         {
-            if (isInt8 ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<int8_t> (_data.template get<IntegerValue> ());
-
-                    case UnsignedValue:
-                        return static_cast<int8_t> (_data.template get<UnsignedValue> ());
-
-                    case Integer64Value:
-                        return static_cast<int8_t> (_data.template get<Integer64Value> ());
-
-                    case Unsigned64Value:
-                        return static_cast<int8_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<int8_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief explicit conversion function for 8 bits integer value.
-         * @return converted char value.
-         * @throw std::bad_cast.
-         */
-        explicit operator int8_t () const
-        {
-            return getInt8 ();
+            return convertInteger<int8_t> ();
         }
 
         /**
@@ -899,37 +660,7 @@ namespace join
          */
         constexpr bool isUint8 () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return _data.template get<IntegerValue> () >= 0 &&
-                           _data.template get<IntegerValue> () <=
-                               static_cast<int32_t> (std::numeric_limits<uint8_t>::max ());
-
-                case UnsignedValue:
-                    return _data.template get<UnsignedValue> () <=
-                           static_cast<uint32_t> (std::numeric_limits<uint8_t>::max ());
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >= 0 &&
-                           _data.template get<Integer64Value> () <=
-                               static_cast<int64_t> (std::numeric_limits<uint8_t>::max ());
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<uint8_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >= 0 &&
-                           _data.template get<RealValue> () <=
-                               static_cast<double> (std::numeric_limits<uint8_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<uint8_t> ();
         }
 
         /**
@@ -939,38 +670,7 @@ namespace join
          */
         constexpr uint8_t getUint8 () const
         {
-            if (isUint8 ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<uint8_t> (_data.template get<IntegerValue> ());
-
-                    case UnsignedValue:
-                        return static_cast<uint8_t> (_data.template get<UnsignedValue> ());
-
-                    case Integer64Value:
-                        return static_cast<uint8_t> (_data.template get<Integer64Value> ());
-
-                    case Unsigned64Value:
-                        return static_cast<uint8_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<uint8_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief explicit conversion function for 8 bits unsigned integer value.
-         * @return converted unsihed char value.
-         * @throw std::bad_cast.
-         */
-        explicit operator uint8_t () const
-        {
-            return getUint8 ();
+            return convertInteger<uint8_t> ();
         }
 
         /**
@@ -979,40 +679,7 @@ namespace join
          */
         constexpr bool isInt16 () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return _data.template get<IntegerValue> () >=
-                               static_cast<int32_t> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.template get<IntegerValue> () <=
-                               static_cast<int32_t> (std::numeric_limits<int16_t>::max ());
-
-                case UnsignedValue:
-                    return _data.template get<UnsignedValue> () <=
-                           static_cast<uint32_t> (std::numeric_limits<int16_t>::max ());
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >=
-                               static_cast<int64_t> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.template get<Integer64Value> () <=
-                               static_cast<int64_t> (std::numeric_limits<int16_t>::max ());
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<int16_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >=
-                               static_cast<double> (std::numeric_limits<int16_t>::min ()) &&
-                           _data.template get<RealValue> () <=
-                               static_cast<double> (std::numeric_limits<int16_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<int16_t> ();
         }
 
         /**
@@ -1022,38 +689,7 @@ namespace join
          */
         constexpr int16_t getInt16 () const
         {
-            if (isInt16 ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<int16_t> (_data.template get<IntegerValue> ());
-
-                    case UnsignedValue:
-                        return static_cast<int16_t> (_data.template get<UnsignedValue> ());
-
-                    case Integer64Value:
-                        return static_cast<int16_t> (_data.template get<Integer64Value> ());
-
-                    case Unsigned64Value:
-                        return static_cast<int16_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<int16_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief explicit conversion function for 16 bits integer value.
-         * @return converted short value.
-         * @throw std::bad_cast.
-         */
-        explicit operator int16_t () const
-        {
-            return getInt16 ();
+            return convertInteger<int16_t> ();
         }
 
         /**
@@ -1062,37 +698,7 @@ namespace join
          */
         constexpr bool isUint16 () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return _data.template get<IntegerValue> () >= 0 &&
-                           _data.template get<IntegerValue> () <=
-                               static_cast<int32_t> (std::numeric_limits<uint16_t>::max ());
-
-                case UnsignedValue:
-                    return _data.template get<UnsignedValue> () <=
-                           static_cast<uint32_t> (std::numeric_limits<uint16_t>::max ());
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >= 0 &&
-                           _data.template get<Integer64Value> () <=
-                               static_cast<int64_t> (std::numeric_limits<uint16_t>::max ());
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<uint16_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >= 0 &&
-                           _data.template get<RealValue> () <=
-                               static_cast<double> (std::numeric_limits<uint16_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<uint16_t> ();
         }
 
         /**
@@ -1102,38 +708,7 @@ namespace join
          */
         constexpr uint16_t getUint16 () const
         {
-            if (isUint16 ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<uint16_t> (_data.template get<IntegerValue> ());
-
-                    case UnsignedValue:
-                        return static_cast<uint16_t> (_data.template get<UnsignedValue> ());
-
-                    case Integer64Value:
-                        return static_cast<uint16_t> (_data.template get<Integer64Value> ());
-
-                    case Unsigned64Value:
-                        return static_cast<uint16_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<uint16_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief explicit conversion function for 16 bits unsigned integer value.
-         * @return converted unsigned short value.
-         * @throw std::bad_cast.
-         */
-        explicit operator uint16_t () const
-        {
-            return getUint16 ();
+            return convertInteger<uint16_t> ();
         }
 
         /**
@@ -1142,37 +717,7 @@ namespace join
          */
         constexpr bool isInt () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return true;
-
-                case UnsignedValue:
-                    return _data.template get<UnsignedValue> () <=
-                           static_cast<uint32_t> (std::numeric_limits<int32_t>::max ());
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >=
-                               static_cast<int64_t> (std::numeric_limits<int32_t>::min ()) &&
-                           _data.template get<Integer64Value> () <=
-                               static_cast<int64_t> (std::numeric_limits<int32_t>::max ());
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<int32_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >=
-                               static_cast<double> (std::numeric_limits<int32_t>::min ()) &&
-                           _data.template get<RealValue> () <=
-                               static_cast<double> (std::numeric_limits<int32_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<int32_t> ();
         }
 
         /**
@@ -1187,17 +732,7 @@ namespace join
                 return _data.template get<IntegerValue> ();
             }
 
-            return convertInt ();
-        }
-
-        /**
-         * @brief explicit conversion function for 32 bits integer value.
-         * @return converted integer value.
-         * @throw std::bad_cast.
-         */
-        explicit operator int32_t () const
-        {
-            return getInt ();
+            return convertInteger<int32_t> ();
         }
 
         /**
@@ -1206,34 +741,7 @@ namespace join
          */
         constexpr bool isUint () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return _data.template get<IntegerValue> () >= 0;
-
-                case UnsignedValue:
-                    return true;
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >= 0 &&
-                           _data.template get<Integer64Value> () <=
-                               static_cast<int64_t> (std::numeric_limits<uint32_t>::max ());
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<uint32_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >= 0 &&
-                           _data.template get<RealValue> () <=
-                               static_cast<double> (std::numeric_limits<uint32_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<uint32_t> ();
         }
 
         /**
@@ -1248,17 +756,7 @@ namespace join
                 return _data.template get<UnsignedValue> ();
             }
 
-            return convertUint ();
-        }
-
-        /**
-         * @brief explicit conversion function for 32 bits unsigned integer value.
-         * @return converted unsigned integer value.
-         * @throw std::bad_cast.
-         */
-        explicit operator uint32_t () const
-        {
-            return getUint ();
+            return convertInteger<uint32_t> ();
         }
 
         /**
@@ -1267,29 +765,7 @@ namespace join
          */
         constexpr bool isInt64 () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                case UnsignedValue:
-                case Integer64Value:
-                    return true;
-
-                case Unsigned64Value:
-                    return _data.template get<Unsigned64Value> () <=
-                           static_cast<uint64_t> (std::numeric_limits<int64_t>::max ());
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >=
-                               static_cast<double> (std::numeric_limits<int64_t>::min ()) &&
-                           _data.template get<RealValue> () <
-                               static_cast<double> (std::numeric_limits<int64_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<int64_t> ();
         }
 
         /**
@@ -1304,17 +780,7 @@ namespace join
                 return _data.template get<Integer64Value> ();
             }
 
-            return convertInt64 ();
-        }
-
-        /**
-         * @brief explicit conversion function for 64 bits integer value.
-         * @return converted integer 64 bits value.
-         * @throw std::bad_cast.
-         */
-        explicit operator int64_t () const
-        {
-            return getInt64 ();
+            return convertInteger<int64_t> ();
         }
 
         /**
@@ -1323,31 +789,7 @@ namespace join
          */
         constexpr bool isUint64 () const
         {
-            switch (_data.index ())
-            {
-                case IntegerValue:
-                    return _data.template get<IntegerValue> () >= 0;
-
-                case UnsignedValue:
-                    return true;
-
-                case Integer64Value:
-                    return _data.template get<Integer64Value> () >= 0;
-
-                case Unsigned64Value:
-                    return true;
-
-                case RealValue:
-                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
-                           _data.template get<RealValue> () >= 0 &&
-                           _data.template get<RealValue> () <
-                               static_cast<double> (std::numeric_limits<uint64_t>::max ());
-
-                default:
-                    break;
-            }
-
-            return false;
+            return isInteger<uint64_t> ();
         }
 
         /**
@@ -1362,17 +804,7 @@ namespace join
                 return _data.template get<Unsigned64Value> ();
             }
 
-            return convertUint64 ();
-        }
-
-        /**
-         * @brief explicit conversion function for 64 bits unsigned integer value.
-         * @return converted 64 bits unsigned integer value.
-         * @throw std::bad_cast.
-         */
-        explicit operator uint64_t () const
-        {
-            return getUint64 ();
+            return convertInteger<uint64_t> ();
         }
 
         /**
@@ -1391,22 +823,7 @@ namespace join
          */
         constexpr float getFloat () const
         {
-            if (_data.index () == RealValue)
-            {
-                return static_cast<float> (_data.template get<RealValue> ());
-            }
-
-            return convertFloat ();
-        }
-
-        /**
-         * @brief explicit conversion function for float value.
-         * @return converted float value.
-         * @throw std::bad_cast.
-         */
-        explicit operator float () const
-        {
-            return getFloat ();
+            return convertReal<float> ();
         }
 
         /**
@@ -1430,17 +847,7 @@ namespace join
                 return _data.template get<RealValue> ();
             }
 
-            return convertDouble ();
-        }
-
-        /**
-         * @brief explicit conversion function for double value.
-         * @return converted double value.
-         * @throw std::bad_cast.
-         */
-        explicit operator double () const
-        {
-            return getDouble ();
+            return convertReal<double> ();
         }
 
         /**
@@ -1542,156 +949,15 @@ namespace join
         }
 
         /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at ([[maybe_unused]] std::nullptr_t key)
-        {
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isNull ())
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at (bool key)
-        {
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isBool () && member.first.getBool () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
          * @brief returns a reference to the value at position pos or mapped to key.
          * @param key position or key of the element to find.
          * @return a reference to the requested element.
          * @throw std::bad_cast, std::out_of_range.
          */
-        Value& at (int32_t key)
+        template <Scalar Key>
+        Value& at (Key key)
         {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key);
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt () && member.first.getInt () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at (uint32_t key)
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key);
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint () && member.first.getUint () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at (int64_t key)
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key);
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt64 () && member.first.getInt64 () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at (uint64_t key)
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key);
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint64 () && member.first.getUint64 () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at (double key)
-        {
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isDouble () && member.first.getDouble () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
+            return const_cast<Value&> (std::as_const (*this).at (key));
         }
 
         /**
@@ -1702,26 +968,7 @@ namespace join
          */
         Value& at (std::string_view key)
         {
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isString () && member.first.getString () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        Value& at (const char* key)
-        {
-            return at (std::string_view (key));
+            return const_cast<Value&> (std::as_const (*this).at (key));
         }
 
         /**
@@ -1734,58 +981,7 @@ namespace join
             requires std::same_as<Key, BasicValue>
         Value& at (const Key& key)
         {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key.getUint64 ());
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at ([[maybe_unused]] std::nullptr_t key) const
-        {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isNull ())
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at (bool key) const
-        {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isBool () && member.first.getBool () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
+            return const_cast<Value&> (std::as_const (*this).at (key));
         }
 
         /**
@@ -1794,113 +990,24 @@ namespace join
          * @return a reference to the requested element.
          * @throw std::bad_cast, std::out_of_range.
          */
-        const Value& at (int32_t key) const
+        template <Scalar Key>
+        const Value& at (Key key) const
         {
-            if (_data.index () == ArrayValue)
+            if constexpr (std::integral<Key> && !std::same_as<Key, bool>)
             {
-                return elementAt (key);
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt () && member.first.getInt () == key)
+                if (_data.index () == ArrayValue)
                 {
-                    return member.second;
+                    return elementAt (key);
                 }
             }
 
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at (uint32_t key) const
-        {
-            if (_data.index () == ArrayValue)
+            const Member* member = findMember (key);
+            if (member == nullptr)
             {
-                return elementAt (key);
+                throwException<std::out_of_range> ("invalid key");
             }
 
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint () && member.first.getUint () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at (int64_t key) const
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key);
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt64 () && member.first.getInt64 () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at (uint64_t key) const
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return elementAt (key);
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint64 () && member.first.getUint64 () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at (double key) const
-        {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isDouble () && member.first.getDouble () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            throwException<std::out_of_range> ("invalid key");
+            return member->second;
         }
 
         /**
@@ -1911,26 +1018,13 @@ namespace join
          */
         const Value& at (std::string_view key) const
         {
-            for (auto const& member : _data.template get<ObjectValue> ())
+            const Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (member.first.isString () && member.first.getString () == key)
-                {
-                    return member.second;
-                }
+                throwException<std::out_of_range> ("invalid key");
             }
 
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast, std::out_of_range.
-         */
-        const Value& at (const char* key) const
-        {
-            return at (std::string_view (key));
+            return member->second;
         }
 
         /**
@@ -1948,63 +1042,13 @@ namespace join
                 return elementAt (key.getUint64 ());
             }
 
-            for (auto const& member : _data.template get<ObjectValue> ())
+            const Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (member.first == key)
-                {
-                    return member.second;
-                }
+                throwException<std::out_of_range> ("invalid key");
             }
 
-            throwException<std::out_of_range> ("invalid key");
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (std::nullptr_t key)
-        {
-            if (_data.index () == NullValue)
-            {
-                _data.template set<ObjectValue> ();
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isNull ())
-                {
-                    return member.second;
-                }
-            }
-
-            return appendMember (key);
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (bool key)
-        {
-            if (_data.index () == NullValue)
-            {
-                _data.template set<ObjectValue> ();
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isBool () && member.first.getBool () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            return appendMember (key);
+            return member->second;
         }
 
         /**
@@ -2013,11 +1057,15 @@ namespace join
          * @return a reference to the requested element.
          * @throw std::bad_cast.
          */
-        Value& operator[] (int32_t key)
+        template <Scalar Key>
+        Value& operator[] (Key key)
         {
-            if (_data.index () == ArrayValue)
+            if constexpr (std::integral<Key> && !std::same_as<Key, bool>)
             {
-                return _data.template get<ArrayValue> ()[key];
+                if (_data.index () == ArrayValue)
+                {
+                    return _data.template get<ArrayValue> ()[key];
+                }
             }
 
             if (_data.index () == NullValue)
@@ -2025,126 +1073,13 @@ namespace join
                 _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.template get<ObjectValue> ())
+            Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (member.first.isInt () && member.first.getInt () == key)
-                {
-                    return member.second;
-                }
+                return appendMember (key);
             }
 
-            return appendMember (key);
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (uint32_t key)
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return _data.template get<ArrayValue> ()[key];
-            }
-
-            if (_data.index () == NullValue)
-            {
-                _data.template set<ObjectValue> ();
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint () && member.first.getUint () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            return appendMember (key);
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (int64_t key)
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return _data.template get<ArrayValue> ()[key];
-            }
-
-            if (_data.index () == NullValue)
-            {
-                _data.template set<ObjectValue> ();
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt64 () && member.first.getInt64 () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            return appendMember (key);
-        }
-
-        /**
-         * @brief returns a reference to the value at position pos or mapped to key.
-         * @param key position or key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (uint64_t key)
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return _data.template get<ArrayValue> ()[key];
-            }
-
-            if (_data.index () == NullValue)
-            {
-                _data.template set<ObjectValue> ();
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint64 () && member.first.getUint64 () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            return appendMember (key);
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (double key)
-        {
-            if (_data.index () == NullValue)
-            {
-                _data.template set<ObjectValue> ();
-            }
-
-            for (auto& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isDouble () && member.first.getDouble () == key)
-                {
-                    return member.second;
-                }
-            }
-
-            return appendMember (key);
+            return member->second;
         }
 
         /**
@@ -2160,26 +1095,13 @@ namespace join
                 _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.template get<ObjectValue> ())
+            Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (member.first.isString () && member.first.getString () == key)
-                {
-                    return member.second;
-                }
+                return appendMember (key);
             }
 
-            return appendMember (key);
-        }
-
-        /**
-         * @brief returns a reference to the value mapped to key.
-         * @param key key of the element to find.
-         * @return a reference to the requested element.
-         * @throw std::bad_cast.
-         */
-        Value& operator[] (const char* key)
-        {
-            return operator[] (std::string_view (key));
+            return member->second;
         }
 
         /**
@@ -2202,15 +1124,13 @@ namespace join
                 _data.template set<ObjectValue> ();
             }
 
-            for (auto& member : _data.template get<ObjectValue> ())
+            Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (member.first == key)
-                {
-                    return member.second;
-                }
+                return appendMember (Value (key, *allocator ()), Value (*allocator ()));
             }
 
-            return appendMember (Value (key, *allocator ()), Value (*allocator ()));
+            return member->second;
         }
 
         /**
@@ -2220,25 +1140,7 @@ namespace join
          */
         bool empty () const
         {
-            switch (_data.index ())
-            {
-                case StringValue:
-                    return _data.template get<StringValue> ().empty ();
-
-                case BinaryValue:
-                    return _data.template get<BinaryValue> ().data.empty ();
-
-                case ArrayValue:
-                    return _data.template get<ArrayValue> ().empty ();
-
-                case ObjectValue:
-                    return _data.template get<ObjectValue> ().empty ();
-
-                default:
-                    break;
-            }
-
-            throwException<std::bad_cast> ();
+            return size () == 0;
         }
 
         /**
@@ -2368,159 +1270,17 @@ namespace join
          * @return number of elements removed.
          * @throw std::bad_cast.
          */
-        size_t erase ([[maybe_unused]] std::nullptr_t key)
+        template <Scalar Key>
+        size_t erase (Key key)
         {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
+            Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (it->first.isNull ())
-                {
-                    eraseMember (it);
-                    return 1;
-                }
+                return 0;
             }
 
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (bool key)
-        {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
-            {
-                if (it->first.isBool () && it->first.getBool () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (int32_t key)
-        {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
-            {
-                if (it->first.isInt () && it->first.getInt () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (uint32_t key)
-        {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
-            {
-                if (it->first.isUint () && it->first.getUint () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (int64_t key)
-        {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
-            {
-                if (it->first.isInt64 () && it->first.getInt64 () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (uint64_t key)
-        {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
-            {
-                if (it->first.isUint64 () && it->first.getUint64 () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
-            }
-
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (double key)
-        {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
-            {
-                if (it->first.isDouble () && it->first.getDouble () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
-            }
-
-            return 0;
+            eraseMember (member);
+            return 1;
         }
 
         /**
@@ -2531,30 +1291,14 @@ namespace join
          */
         size_t erase (std::string_view key)
         {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
+            Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (it->first.isString () && it->first.getString () == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
+                return 0;
             }
 
-            return 0;
-        }
-
-        /**
-         * @brief removes member with the key equivalent to key.
-         * @param key key of the member to remove.
-         * @return number of elements removed.
-         * @throw std::bad_cast.
-         */
-        size_t erase (const char* key)
-        {
-            return erase (std::string_view (key));
+            eraseMember (member);
+            return 1;
         }
 
         /**
@@ -2567,19 +1311,14 @@ namespace join
             requires std::same_as<Key, BasicValue>
         size_t erase (const Key& key)
         {
-            auto beg = _data.template get<ObjectValue> ().begin ();
-            auto end = _data.template get<ObjectValue> ().end ();
-
-            for (auto it = beg; it != end; ++it)
+            Member* member = findMember (key);
+            if (member == nullptr)
             {
-                if (it->first == key)
-                {
-                    eraseMember (it);
-                    return 1;
-                }
+                return 0;
             }
 
-            return 0;
+            eraseMember (member);
+            return 1;
         }
 
         /**
@@ -2595,89 +1334,13 @@ namespace join
         }
 
         /**
-         * @brief appends a null value at the end of the nested container.
+         * @brief appends a scalar value at the end of the nested container.
          * @param value the element to append.
          * @return a reference to the pushed object.
          * @throw std::bad_cast.
          */
-        Value& pushBack (std::nullptr_t value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a boolean value at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (bool value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a integer value at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (int32_t value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a unsigned integer value at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (uint32_t value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a 64 bits integer value at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (int64_t value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a 64 bits unsigned integer value at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (uint64_t value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a real value at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (double value)
-        {
-            return pushBack (Value (value, *allocator ()));
-        }
-
-        /**
-         * @brief appends a string value from a C-style string at the end of the nested container.
-         * @param value the element to append.
-         * @return a reference to the pushed object.
-         * @throw std::bad_cast.
-         */
-        Value& pushBack (const char* value)
+        template <Scalar Type>
+        Value& pushBack (Type value)
         {
             return pushBack (Value (value, *allocator ()));
         }
@@ -2764,156 +1427,31 @@ namespace join
         }
 
         /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains ([[maybe_unused]] std::nullptr_t key) const
-        {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isNull ())
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (bool key) const
-        {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isBool () && member.first.getBool () == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
+         * @brief checks if the nested container contains an element at position pos or mapped to key.
          * @param key position or key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
+         * @return true if the nested container contains an element at position pos or mapped to key, false otherwise.
          * @throw std::bad_cast.
          */
-        bool contains (int32_t key) const
+        template <Scalar Key>
+        bool contains (Key key) const
         {
-            if (_data.index () == ArrayValue)
+            if constexpr (std::integral<Key> && !std::same_as<Key, bool>)
             {
-                return key >= 0 && static_cast<uint64_t> (key) < _data.template get<ArrayValue> ().size ();
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt () && member.first.getInt () == key)
+                if (_data.index () == ArrayValue)
                 {
-                    return true;
+                    if constexpr (std::is_signed_v<Key>)
+                    {
+                        if (key < 0)
+                        {
+                            return false;
+                        }
+                    }
+
+                    return static_cast<uint64_t> (key) < _data.template get<ArrayValue> ().size ();
                 }
             }
 
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key position or key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (uint32_t key) const
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return key < _data.template get<ArrayValue> ().size ();
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint () && member.first.getUint () == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key position or key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (int64_t key) const
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return key >= 0 && static_cast<uint64_t> (key) < _data.template get<ArrayValue> ().size ();
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isInt64 () && member.first.getInt64 () == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key position or key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (uint64_t key) const
-        {
-            if (_data.index () == ArrayValue)
-            {
-                return key < _data.template get<ArrayValue> ().size ();
-            }
-
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isUint64 () && member.first.getUint64 () == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (double key) const
-        {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isDouble () && member.first.getDouble () == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return findMember (key) != nullptr;
         }
 
         /**
@@ -2924,26 +1462,7 @@ namespace join
          */
         bool contains (std::string_view key) const
         {
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first.isString () && member.first.getString () == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /**
-         * @brief checks if the nested container contains an element that is mapped to key.
-         * @param key key of the element to find.
-         * @return true if the nested container contains an element mapped to key, false otherwise.
-         * @throw std::bad_cast.
-         */
-        bool contains (const char* key) const
-        {
-            return contains (std::string_view (key));
+            return findMember (key) != nullptr;
         }
 
         /**
@@ -2961,15 +1480,7 @@ namespace join
                 return key.getUint64 () < _data.template get<ArrayValue> ().size ();
             }
 
-            for (auto const& member : _data.template get<ObjectValue> ())
-            {
-                if (member.first == key)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return findMember (key) != nullptr;
         }
 
         /**
@@ -3058,116 +1569,20 @@ namespace join
         constexpr std::partial_ordering operator<=> (const Other& other) const;
 
         /**
-         * @brief compare if equal to a null value.
-         * @param other null value to compare to.
+         * @brief compare if equal to a scalar value.
+         * @param other scalar value to compare to.
          * @return true if equal.
          */
-        constexpr bool operator== (std::nullptr_t other) const;
+        template <Scalar Type>
+        constexpr bool operator== (Type other) const;
 
         /**
-         * @brief three-way compare to a null value.
-         * @param other null value to compare to.
+         * @brief three-way compare to a scalar value.
+         * @param other scalar value to compare to.
          * @return ordering of this value relative to other.
          */
-        constexpr std::partial_ordering operator<=> (std::nullptr_t other) const;
-
-        /**
-         * @brief compare if equal to a boolean value.
-         * @param other boolean value to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (bool other) const;
-
-        /**
-         * @brief three-way compare to a boolean value.
-         * @param other boolean value to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (bool other) const;
-
-        /**
-         * @brief compare if equal to a integer value.
-         * @param other integer value to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (int32_t other) const;
-
-        /**
-         * @brief three-way compare to a integer value.
-         * @param other integer value to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (int32_t other) const;
-
-        /**
-         * @brief compare if equal to a unsigned integer value.
-         * @param other unsigned integer value to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (uint32_t other) const;
-
-        /**
-         * @brief three-way compare to a unsigned integer value.
-         * @param other unsigned integer value to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (uint32_t other) const;
-
-        /**
-         * @brief compare if equal to a 64 bits integer value.
-         * @param other 64 bits integer value to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (int64_t other) const;
-
-        /**
-         * @brief three-way compare to a 64 bits integer value.
-         * @param other 64 bits integer value to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (int64_t other) const;
-
-        /**
-         * @brief compare if equal to a 64 bits unsigned integer value.
-         * @param other 64 bits unsigned integer value to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (uint64_t other) const;
-
-        /**
-         * @brief three-way compare to a 64 bits unsigned integer value.
-         * @param other 64 bits unsigned integer value to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (uint64_t other) const;
-
-        /**
-         * @brief compare if equal to a real value.
-         * @param other real value to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (double other) const;
-
-        /**
-         * @brief three-way compare to a real value.
-         * @param other real value to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (double other) const;
-
-        /**
-         * @brief compare if equal to a C-style string.
-         * @param other string to compare to.
-         * @return true if equal.
-         */
-        constexpr bool operator== (const char* other) const;
-
-        /**
-         * @brief three-way compare to a C-style string.
-         * @param other string to compare to.
-         * @return ordering of this value relative to other.
-         */
-        constexpr std::partial_ordering operator<=> (const char* other) const;
+        template <Scalar Type>
+        constexpr std::partial_ordering operator<=> (Type other) const;
 
         /**
          * @brief compare if equal to a string view.
@@ -3460,6 +1875,87 @@ namespace join
         }
 
         /**
+         * @brief check if the value matches a scalar key.
+         * @param key key to match.
+         * @return true if the value matches the key, false otherwise.
+         */
+        template <Scalar Key>
+        constexpr bool matchKey (Key key) const
+        {
+            if constexpr (std::same_as<Key, std::nullptr_t>)
+            {
+                return isNull ();
+            }
+            else if constexpr (std::same_as<Key, bool>)
+            {
+                return isBool () && getBool () == key;
+            }
+            else if constexpr (std::floating_point<Key>)
+            {
+                return isDouble () && getDouble () == key;
+            }
+            else
+            {
+                using Type = std::common_type_t<Key, int32_t>;
+                return isInteger<Type> () && convertInteger<Type> () == key;
+            }
+        }
+
+        /**
+         * @brief check if the value matches a string key.
+         * @param key key to match.
+         * @return true if the value matches the key, false otherwise.
+         */
+        constexpr bool matchKey (std::string_view key) const
+        {
+            return isString () && getString () == key;
+        }
+
+        /**
+         * @brief check if the value matches a value key.
+         * @param key key to match.
+         * @return true if the value matches the key, false otherwise.
+         */
+        template <typename Key>
+            requires std::same_as<Key, BasicValue>
+        constexpr bool matchKey (const Key& key) const
+        {
+            return *this == key;
+        }
+
+        /**
+         * @brief find the member mapped to key.
+         * @param key key of the member to find.
+         * @return a pointer to the member, nullptr if not found.
+         * @throw std::bad_cast.
+         */
+        template <typename Key>
+        Member* findMember (const Key& key)
+        {
+            return const_cast<Member*> (std::as_const (*this).findMember (key));
+        }
+
+        /**
+         * @brief find the member mapped to key.
+         * @param key key of the member to find.
+         * @return a pointer to the member, nullptr if not found.
+         * @throw std::bad_cast.
+         */
+        template <typename Key>
+        const Member* findMember (const Key& key) const
+        {
+            for (auto const& member : _data.template get<ObjectValue> ())
+            {
+                if (member.first.matchKey (key))
+                {
+                    return &member;
+                }
+            }
+
+            return nullptr;
+        }
+
+        /**
          * @brief remove a member of the object.
          * @param it member to remove.
          */
@@ -3479,12 +1975,7 @@ namespace join
          */
         Value& elementAt (size_t pos)
         {
-            Array& array = _data.template get<ArrayValue> ();
-            if (pos >= array.size ())
-            {
-                throwException<std::out_of_range> ("invalid key");
-            }
-            return array[pos];
+            return const_cast<Value&> (std::as_const (*this).elementAt (pos));
         }
 
         /**
@@ -3658,24 +2149,29 @@ namespace join
         }
 
         /**
-         * @brief convert the value held by the variant to float.
+         * @brief convert the value held by the variant to a floating point type.
          * @return converted value.
+         * @throw std::bad_cast.
          */
-        float convertFloat () const
+        template <typename Type>
+        Type convertReal () const
         {
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return static_cast<float> (_data.template get<IntegerValue> ());
+                    return static_cast<Type> (_data.template get<IntegerValue> ());
 
                 case UnsignedValue:
-                    return static_cast<float> (_data.template get<UnsignedValue> ());
+                    return static_cast<Type> (_data.template get<UnsignedValue> ());
 
                 case Integer64Value:
-                    return static_cast<float> (_data.template get<Integer64Value> ());
+                    return static_cast<Type> (_data.template get<Integer64Value> ());
 
                 case Unsigned64Value:
-                    return static_cast<float> (_data.template get<Unsigned64Value> ());
+                    return static_cast<Type> (_data.template get<Unsigned64Value> ());
+
+                case RealValue:
+                    return static_cast<Type> (_data.template get<RealValue> ());
 
                 default:
                     break;
@@ -3718,135 +2214,66 @@ namespace join
         }
 
         /**
-         * @brief convert the value held by the variant to int32_t.
-         * @return converted value.
+         * @brief check if the variable held by value fits in an integer type.
+         * @return true if the variable held by value fits in the integer type, false otherwise.
          */
-        int32_t convertInt () const
-        {
-            if (isInt ())
-            {
-                switch (_data.index ())
-                {
-                    case UnsignedValue:
-                        return static_cast<int32_t> (_data.template get<UnsignedValue> ());
-
-                    case Integer64Value:
-                        return static_cast<int32_t> (_data.template get<Integer64Value> ());
-
-                    case Unsigned64Value:
-                        return static_cast<int32_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<int32_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to uint32_t.
-         * @return converted value.
-         */
-        uint32_t convertUint () const
-        {
-            if (isUint ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<uint32_t> (_data.template get<IntegerValue> ());
-
-                    case Integer64Value:
-                        return static_cast<uint32_t> (_data.template get<Integer64Value> ());
-
-                    case Unsigned64Value:
-                        return static_cast<uint32_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<uint32_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to int64_t.
-         * @return converted value.
-         */
-        int64_t convertInt64 () const
-        {
-            if (isInt64 ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<int64_t> (_data.template get<IntegerValue> ());
-
-                    case UnsignedValue:
-                        return static_cast<int64_t> (_data.template get<UnsignedValue> ());
-
-                    case Unsigned64Value:
-                        return static_cast<int64_t> (_data.template get<Unsigned64Value> ());
-
-                    default:
-                        return static_cast<int64_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to uint64_t.
-         * @return converted value.
-         */
-        uint64_t convertUint64 () const
-        {
-            if (isUint64 ())
-            {
-                switch (_data.index ())
-                {
-                    case IntegerValue:
-                        return static_cast<uint64_t> (_data.template get<IntegerValue> ());
-
-                    case UnsignedValue:
-                        return static_cast<uint64_t> (_data.template get<UnsignedValue> ());
-
-                    case Integer64Value:
-                        return static_cast<uint64_t> (_data.template get<Integer64Value> ());
-
-                    default:
-                        return static_cast<uint64_t> (_data.template get<RealValue> ());
-                }
-            }
-
-            throwException<std::bad_cast> ();
-        }
-
-        /**
-         * @brief convert the value held by the variant to double.
-         * @return converted value.
-         */
-        double convertDouble () const
+        template <typename Type>
+        constexpr bool isInteger () const
         {
             switch (_data.index ())
             {
                 case IntegerValue:
-                    return static_cast<double> (_data.template get<IntegerValue> ());
+                    return std::in_range<Type> (_data.template get<IntegerValue> ());
 
                 case UnsignedValue:
-                    return static_cast<double> (_data.template get<UnsignedValue> ());
+                    return std::in_range<Type> (_data.template get<UnsignedValue> ());
 
                 case Integer64Value:
-                    return static_cast<double> (_data.template get<Integer64Value> ());
+                    return std::in_range<Type> (_data.template get<Integer64Value> ());
 
                 case Unsigned64Value:
-                    return static_cast<double> (_data.template get<Unsigned64Value> ());
+                    return std::in_range<Type> (_data.template get<Unsigned64Value> ());
+
+                case RealValue:
+                    return std::trunc (_data.template get<RealValue> ()) == _data.template get<RealValue> () &&
+                           _data.template get<RealValue> () >=
+                               static_cast<double> (std::numeric_limits<Type>::min ()) &&
+                           _data.template get<RealValue> () < std::ldexp (1.0, std::numeric_limits<Type>::digits);
 
                 default:
                     break;
+            }
+
+            return false;
+        }
+
+        /**
+         * @brief convert the value held by the variant to an integer type.
+         * @return converted value.
+         * @throw std::bad_cast.
+         */
+        template <typename Type>
+        constexpr Type convertInteger () const
+        {
+            if (isInteger<Type> ())
+            {
+                switch (_data.index ())
+                {
+                    case IntegerValue:
+                        return static_cast<Type> (_data.template get<IntegerValue> ());
+
+                    case UnsignedValue:
+                        return static_cast<Type> (_data.template get<UnsignedValue> ());
+
+                    case Integer64Value:
+                        return static_cast<Type> (_data.template get<Integer64Value> ());
+
+                    case Unsigned64Value:
+                        return static_cast<Type> (_data.template get<Unsigned64Value> ());
+
+                    default:
+                        return static_cast<Type> (_data.template get<RealValue> ());
+                }
             }
 
             throwException<std::bad_cast> ();
@@ -3932,179 +2359,27 @@ namespace join
     }
 
     /**
-     * @brief compare if equal to a null value.
-     * @param other null value to compare to.
+     * @brief compare if equal to a scalar value.
+     * @param other scalar value to compare to.
      * @return true if equal.
      */
     template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (std::nullptr_t other) const
+    template <Scalar Type>
+    constexpr bool BasicValue<Allocator>::operator== (Type other) const
     {
         return *this == BasicValue (other);
     }
 
     /**
-     * @brief three-way compare to a null value.
-     * @param other null value to compare to.
+     * @brief three-way compare to a scalar value.
+     * @param other scalar value to compare to.
      * @return ordering of this value relative to other.
      */
     template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (std::nullptr_t other) const
+    template <Scalar Type>
+    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (Type other) const
     {
         return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a boolean value.
-     * @param other boolean value to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (bool other) const
-    {
-        return *this == BasicValue (other);
-    }
-
-    /**
-     * @brief three-way compare to a boolean value.
-     * @param other boolean value to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (bool other) const
-    {
-        return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a integer value.
-     * @param other integer value to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (int32_t other) const
-    {
-        return *this == BasicValue (other);
-    }
-
-    /**
-     * @brief three-way compare to a integer value.
-     * @param other integer value to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (int32_t other) const
-    {
-        return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a unsigned integer value.
-     * @param other unsigned integer value to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (uint32_t other) const
-    {
-        return *this == BasicValue (other);
-    }
-
-    /**
-     * @brief three-way compare to a unsigned integer value.
-     * @param other unsigned integer value to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (uint32_t other) const
-    {
-        return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a 64 bits integer value.
-     * @param other 64 bits integer value to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (int64_t other) const
-    {
-        return *this == BasicValue (other);
-    }
-
-    /**
-     * @brief three-way compare to a 64 bits integer value.
-     * @param other 64 bits integer value to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (int64_t other) const
-    {
-        return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a 64 bits unsigned integer value.
-     * @param other 64 bits unsigned integer value to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (uint64_t other) const
-    {
-        return *this == BasicValue (other);
-    }
-
-    /**
-     * @brief three-way compare to a 64 bits unsigned integer value.
-     * @param other 64 bits unsigned integer value to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (uint64_t other) const
-    {
-        return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a real value.
-     * @param other real value to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (double other) const
-    {
-        return *this == BasicValue (other);
-    }
-
-    /**
-     * @brief three-way compare to a real value.
-     * @param other real value to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (double other) const
-    {
-        return *this <=> BasicValue (other);
-    }
-
-    /**
-     * @brief compare if equal to a C-style string.
-     * @param other string to compare to.
-     * @return true if equal.
-     */
-    template <typename Allocator>
-    constexpr bool BasicValue<Allocator>::operator== (const char* other) const
-    {
-        return *this == std::string_view (other);
-    }
-
-    /**
-     * @brief three-way compare to a C-style string.
-     * @param other string to compare to.
-     * @return ordering of this value relative to other.
-     */
-    template <typename Allocator>
-    constexpr std::partial_ordering BasicValue<Allocator>::operator<=> (const char* other) const
-    {
-        return *this <=> std::string_view (other);
     }
 
     /**
