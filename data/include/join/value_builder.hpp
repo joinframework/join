@@ -270,119 +270,12 @@ namespace join
         }
 
         /**
-         * @brief set null key.
+         * @brief set scalar key.
          * @param key object key to set.
          * @return 0 on success, -1 otherwise.
          */
-        int setKey (std::nullptr_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (key);
-
-            return 0;
-        }
-
-        /**
-         * @brief set boolean key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (bool key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (key);
-
-            return 0;
-        }
-
-        /**
-         * @brief set integer key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (int32_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (key);
-
-            return 0;
-        }
-
-        /**
-         * @brief set unsigned integer key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (uint32_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (key);
-
-            return 0;
-        }
-
-        /**
-         * @brief set 64 bits integer key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (int64_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (key);
-
-            return 0;
-        }
-
-        /**
-         * @brief set unsigned 64 bits integer key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (uint64_t key)
-        {
-            if (JOIN_UNLIKELY (_depth == 0))
-            {
-                join::lastError = make_error_code (SaxErrc::InvalidParent);
-                return -1;
-            }
-
-            _stack.emplace_back (key);
-
-            return 0;
-        }
-
-        /**
-         * @brief set real key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (double key)
+        template <Scalar Key>
+        int setKey (Key key)
         {
             if (JOIN_UNLIKELY (_depth == 0))
             {
@@ -411,16 +304,6 @@ namespace join
             _stack.emplace_back (_root.copyString (key));
 
             return 0;
-        }
-
-        /**
-         * @brief set string key.
-         * @param key object key to set.
-         * @return 0 on success, -1 otherwise.
-         */
-        int setKey (const char* key)
-        {
-            return setKey (std::string_view (key));
         }
 
         /**
