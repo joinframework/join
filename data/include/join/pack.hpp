@@ -53,16 +53,26 @@ namespace join
                    "MessagePack requires IEEE 754 floating point numbers");
 
     /**
+     * @brief MessagePack serialization mode.
+     */
+    enum class PackWriteMode
+    {
+        None,             /**< no write mode set. */
+        ValidateEncoding, /**< validate UTF-8 encoding of strings. */
+    };
+
+    /**
      * @brief message pack writer class.
      */
-    class PackWriter
+    template <PackWriteMode WriteMode = PackWriteMode::None>
+    class BasicPackWriter
     {
     public:
         /**
          * @brief create instance.
          * @param document MessagePack document to create.
          */
-        explicit PackWriter (std::ostream& document)
+        explicit BasicPackWriter (std::ostream& document)
         : _out (document.rdbuf ())
         {
         }
@@ -71,32 +81,32 @@ namespace join
          * @brief copy constructor.
          * @param other object to copy.
          */
-        PackWriter (const PackWriter& other) = delete;
+        BasicPackWriter (const BasicPackWriter& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        PackWriter& operator= (const PackWriter& other) = delete;
+        BasicPackWriter& operator= (const BasicPackWriter& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        PackWriter (PackWriter&& other) = delete;
+        BasicPackWriter (BasicPackWriter&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        PackWriter& operator= (PackWriter&& other) = delete;
+        BasicPackWriter& operator= (BasicPackWriter&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        ~PackWriter () = default;
+        ~BasicPackWriter () = default;
 
         /**
          * @brief set null value.
@@ -322,6 +332,23 @@ namespace join
          */
         int setString (std::string_view value)
         {
+            if (JOIN_UNLIKELY (value.size () > std::numeric_limits<uint32_t>::max ()))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                reset ();
+                return -1;
+            }
+
+            if constexpr (WriteMode == PackWriteMode::ValidateEncoding)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+                {
+                    join::lastError = make_error_code (SaxErrc::InvalidEncoding);
+                    reset ();
+                    return -1;
+                }
+            }
+
             if (value.size () < 32)
             {
                 append (static_cast<char> (0xa0 | value.size ()));
@@ -354,6 +381,13 @@ namespace join
          */
         int setBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
         {
+            if (JOIN_UNLIKELY (value.size () > std::numeric_limits<uint32_t>::max ()))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                reset ();
+                return -1;
+            }
+
             if (subtype)
             {
                 switch (value.size ())
@@ -696,6 +730,9 @@ namespace join
         /// number of open containers.
         size_t _depth = 0;
     };
+
+    /// MessagePack writer.
+    using PackWriter = BasicPackWriter<PackWriteMode::None>;
 
     /**
      * @brief MessagePack deserialization mode.
