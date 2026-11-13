@@ -47,6 +47,31 @@ target_link_libraries(pack_roundtrip.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME pack_roundtrip.gtest COMMAND pack_roundtrip.gtest)
 install(TARGETS pack_roundtrip.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(cbor_reader.gtest cbor_reader_test.cpp)
+target_link_libraries(cbor_reader.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME cbor_reader.gtest COMMAND cbor_reader.gtest)
+install(TARGETS cbor_reader.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(cbor_writer.gtest cbor_writer_test.cpp)
+target_link_libraries(cbor_writer.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME cbor_writer.gtest COMMAND cbor_writer.gtest)
+install(TARGETS cbor_writer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(cbor_stream_writer.gtest cbor_stream_writer_test.cpp)
+target_link_libraries(cbor_stream_writer.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME cbor_stream_writer.gtest COMMAND cbor_stream_writer.gtest)
+install(TARGETS cbor_stream_writer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(cbor_roundtrip.gtest cbor_roundtrip_test.cpp)
+target_link_libraries(cbor_roundtrip.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME cbor_roundtrip.gtest COMMAND cbor_roundtrip.gtest)
+install(TARGETS cbor_roundtrip.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
+add_executable(cbor_stream_roundtrip.gtest cbor_stream_roundtrip_test.cpp)
+target_link_libraries(cbor_stream_roundtrip.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME cbor_stream_roundtrip.gtest COMMAND cbor_stream_roundtrip.gtest)
+install(TARGETS cbor_stream_roundtrip.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(json_error.gtest json_error_test.cpp)
 target_link_libraries(json_error.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME json_error.gtest COMMAND json_error.gtest)
