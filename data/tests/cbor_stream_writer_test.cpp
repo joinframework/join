@@ -228,6 +228,10 @@ TEST (CborStreamWriter, setString)
     EXPECT_EQ (stream.str (), std::string ({'\x60'}));
 
     stream.str ("");
+    EXPECT_EQ (cborStreamWriter.setString (std::string_view ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\x60'}));
+
+    stream.str ("");
     EXPECT_EQ (cborStreamWriter.setString ("IETF"), 0);
     EXPECT_EQ (stream.str (), std::string ({'\x64', 'I', 'E', 'T', 'F'}));
 
