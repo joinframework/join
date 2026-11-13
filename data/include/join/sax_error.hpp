@@ -43,6 +43,7 @@ namespace join
         InvalidParent,     /**< Parent not an array nor an object. */
         InvalidKey,        /**< Key is invalid. */
         InvalidValue,      /**< Value is invalid. */
+        InvalidEncoding,   /**< Character encoding is invalid. */
         ExtraData,         /**< Extra data detected. */
         Truncated          /**< Data is truncated. */
     };

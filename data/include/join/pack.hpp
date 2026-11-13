@@ -32,6 +32,7 @@
 #include <join/value_builder.hpp>
 #include <join/value.hpp>
 #include <join/utils.hpp>
+#include <join/utf8.hpp>
 #include <join/sax.hpp>
 
 // C++.
@@ -692,46 +693,133 @@ namespace join
     };
 
     /**
+     * @brief MessagePack deserialization mode.
+     */
+    enum class PackReadMode : uint32_t
+    {
+        None = 0,                    /**< no read mode set. */
+        ValidateEncoding = 1L << 0,  /**< validate UTF-8 encoding of strings. */
+        StopParsingOnDone = 1L << 1, /**< stop parsing on done. */
+    };
+
+    /**
+     * @brief perform binary AND on PackReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary AND on PackReadMode.
+     */
+    constexpr PackReadMode operator& (PackReadMode a, PackReadMode b) noexcept
+    {
+        return PackReadMode (static_cast<uint32_t> (a) & static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary OR on PackReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary OR on PackReadMode.
+     */
+    constexpr PackReadMode operator| (PackReadMode a, PackReadMode b) noexcept
+    {
+        return PackReadMode (static_cast<uint32_t> (a) | static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary XOR on PackReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary XOR on PackReadMode.
+     */
+    constexpr PackReadMode operator^ (PackReadMode a, PackReadMode b) noexcept
+    {
+        return PackReadMode (static_cast<uint32_t> (a) ^ static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary NOT on PackReadMode.
+     * @param a bitset.
+     * @return bitset result of binary NOT on PackReadMode.
+     */
+    constexpr PackReadMode operator~(PackReadMode a) noexcept
+    {
+        return PackReadMode (~static_cast<uint32_t> (a));
+    }
+
+    /**
+     * @brief perform binary AND assignment on PackReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const PackReadMode& operator&= (PackReadMode& a, PackReadMode b) noexcept
+    {
+        return a = a & b;
+    }
+
+    /**
+     * @brief perform binary OR assignment on PackReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const PackReadMode& operator|= (PackReadMode& a, PackReadMode b) noexcept
+    {
+        return a = a | b;
+    }
+
+    /**
+     * @brief perform binary XOR assignment on PackReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const PackReadMode& operator^= (PackReadMode& a, PackReadMode b) noexcept
+    {
+        return a = a ^ b;
+    }
+
+    /**
      * @brief message pack reader class.
      */
-    class PackReader
+    template <PackReadMode ReadMode = PackReadMode::None>
+    class BasicPackReader
     {
     public:
         /**
          * @brief default constructor.
          */
-        PackReader () = default;
+        BasicPackReader () = default;
 
         /**
          * @brief copy constructor.
          * @param other object to copy.
          */
-        PackReader (const PackReader& other) = delete;
+        BasicPackReader (const BasicPackReader& other) = delete;
 
         /**
          * @brief copy assignment.
          * @param other object to copy.
          * @return a reference of the current object.
          */
-        PackReader& operator= (const PackReader& other) = delete;
+        BasicPackReader& operator= (const BasicPackReader& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other object to move.
          */
-        PackReader (PackReader&& other) = delete;
+        BasicPackReader (BasicPackReader&& other) = delete;
 
         /**
          * @brief move assignment.
          * @param other object to move.
          * @return a reference of the current object.
          */
-        PackReader& operator= (PackReader&& other) = delete;
+        BasicPackReader& operator= (BasicPackReader&& other) = delete;
 
         /**
          * @brief destroy instance.
          */
-        ~PackReader () = default;
+        ~BasicPackReader () = default;
 
         /**
          * @brief deserialize a document.
@@ -818,6 +906,11 @@ namespace join
             {
                 if (JOIN_LIKELY (readValue (document, handler, 0) == 0))
                 {
+                    if constexpr ((ReadMode & PackReadMode::StopParsingOnDone) != PackReadMode::None)
+                    {
+                        return 0;
+                    }
+
                     if (JOIN_LIKELY (document.peek () == std::char_traits<char>::eof ()))
                     {
                         return 0;
@@ -1155,6 +1248,10 @@ namespace join
                 }
 
                 std::string_view output (document.tell (), len);
+                if (JOIN_UNLIKELY (validateString (output) == -1))
+                {
+                    return -1;
+                }
                 document.seek (document.tell () + len);
                 return isKey ? handler.setKey (output) : handler.setString (output);
             }
@@ -1167,9 +1264,32 @@ namespace join
                 return -1;
             }
 
+            if (JOIN_UNLIKELY (validateString (output) == -1))
+            {
+                return -1;
+            }
+
             int result = isKey ? handler.setKey (output) : handler.setString (output);
             cache = std::move (output);
             return result;
+        }
+
+        /**
+         * @brief validate the UTF-8 encoding of a string when required by the read mode.
+         * @param value string to validate.
+         * @return 0 on success, -1 otherwise.
+         */
+        static int validateString ([[maybe_unused]] std::string_view value) noexcept
+        {
+            if constexpr ((ReadMode & PackReadMode::ValidateEncoding) != PackReadMode::None)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+                {
+                    join::lastError = make_error_code (SaxErrc::InvalidEncoding);
+                    return -1;
+                }
+            }
+            return 0;
         }
 
         /**
@@ -1581,6 +1701,9 @@ namespace join
             return ((c >= 0x80) && (c <= 0x8f)) || (c == 0xde) || (c == 0xdf);
         }
     };
+
+    /// MessagePack reader.
+    using PackReader = BasicPackReader<PackReadMode::None>;
 }
 
 #endif

@@ -209,6 +209,25 @@ TEST (PackReader, deserialize)
         builder.startArray ();
     }
     ASSERT_EQ (PackReader ().deserialize (std::string (1, '\x80'), builder), -1);
+
+    using Stopping = join::BasicPackReader<join::PackReadMode::StopParsingOnDone>;
+    std::stringstream messages (std::string ({'\x01', '\x02', '\xc3'}));
+    ASSERT_EQ (Stopping ().deserialize (messages, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 1);
+    ASSERT_EQ (Stopping ().deserialize (messages, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, 2);
+    ASSERT_EQ (Stopping ().deserialize (messages, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value, true);
+    ASSERT_EQ (Stopping ().deserialize (messages, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (Stopping ().deserialize (std::string ({'\x00', '\x00'}), value), 0) << join::lastError.message ();
+
+    using Strict = join::BasicPackReader<join::PackReadMode::ValidateEncoding | join::PackReadMode::StopParsingOnDone>;
+    std::stringstream strict (std::string ({'\xa1', 'a', '\xa1', '\xff'}));
+    ASSERT_EQ (Strict ().deserialize (strict, value), 0) << join::lastError.message ();
+    ASSERT_EQ (value.getString (), "a");
+    ASSERT_EQ (Strict ().deserialize (strict, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
 }
 
 /**
@@ -1568,6 +1587,39 @@ TEST (PackReader, key)
     ASSERT_EQ (PackReader ().deserialize (stream, value), 0) << join::lastError.message ();
     ASSERT_TRUE (value.isObject ());
     ASSERT_TRUE (value.contains (-10));
+}
+
+/**
+ * @brief Test MessagePack parsing with UTF-8 validation.
+ */
+TEST (PackReader, encoding)
+{
+    using Validator = join::BasicPackReader<join::PackReadMode::ValidateEncoding>;
+
+    for (const std::string& document : {std::string ({'\xa2', '\xc3', '\xa9'}), std::string ({'\xc4', '\x01', '\xff'})})
+    {
+        std::stringstream stream (document);
+        join::SaxHandler handler;
+        ASSERT_EQ (Validator ().deserialize (document, handler), 0) << join::lastError.message ();
+        ASSERT_EQ (Validator ().deserialize (stream, handler), 0) << join::lastError.message ();
+    }
+
+    for (const std::string& document : {std::string ({'\xa1', '\xff'}), std::string ({'\x81', '\xa1', '\xff', '\x01'})})
+    {
+        std::stringstream stream (document);
+        join::SaxHandler handler;
+        ASSERT_EQ (Validator ().deserialize (document, handler), -1);
+        ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+        ASSERT_EQ (Validator ().deserialize (stream, handler), -1);
+        ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+    }
+
+    Value value;
+    ASSERT_EQ (PackReader ().deserialize (std::string ({'\xa1', '\xff'}), value), 0) << join::lastError.message ();
+    ASSERT_EQ (value.getString (), "\xff");
+    ASSERT_EQ (value.deserialize<Validator> (std::string ({'\xa4', 'I', 'E', 'T', 'F'})), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (value.getString (), "IETF");
 }
 
 /**

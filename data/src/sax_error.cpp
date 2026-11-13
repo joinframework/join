@@ -53,6 +53,8 @@ std::string SaxCategory::message (int code) const
             return "key is invalid";
         case SaxErrc::InvalidValue:
             return "value is invalid";
+        case SaxErrc::InvalidEncoding:
+            return "character encoding is invalid";
         case SaxErrc::ExtraData:
             return "extra data detected";
         case SaxErrc::Truncated:
