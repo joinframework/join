@@ -1585,27 +1585,86 @@ TEST (JsonReader, encoding)
     ASSERT_TRUE (value.isObject ());
     EXPECT_EQ (value["\xC3\xB6\xC3\xA9\xC3\xB6"].getString (), "\xE2\x82\xAC\n\xE2\x82\xAC");
 
-    for (auto const& doc : {"[\"\xC0\xAF\"]", "[\"\xED\xA0\x80\"]", "[\"\xF5\x80\x80\x80\"]", "[\"\xE2\x28\xA1\"]",
-                            "[\"\xE2\x82\"]", "[\"\xE2\x82\\n\"]", "{\"\xFF\":1}"})
-    {
-        stream.clear ();
-        stream.str (doc);
-        ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
-        EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xC0\xAF\"]");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xC0\xAF\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
 
-        stream.clear ();
-        stream.str (doc);
-        ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    }
+    stream.clear ();
+    stream.str ("[\"\xED\xA0\x80\"]");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xED\xA0\x80\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
 
-    for (auto const& doc :
-         {"[\"\\uZZZZ\"]", "[\"\\uDC00\"]", "[\"\\uD800x\"]", "[\"\\uD800\\uZZZZ\"]", "[\"\\uD800\\u0041\"]"})
-    {
-        stream.clear ();
-        stream.str (doc);
-        ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
-        EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
-    }
+    stream.clear ();
+    stream.str ("[\"\xF5\x80\x80\x80\"]");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xF5\x80\x80\x80\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+
+    stream.clear ();
+    stream.str ("[\"\xE2\x28\xA1\"]");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xE2\x28\xA1\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+
+    stream.clear ();
+    stream.str ("[\"\xE2\x82\"]");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xE2\x82\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+
+    stream.clear ();
+    stream.str ("[\"\xE2\x82\\n\"]");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("[\"\xE2\x82\\n\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+
+    stream.clear ();
+    stream.str ("{\"\xFF\":1}");
+    ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str ("{\"\xFF\":1}");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
+
+    stream.clear ();
+    stream.str ("[\"\\uZZZZ\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+
+    stream.clear ();
+    stream.str ("[\"\\uDC00\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+
+    stream.clear ();
+    stream.str ("[\"\\uD800x\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+
+    stream.clear ();
+    stream.str ("[\"\\uD800\\uZZZZ\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
+
+    stream.clear ();
+    stream.str ("[\"\\uD800\\u0041\"]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 
     std::string str ("[\"caf\xC3\xA9\", \"\xE2\x82\"]");
     ASSERT_EQ (BasicJsonReader<JsonReadMode::ValidateEncoding> ().deserialize (str, value), -1);

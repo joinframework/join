@@ -41,7 +41,7 @@ using join::JsonReader;
 /**
  * @brief Test JSON round trip.
  */
-TEST (JsonReader, roundtrip)
+TEST (Json, roundtrip)
 {
     Value value;
     JsonReader reader;
@@ -264,6 +264,38 @@ TEST (JsonReader, roundtrip)
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
     EXPECT_EQ (stream.str (), "[1.7976931348623157e308]");
+
+    stream.clear ();
+    stream.str ("[Inf]");
+    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
+    stream.str ("");
+    stream.clear ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), "[Inf]");
+
+    stream.clear ();
+    stream.str ("[-Inf]");
+    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
+    stream.str ("");
+    stream.clear ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), "[-Inf]");
+
+    stream.clear ();
+    stream.str ("[NaN]");
+    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
+    stream.str ("");
+    stream.clear ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), "[NaN]");
+
+    stream.clear ();
+    stream.str ("[-NaN]");
+    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
+    stream.str ("");
+    stream.clear ();
+    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
+    EXPECT_EQ (stream.str (), "[-NaN]");
 }
 
 /**

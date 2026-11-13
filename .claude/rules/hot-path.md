@@ -30,4 +30,4 @@ Targets: zero allocation, zero lock, bounded latency, low jitter. Data path: pro
 
 ## Determinism and proof
 - Loops bounded by input or constant; recursion depth-limited. No hidden syscalls, locale or `errno` side effects. `JOIN_UNLIKELY` on error branches, `JOIN_LIKELY` on the expected path, `JOIN_ALWAYS_INLINE` only on measured inner functions.
-- Claim a gain only after measuring in `release` (skill `benchmark`); never trade correctness for speed without an equivalence test (`roundtrip_test.cpp`, `parse_test.cpp`, stress tests). Report what, how, before/after.
+- Claim a gain only after measuring in `release` (skill `benchmark`); never trade correctness for speed without an equivalence test (`*_roundtrip_test.cpp`, `parse_test.cpp`, stress tests). Report what, how, before/after.

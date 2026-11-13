@@ -32,7 +32,12 @@
 // C++.
 #include <sstream>
 #include <vector>
+#include <limits>
 #include <span>
+#include <bit>
+
+// C.
+#include <cmath>
 
 using join::PackWriter;
 using join::Value;
@@ -345,6 +350,52 @@ TEST (PackWriter, setDouble)
     stream.str ("");
     EXPECT_EQ (packWriter.setDouble (0.123456789e-12), 0);
     EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x3D', '\x41', '\x5F', '\xFF', '\xE5', '\x3A', '\x68', '\x5D'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::numeric_limits<double>::infinity ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x7F', '\x80', '\x00', '\x00'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (-std::numeric_limits<double>::infinity ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\xFF', '\x80', '\x00', '\x00'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::numeric_limits<double>::quiet_NaN ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x7F', '\xC0', '\x00', '\x00'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (1e300), 0);
+    EXPECT_EQ (stream.str ().front (), '\xCB');
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::bit_cast<double> (uint64_t (0x7ff8000000000001))), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x7F', '\xF8', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::numeric_limits<float>::max ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x7F', '\x7F', '\xFF', '\xFF'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::nextafter (static_cast<double> (std::numeric_limits<float>::max ()),
+                                                     std::numeric_limits<double>::infinity ())),
+               0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x47', '\xEF', '\xFF', '\xFF', '\xE0', '\x00', '\x00', '\x01'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::numeric_limits<float>::denorm_min ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\x00', '\x00', '\x00', '\x01'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::numeric_limits<double>::denorm_min ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (-std::numeric_limits<double>::quiet_NaN ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCA', '\xFF', '\xC0', '\x00', '\x00'}));
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setDouble (std::bit_cast<double> (uint64_t (0x7ff4000000000000))), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xCB', '\x7F', '\xF4', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
 }
 
 /**

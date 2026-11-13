@@ -179,12 +179,46 @@ TEST (PackReader, deserialize)
     ASSERT_EQ (PackReader ().deserialize (std::string ({'\xDA', '\x00'}), value), -1);
     ASSERT_EQ (join::lastError, SaxErrc::Truncated);
 
-    for (char head : {'\xDD', '\xDC', '\xDF', '\xDE', '\xDB', '\xDA', '\xD9', '\xC6', '\xC5', '\xC4',
-                      '\xD3', '\xCF', '\xCB', '\xD2', '\xCE', '\xCA', '\xD1', '\xCD', '\xD0', '\xCC'})
-    {
-        ASSERT_EQ (PackReader ().deserialize (std::string (1, head), value), -1) << int (head & 0xFF);
-        ASSERT_EQ (join::lastError, SaxErrc::Truncated) << int (head & 0xFF);
-    }
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xDD'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xDC'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xDF'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xDE'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xDB'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xDA'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xD9'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xC6'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xC5'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xC4'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xD3'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xCF'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xCB'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xD2'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xCE'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xCA'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xD1'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xCD'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xD0'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_EQ (PackReader ().deserialize (std::string (1, '\xCC'), value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
 
     Throwing throwing;
     ASSERT_THROW (PackReader ().deserialize (std::string ({'\x91', '\xA1', 'a'}), throwing), std::range_error);
@@ -1596,23 +1630,34 @@ TEST (PackReader, encoding)
 {
     using Validator = join::BasicPackReader<join::PackReadMode::ValidateEncoding>;
 
-    for (const std::string& document : {std::string ({'\xa2', '\xc3', '\xa9'}), std::string ({'\xc4', '\x01', '\xff'})})
-    {
-        std::stringstream stream (document);
-        join::SaxHandler handler;
-        ASSERT_EQ (Validator ().deserialize (document, handler), 0) << join::lastError.message ();
-        ASSERT_EQ (Validator ().deserialize (stream, handler), 0) << join::lastError.message ();
-    }
+    join::SaxHandler handler;
+    std::stringstream stream;
 
-    for (const std::string& document : {std::string ({'\xa1', '\xff'}), std::string ({'\x81', '\xa1', '\xff', '\x01'})})
-    {
-        std::stringstream stream (document);
-        join::SaxHandler handler;
-        ASSERT_EQ (Validator ().deserialize (document, handler), -1);
-        ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
-        ASSERT_EQ (Validator ().deserialize (stream, handler), -1);
-        ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
-    }
+    ASSERT_EQ (Validator ().deserialize (std::string ({'\xa2', '\xc3', '\xa9'}), handler), 0)
+        << join::lastError.message ();
+    stream.clear ();
+    stream.str (std::string ({'\xa2', '\xc3', '\xa9'}));
+    ASSERT_EQ (Validator ().deserialize (stream, handler), 0) << join::lastError.message ();
+
+    ASSERT_EQ (Validator ().deserialize (std::string ({'\xc4', '\x01', '\xff'}), handler), 0)
+        << join::lastError.message ();
+    stream.clear ();
+    stream.str (std::string ({'\xc4', '\x01', '\xff'}));
+    ASSERT_EQ (Validator ().deserialize (stream, handler), 0) << join::lastError.message ();
+
+    ASSERT_EQ (Validator ().deserialize (std::string ({'\xa1', '\xff'}), handler), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str (std::string ({'\xa1', '\xff'}));
+    ASSERT_EQ (Validator ().deserialize (stream, handler), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+
+    ASSERT_EQ (Validator ().deserialize (std::string ({'\x81', '\xa1', '\xff', '\x01'}), handler), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+    stream.clear ();
+    stream.str (std::string ({'\x81', '\xa1', '\xff', '\x01'}));
+    ASSERT_EQ (Validator ().deserialize (stream, handler), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
 
     Value value;
     ASSERT_EQ (PackReader ().deserialize (std::string ({'\xa1', '\xff'}), value), 0) << join::lastError.message ();
