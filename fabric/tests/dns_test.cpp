@@ -329,7 +329,7 @@ TEST_F (DnsTest, resolveAllName)
     aliases = Dns::Resolver::lookupAllName ("::");
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases = Dns::Resolver::lookupAllName ("192.168.24.32");
+    aliases = Dns::Resolver::lookupAllName ("192.0.2.32");
     EXPECT_EQ (aliases.size (), 0);
 
     aliases = _resolver->resolveAllName ("127.0.0.1");
@@ -380,7 +380,7 @@ TEST_F (DnsTest, resolveName)
     alias = Dns::Resolver::lookupName ("::");
     EXPECT_TRUE (alias.empty ());
 
-    alias = Dns::Resolver::lookupName ("192.168.24.32");
+    alias = Dns::Resolver::lookupName ("192.0.2.32");
     EXPECT_TRUE (alias.empty ());
 
     alias = _resolver->resolveName ("127.0.0.1");

@@ -429,6 +429,27 @@ TEST (PackWriter, setString)
     stream.str ("");
     EXPECT_EQ (packWriter.setString (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (0, 6, std::string ({'\xDB', '\x00', '\x01', '\x00', '\x00', '\x78'})), 0);
+
+    char dummy = 0;
+    stream.str ("");
+    EXPECT_EQ (packWriter.setString (std::string_view (&dummy, 1ULL << 32)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (stream.str ().empty ());
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setString ("\xff"), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xA1', '\xFF'}));
+
+    join::BasicPackWriter<join::PackWriteMode::ValidateEncoding> validator (stream);
+
+    stream.str ("");
+    EXPECT_EQ (validator.setString ("\xc3\xa9"), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xA2', '\xC3', '\xA9'}));
+
+    stream.str ("");
+    EXPECT_EQ (validator.setString ("\xff"), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**
@@ -474,6 +495,12 @@ TEST (PackWriter, setBinary)
     EXPECT_EQ (ext (256), std::string ({'\xC8', '\x01', '\x00', '\xFF'}));
     EXPECT_EQ (ext (65535), std::string ({'\xC8', '\xFF', '\xFF', '\xFF'}));
     EXPECT_EQ (ext (65536), std::string ({'\xC9', '\x00', '\x01', '\x00', '\x00', '\xFF'}));
+
+    uint8_t dummy = 0;
+    stream.str ("");
+    EXPECT_EQ (packWriter.setBinary (std::span<const uint8_t> (&dummy, 1ULL << 32)), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**
@@ -673,6 +700,13 @@ TEST (PackWriter, setKey)
 
     EXPECT_EQ (key (std::span<const uint8_t> (bytes, sizeof (bytes)), -1), 0);
     EXPECT_EQ (stream.str ().substr (1), std::string ({'\xD5', '\xFF', '\x00', '\xFF'}));
+
+    join::BasicPackWriter<join::PackWriteMode::ValidateEncoding> validator (stream);
+    stream.str ("");
+    validator.startObject (1);
+    EXPECT_EQ (validator.setKey (std::string_view ("\xff")), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**
