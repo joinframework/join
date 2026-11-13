@@ -880,7 +880,7 @@ namespace join
          * @param data data to append to output stream.
          * @param size data size.
          */
-        inline void append (const char* data, uint32_t size)
+        inline void append (const char* data, size_t size)
         {
             if (JOIN_UNLIKELY (size > sizeof (_buffer) - _size))
             {
