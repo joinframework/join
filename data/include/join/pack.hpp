@@ -40,13 +40,18 @@
 #include <optional>
 #include <sstream>
 #include <fstream>
+#include <limits>
 #include <span>
+#include <bit>
 
 // C.
 #include <cstring>
 
 namespace join
 {
+    static_assert (std::numeric_limits<float>::is_iec559 && std::numeric_limits<double>::is_iec559,
+                   "MessagePack requires IEEE 754 floating point numbers");
+
     /**
      * @brief message pack writer class.
      */
@@ -296,7 +301,7 @@ namespace join
         int setDouble (double value)
         {
             float f = static_cast<float> (value);
-            if (std::isfinite (value) && static_cast<double> (f) == value)
+            if (std::bit_cast<uint64_t> (static_cast<double> (f)) == std::bit_cast<uint64_t> (value))
             {
                 append (0xca);
                 pack (f);

@@ -37,34 +37,159 @@
  */
 TEST (Utf8, decode)
 {
-    struct Valid
-    {
-        std::string in;
-        uint32_t codepoint;
-    };
+    std::string in;
+    const char* cur = nullptr;
+    uint32_t codepoint = 0;
 
-    for (auto const& v :
-         {Valid{std::string (1, '\0'), 0x00}, Valid{"\x7F", 0x7F}, Valid{"\xC2\x80", 0x80}, Valid{"\xDF\xBF", 0x7FF},
-          Valid{"\xE0\xA0\x80", 0x800}, Valid{"\xED\x9F\xBF", 0xD7FF}, Valid{"\xEE\x80\x80", 0xE000},
-          Valid{"\xEF\xBF\xBF", 0xFFFF}, Valid{"\xF0\x90\x80\x80", 0x10000}, Valid{"\xF4\x8F\xBF\xBF", 0x10FFFF}})
-    {
-        const char* cur = v.in.data ();
-        uint32_t codepoint = 0;
-        ASSERT_EQ (join::utf8::decode (cur, v.in.data () + v.in.size (), codepoint), 0);
-        EXPECT_EQ (codepoint, v.codepoint);
-        EXPECT_EQ (cur, v.in.data () + v.in.size ());
-    }
+    in = std::string (1, '\0');
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x00U);
+    EXPECT_EQ (cur, in.data () + in.size ());
 
-    for (auto const& in : {"\x80", "\xBF", "\xC0\x80", "\xC1\xBF", "\xC2\x7F", "\xC2\xC0", "\xE0\x9F\xBF",
-                           "\xED\xA0\x80", "\xED\xBF\xBF", "\xE1\x80\x7F", "\xF0\x8F\xBF\xBF", "\xF4\x90\x80\x80",
-                           "\xF1\x80\x80\xC0", "\xF5\x80\x80\x80", "\xFF", "\xC2", "\xE1\x80", "\xF1\x80\x80"})
-    {
-        std::string str (in);
-        const char* cur = str.data ();
-        uint32_t codepoint = 0;
-        EXPECT_EQ (join::utf8::decode (cur, str.data () + str.size (), codepoint), -1);
-        EXPECT_EQ (cur, str.data ());
-    }
+    in = "\x7F";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x7FU);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xC2\x80";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x80U);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xDF\xBF";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x7FFU);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xE0\xA0\x80";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x800U);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xED\x9F\xBF";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0xD7FFU);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xEE\x80\x80";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0xE000U);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xEF\xBF\xBF";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0xFFFFU);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xF0\x90\x80\x80";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x10000U);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\xF4\x8F\xBF\xBF";
+    cur = in.data ();
+    ASSERT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), 0);
+    EXPECT_EQ (codepoint, 0x10FFFFU);
+    EXPECT_EQ (cur, in.data () + in.size ());
+
+    in = "\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xBF";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xC0\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xC1\xBF";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xC2\x7F";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xC2\xC0";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xE0\x9F\xBF";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xED\xA0\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xED\xBF\xBF";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xE1\x80\x7F";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xF0\x8F\xBF\xBF";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xF4\x90\x80\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xF1\x80\x80\xC0";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xF5\x80\x80\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xFF";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xC2";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xE1\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
+
+    in = "\xF1\x80\x80";
+    cur = in.data ();
+    EXPECT_EQ (join::utf8::decode (cur, in.data () + in.size (), codepoint), -1);
+    EXPECT_EQ (cur, in.data ());
 }
 
 /**
