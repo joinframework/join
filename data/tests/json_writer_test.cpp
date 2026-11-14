@@ -40,6 +40,22 @@ using join::Object;
 using join::SaxErrc;
 
 /**
+ * @brief stream buffer refusing every write.
+ */
+struct RefusingBuffer : public std::streambuf
+{
+    std::streamsize xsputn (const char*, std::streamsize) override
+    {
+        return 0;
+    }
+
+    int overflow (int) override
+    {
+        return traits_type::eof ();
+    }
+};
+
+/**
  * @brief stream buffer failing on its first write.
  */
 struct FailingBuffer : public std::streambuf
@@ -481,6 +497,16 @@ TEST (JsonWriter, flush)
     EXPECT_EQ (stream.str (), "[1");
     EXPECT_EQ (jsonWriter.stopArray (), 0);
     EXPECT_EQ (stream.str (), "[1]");
+
+    RefusingBuffer refusing;
+    std::ostream refused (&refusing);
+    JsonWriter refusedWriter (refused);
+    EXPECT_EQ (refusedWriter.setInt (1), 0);
+    EXPECT_TRUE (refused.bad ());
+
+    refused.clear ();
+    EXPECT_EQ (refusedWriter.setString (std::string (2048, 'x')), 0);
+    EXPECT_TRUE (refused.bad ());
 }
 
 /**

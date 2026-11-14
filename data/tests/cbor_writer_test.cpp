@@ -45,6 +45,22 @@ using join::Object;
 using join::SaxErrc;
 
 /**
+ * @brief stream buffer refusing every write.
+ */
+struct RefusingBuffer : public std::streambuf
+{
+    std::streamsize xsputn (const char*, std::streamsize) override
+    {
+        return 0;
+    }
+
+    int overflow (int) override
+    {
+        return traits_type::eof ();
+    }
+};
+
+/**
  * @brief Test setNull method.
  */
 TEST (CborWriter, setNull)
@@ -522,6 +538,16 @@ TEST (CborWriter, flush)
     EXPECT_EQ (stream.str ().size (), 1024u);
     EXPECT_EQ (cborWriter.stopArray (), 0);
     EXPECT_EQ (stream.str ().size (), 1103u);
+
+    RefusingBuffer refusing;
+    std::ostream refused (&refusing);
+    CborWriter refusedWriter (refused);
+    EXPECT_EQ (refusedWriter.setInt (1), 0);
+    EXPECT_TRUE (refused.bad ());
+
+    refused.clear ();
+    EXPECT_EQ (refusedWriter.setString (std::string (2048, 'x')), 0);
+    EXPECT_TRUE (refused.bad ());
 }
 
 /**
