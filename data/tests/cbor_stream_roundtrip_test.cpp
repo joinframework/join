@@ -224,20 +224,20 @@ TEST (CborStream, roundtrip)
     EXPECT_EQ (stream.str (), hex ("9f1bffffffffffffffffff"));
 
     stream.clear ();
-    stream.str (hex ("9ffa00000000ff"));
+    stream.str (hex ("9ff90000ff"));
     ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
     stream.str ("");
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), hex ("9ffa00000000ff"));
+    EXPECT_EQ (stream.str (), hex ("9ff90000ff"));
 
     stream.clear ();
-    stream.str (hex ("9ffa80000000ff"));
+    stream.str (hex ("9ff98000ff"));
     ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
     stream.str ("");
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), hex ("9ffa80000000ff"));
+    EXPECT_EQ (stream.str (), hex ("9ff98000ff"));
 
     stream.clear ();
     stream.str (hex ("9ffb3ff3c083126e978dff"));
@@ -304,36 +304,36 @@ TEST (CborStream, roundtrip)
     EXPECT_EQ (stream.str (), hex ("bf0102ff"));
 
     stream.clear ();
-    stream.str (hex ("9ffa7f800000ff"));
+    stream.str (hex ("9ff97c00ff"));
     ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
     stream.str ("");
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), hex ("9ffa7f800000ff"));
+    EXPECT_EQ (stream.str (), hex ("9ff97c00ff"));
 
     stream.clear ();
-    stream.str (hex ("9ffaff800000ff"));
+    stream.str (hex ("9ff9fc00ff"));
     ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
     stream.str ("");
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), hex ("9ffaff800000ff"));
+    EXPECT_EQ (stream.str (), hex ("9ff9fc00ff"));
 
     stream.clear ();
-    stream.str (hex ("9ffa7fc00000ff"));
+    stream.str (hex ("9ff97e00ff"));
     ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
     stream.str ("");
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), hex ("9ffa7fc00000ff"));
+    EXPECT_EQ (stream.str (), hex ("9ff97e00ff"));
 
     stream.clear ();
-    stream.str (hex ("9ffaffc00000ff"));
+    stream.str (hex ("9ff9fe00ff"));
     ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
     stream.str ("");
     stream.clear ();
     ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), hex ("9ffaffc00000ff"));
+    EXPECT_EQ (stream.str (), hex ("9ff9fe00ff"));
 }
 
 /**
