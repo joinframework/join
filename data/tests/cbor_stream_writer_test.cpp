@@ -303,6 +303,11 @@ TEST (CborStreamWriter, startArray)
     EXPECT_EQ (array (24), std::string ({'\x9F', '\xFF'}));
     EXPECT_EQ (array (256), std::string ({'\x9F', '\xFF'}));
     EXPECT_EQ (array (65536), std::string ({'\x9F', '\xFF'}));
+
+    stream.str ("");
+    EXPECT_EQ (cborStreamWriter.startArray (), 0);
+    EXPECT_EQ (cborStreamWriter.stopArray (), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\x9F', '\xFF'}));
 }
 
 /**
@@ -342,6 +347,11 @@ TEST (CborStreamWriter, startObject)
     EXPECT_EQ (object (24), std::string ({'\xBF', '\xFF'}));
     EXPECT_EQ (object (256), std::string ({'\xBF', '\xFF'}));
     EXPECT_EQ (object (65536), std::string ({'\xBF', '\xFF'}));
+
+    stream.str ("");
+    EXPECT_EQ (cborStreamWriter.startObject (), 0);
+    EXPECT_EQ (cborStreamWriter.stopObject (), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xBF', '\xFF'}));
 }
 
 /**
