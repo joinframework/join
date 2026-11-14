@@ -1126,7 +1126,7 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (len > std::numeric_limits<uint32_t>::max ()))
+                if (JOIN_UNLIKELY (len > std::numeric_limits<uint32_t>::max () - output.size ()))
                 {
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
                     return -1;

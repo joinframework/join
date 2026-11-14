@@ -773,6 +773,10 @@ namespace join
             {
                 char buf[25];
                 char* end = dconv::dtoa (buf, value);
+                if ((end - buf > 2) && (end[-2] == '.') && (end[-1] == '0'))
+                {
+                    end -= 2;
+                }
                 for (char* pos = buf; pos < end; ++pos)
                 {
                     append (*pos);
@@ -1284,6 +1288,9 @@ namespace join
                 case 'f':
                     document.get ();
                     return readFalse (document, handler);
+                case std::char_traits<char>::eof ():
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                    return -1;
                 default:
                     return readNumber (document, handler);
             }
@@ -1581,7 +1588,14 @@ namespace join
 
                 if (ch < 0x20)
                 {
-                    join::lastError = make_error_code (JsonErrc::IllegalCharacter);
+                    if (ch == std::char_traits<char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::Truncated);
+                    }
+                    else
+                    {
+                        join::lastError = make_error_code (JsonErrc::IllegalCharacter);
+                    }
                     return -1;
                 }
             }
@@ -1654,7 +1668,14 @@ namespace join
                     break;
                 }
 
-                join::lastError = make_error_code (JsonErrc::MissingComma);
+                if (ch == std::char_traits<char>::eof ())
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                }
+                else
+                {
+                    join::lastError = make_error_code (JsonErrc::MissingComma);
+                }
                 return -1;
             }
 
@@ -1694,9 +1715,17 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_UNLIKELY (document.get () != '"'))
+                int quote = document.get ();
+                if (JOIN_UNLIKELY (quote != '"'))
                 {
-                    join::lastError = make_error_code (JsonErrc::MissingQuote);
+                    if (quote == std::char_traits<char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::Truncated);
+                    }
+                    else
+                    {
+                        join::lastError = make_error_code (JsonErrc::MissingQuote);
+                    }
                     return -1;
                 }
 
@@ -1713,9 +1742,17 @@ namespace join
                     }
                 }
 
-                if (JOIN_UNLIKELY (document.get () != ':'))
+                int colon = document.get ();
+                if (JOIN_UNLIKELY (colon != ':'))
                 {
-                    join::lastError = make_error_code (JsonErrc::MissingColon);
+                    if (colon == std::char_traits<char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::Truncated);
+                    }
+                    else
+                    {
+                        join::lastError = make_error_code (JsonErrc::MissingColon);
+                    }
                     return -1;
                 }
 
@@ -1754,7 +1791,14 @@ namespace join
                     break;
                 }
 
-                join::lastError = make_error_code (JsonErrc::MissingComma);
+                if (ch == std::char_traits<char>::eof ())
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                }
+                else
+                {
+                    join::lastError = make_error_code (JsonErrc::MissingComma);
+                }
                 return -1;
             }
 

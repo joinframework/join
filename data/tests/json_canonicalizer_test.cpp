@@ -249,6 +249,26 @@ TEST (JsonCanonicalizer, values)
     EXPECT_EQ (out.str (),
                "{\"literals\":[null,true,false],\"numbers\":[333333333.3333333,1e+30,4.5,0.002,1e-27],\"string\":\"€$"
                "\\u000f\\nA'B\\\"\\\\\\\\\\\"/\"}");
+
+    out.str ("");
+    EXPECT_EQ (writer.setDouble (18446744073709551616.0), 0);
+    EXPECT_EQ (out.str (), "18446744073709552000");
+
+    out.str ("");
+    EXPECT_EQ (writer.setDouble (-18446744073709551616.0), 0);
+    EXPECT_EQ (out.str (), "-18446744073709552000");
+
+    out.str ("");
+    EXPECT_EQ (writer.setDouble (295147905179352825856.0), 0);
+    EXPECT_EQ (out.str (), "295147905179352830000");
+
+    out.str ("");
+    EXPECT_EQ (writer.setDouble (999999999999999700000.0), 0);
+    EXPECT_EQ (out.str (), "999999999999999700000");
+
+    out.str ("");
+    EXPECT_EQ (writer.setDouble (1e21), 0);
+    EXPECT_EQ (out.str (), "1e+21");
 }
 
 /**

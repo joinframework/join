@@ -796,6 +796,51 @@ TEST (JsonReader, fail)
     stream.clear ();
     stream.str ("{}   extra");
     ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+
+    stream.clear ();
+    stream.str ("");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("[");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("[1");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("[1,");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("{");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("{\"a\"");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("{\"a\":");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("{\"a\":1");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
+
+    stream.clear ();
+    stream.str ("[\"Hello");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::Truncated);
 }
 
 /**
