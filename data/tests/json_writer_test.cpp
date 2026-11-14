@@ -190,20 +190,29 @@ TEST (JsonWriter, setDouble)
     EXPECT_EQ (stream.str (), "1.23456789e-13");
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits<double>::infinity ()), 0);
-    EXPECT_EQ (stream.str (), "-Inf");
+    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits<double>::infinity ()), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (stream.str ().empty ());
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::infinity ()), 0);
-    EXPECT_EQ (stream.str (), "Inf");
+    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::infinity ()), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (stream.str ().empty ());
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits<double>::quiet_NaN ()), 0);
-    EXPECT_EQ (stream.str (), "-NaN");
+    EXPECT_EQ (jsonWriter.setDouble (-std::numeric_limits<double>::quiet_NaN ()), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (stream.str ().empty ());
 
     stream.str ("");
-    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::quiet_NaN ()), 0);
-    EXPECT_EQ (stream.str (), "NaN");
+    EXPECT_EQ (jsonWriter.setDouble (std::numeric_limits<double>::quiet_NaN ()), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (stream.str ().empty ());
+
+    join::BasicJsonWriter<join::JsonWriteMode::ValidateEncoding> validator (stream);
+    stream.str ("");
+    EXPECT_EQ (validator.setDouble (1.0), 0);
+    EXPECT_EQ (stream.str (), "1.0");
 
     stream.str ("");
     std::string expected ("[98.6");
@@ -233,6 +242,21 @@ TEST (JsonWriter, setString)
     stream.str ("");
     EXPECT_EQ (jsonWriter.setString ("\"\\\b\f\n\r\t\x19"), 0);
     EXPECT_EQ (stream.str (), "\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\"");
+
+    stream.str ("");
+    EXPECT_EQ (jsonWriter.setString ("\xff"), 0);
+    EXPECT_EQ (stream.str (), "\"\xff\"");
+
+    join::BasicJsonWriter<join::JsonWriteMode::ValidateEncoding> validator (stream);
+
+    stream.str ("");
+    EXPECT_EQ (validator.setString ("caf\xc3\xa9"), 0);
+    EXPECT_EQ (stream.str (), "\"caf\xc3\xa9\"");
+
+    stream.str ("");
+    EXPECT_EQ (validator.setString ("\xff"), -1);
+    EXPECT_EQ (join::lastError, join::JsonErrc::InvalidEncoding);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**
@@ -400,6 +424,13 @@ TEST (JsonWriter, setKey)
     EXPECT_EQ (jsonWriter.setKey ("\"\\\b\f\n\r\t\x19"), 0);
     jsonWriter.flush ();
     EXPECT_EQ (stream.str (), "{\"\\\"\\\\\\b\\f\\n\\r\\t\\u0019\":");
+
+    join::BasicJsonWriter<join::JsonWriteMode::ValidateEncoding> validator (stream);
+    stream.str ("");
+    EXPECT_EQ (validator.startObject (), 0);
+    EXPECT_EQ (validator.setKey ("\xff"), -1);
+    EXPECT_EQ (join::lastError, join::JsonErrc::InvalidEncoding);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**

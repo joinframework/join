@@ -110,8 +110,9 @@ TEST (JsonCanonicalizer, nan)
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), "[null,null]");
+    ASSERT_EQ (value.serialize (writer), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (out.str ().empty ());
 }
 
 /**
@@ -125,8 +126,9 @@ TEST (JsonCanonicalizer, infinity)
 
     std::stringstream out;
     JsonCanonicalizer writer (out);
-    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (out.str (), "[null,null]");
+    ASSERT_EQ (value.serialize (writer), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
+    EXPECT_TRUE (out.str ().empty ());
 }
 
 /**

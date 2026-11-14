@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-find_package(dconv 1.2.3 REQUIRED)
+find_package(dconv 2.0.0 REQUIRED)
 find_package(ZLIB REQUIRED)
 
 set(PUBLIC_HEADERS
