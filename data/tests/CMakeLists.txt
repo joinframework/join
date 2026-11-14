@@ -62,6 +62,11 @@ target_link_libraries(cbor_stream_writer.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME cbor_stream_writer.gtest COMMAND cbor_stream_writer.gtest)
 install(TARGETS cbor_stream_writer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(cbor_canonicalizer.gtest cbor_canonicalizer_test.cpp)
+target_link_libraries(cbor_canonicalizer.gtest ${JOIN_DATA} GTest::gtest_main)
+add_test(NAME cbor_canonicalizer.gtest COMMAND cbor_canonicalizer.gtest)
+install(TARGETS cbor_canonicalizer.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(cbor_roundtrip.gtest cbor_roundtrip_test.cpp)
 target_link_libraries(cbor_roundtrip.gtest ${JOIN_DATA} GTest::gtest_main)
 add_test(NAME cbor_roundtrip.gtest COMMAND cbor_roundtrip.gtest)

@@ -37,11 +37,15 @@
 
 // C++.
 #include <string_view>
+#include <functional>
 #include <algorithm>
 #include <optional>
+#include <sstream>
 #include <istream>
 #include <ostream>
+#include <utility>
 #include <string>
+#include <vector>
 #include <limits>
 #include <span>
 #include <bit>
@@ -63,6 +67,7 @@ namespace join
         Definite = 0,               /**< containers written with their length. */
         Indefinite = 1L << 0,       /**< containers written with an indefinite length. */
         ValidateEncoding = 1L << 1, /**< validate UTF-8 encoding of text strings. */
+        Canonical = 1L << 2,        /**< canonical form. */
     };
 
     /**
@@ -428,10 +433,45 @@ namespace join
          * @param object object to write.
          * @return object members in insertion order.
          */
-        template <typename Type>
+        template <typename Type, CborWriteMode Mode = WriteMode>
         const View<Type>& members (const View<Type>& object) const noexcept
+            requires ((Mode & CborWriteMode::Canonical) == CborWriteMode::Definite)
         {
             return object;
+        }
+
+        /**
+         * @brief get object members sorted by encoded key.
+         * @param object object to write.
+         * @return sorted object members.
+         */
+        template <typename Type, CborWriteMode Mode = WriteMode>
+        std::vector<std::reference_wrapper<const Type>> members (const View<Type>& object)
+            requires ((Mode & CborWriteMode::Canonical) != CborWriteMode::Definite)
+        {
+            std::vector<std::pair<std::string, std::reference_wrapper<const Type>>> keyed;
+            keyed.reserve (object.size ());
+            for (const Type& member : object)
+            {
+                std::stringstream encoded;
+                BasicCborWriter<Mode> writer (encoded);
+                member.first.serialize (writer);
+                keyed.emplace_back (encoded.str (), member);
+            }
+            std::sort (keyed.begin (), keyed.end (), [] (const auto& a, const auto& b) {
+                return a.first < b.first;
+            });
+            std::vector<std::reference_wrapper<const Type>> sorted;
+            sorted.reserve (keyed.size ());
+            for (size_t i = 0; i < keyed.size (); ++i)
+            {
+                if ((i > 0) && (keyed[i].first == keyed[i - 1].first))
+                {
+                    _duplicate = true;
+                }
+                sorted.push_back (keyed[i].second);
+            }
+            return sorted;
         }
 
         /**
@@ -541,6 +581,15 @@ namespace join
                 reset ();
                 return -1;
             }
+            if constexpr ((WriteMode & CborWriteMode::Canonical) != CborWriteMode::Definite)
+            {
+                if (JOIN_UNLIKELY (_duplicate))
+                {
+                    join::lastError = make_error_code (SaxErrc::DuplicateKey);
+                    reset ();
+                    return -1;
+                }
+            }
             if constexpr (_indefinite)
             {
                 append (0xff);
@@ -572,6 +621,7 @@ namespace join
         {
             _size = 0;
             _depth = 0;
+            _duplicate = false;
         }
 
     protected:
@@ -742,9 +792,15 @@ namespace join
         /// number of open containers.
         size_t _depth = 0;
 
+        /// duplicate key detected in canonical mode.
+        bool _duplicate = false;
+
     private:
         /// containers written with an indefinite length.
         static constexpr bool _indefinite = (WriteMode & CborWriteMode::Indefinite) != CborWriteMode::Definite;
+
+        static_assert (!_indefinite || ((WriteMode & CborWriteMode::Canonical) == CborWriteMode::Definite),
+                       "canonical encoding requires definite length containers");
     };
 
     /// CBOR writer with definite length containers.
@@ -752,6 +808,9 @@ namespace join
 
     /// CBOR writer with indefinite length containers.
     using CborStreamWriter = BasicCborWriter<CborWriteMode::Indefinite>;
+
+    /// CBOR canonicalizer, sorting map keys when used with Value::serialize.
+    using CborCanonicalizer = BasicCborWriter<CborWriteMode::Canonical>;
 
     /**
      * @brief CBOR deserialization mode.
