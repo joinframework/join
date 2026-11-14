@@ -32,6 +32,7 @@ using join::Value;
 using join::Array;
 using join::Object;
 using join::JsonCanonicalizer;
+using join::JsonReader;
 using join::JsonErrc;
 using join::SaxErrc;
 
@@ -63,6 +64,24 @@ TEST (JsonCanonicalizer, members)
     EXPECT_EQ (out.str (), "{\"a\":2,\"b\":1}");
     EXPECT_EQ (value.getObject ()[0].first, "b");
     EXPECT_EQ (value.getObject ()[1].first, "a");
+
+    Value duplicate;
+    ASSERT_EQ (duplicate.deserialize<JsonReader> (std::string ("{\"a\":1,\"b\":2,\"a\":3}")), 0)
+        << join::lastError.message ();
+    out.str ("");
+    ASSERT_EQ (duplicate.serialize (writer), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::DuplicateKey);
+    EXPECT_TRUE (out.str ().empty ());
+
+    Value nested;
+    ASSERT_EQ (nested.deserialize<JsonReader> (std::string ("{\"x\":{\"a\":1,\"a\":2}}")), 0)
+        << join::lastError.message ();
+    ASSERT_EQ (nested.serialize (writer), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::DuplicateKey);
+    EXPECT_TRUE (out.str ().empty ());
+
+    ASSERT_EQ (value.serialize (writer), 0) << join::lastError.message ();
+    EXPECT_EQ (out.str (), "{\"a\":2,\"b\":1}");
 }
 
 /**
