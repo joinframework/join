@@ -190,8 +190,9 @@ namespace join
      */
     enum class JsonWriteMode
     {
-        None,      /**< no write mode set. */
-        Canonical, /**< canonical form. */
+        None,             /**< no write mode set. */
+        ValidateEncoding, /**< validate UTF-8 encoding of strings. */
+        Canonical,        /**< canonical form. */
     };
 
     /**
@@ -334,40 +335,16 @@ namespace join
          */
         template <JsonWriteMode Mode = WriteMode>
         int setDouble (double value)
-            requires (Mode == JsonWriteMode::None)
+            requires (Mode != JsonWriteMode::Canonical)
         {
+            if (JOIN_UNLIKELY (!std::isfinite (value)))
+            {
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                reset ();
+                return -1;
+            }
             array ();
-            uint64_t bits;
-            memcpy (&bits, &value, sizeof (bits));
-            const bool neg = (bits >> 63) != 0;
-            const uint64_t exp = (bits >> 52) & 0x7FFULL;
-            const uint64_t frac = bits & 0x000FFFFFFFFFFFFFULL;
-            if (exp != 0x7FFULL)
-            {
-                writeDouble (value);
-            }
-            else if (frac != 0)
-            {
-                if (neg)
-                {
-                    append ("-NaN", 4);
-                }
-                else
-                {
-                    append ("NaN", 3);
-                }
-            }
-            else
-            {
-                if (neg)
-                {
-                    append ("-Inf", 4);
-                }
-                else
-                {
-                    append ("Inf", 3);
-                }
-            }
+            writeDouble (value);
             endValue ();
             return 0;
         }
@@ -381,28 +358,27 @@ namespace join
         int setDouble (double value)
             requires (Mode == JsonWriteMode::Canonical)
         {
-            array ();
-            if (std::isfinite (value))
+            if (JOIN_UNLIKELY (!std::isfinite (value)))
             {
-                if ((std::trunc (value) == value) && (value >= 0) &&
-                    (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
-                {
-                    writeUint64 (static_cast<uint64_t> (value));
-                }
-                else if ((std::trunc (value) == value) &&
-                         (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
-                         (value < static_cast<double> (std::numeric_limits<int64_t>::max ())))
-                {
-                    writeInt64 (static_cast<int64_t> (value));
-                }
-                else
-                {
-                    writeDouble (value);
-                }
+                join::lastError = make_error_code (SaxErrc::InvalidValue);
+                reset ();
+                return -1;
+            }
+            array ();
+            if ((std::trunc (value) == value) && (value >= 0) &&
+                (value < static_cast<double> (std::numeric_limits<uint64_t>::max ())))
+            {
+                writeUint64 (static_cast<uint64_t> (value));
+            }
+            else if ((std::trunc (value) == value) &&
+                     (value >= static_cast<double> (std::numeric_limits<int64_t>::min ())) &&
+                     (value < static_cast<double> (std::numeric_limits<int64_t>::max ())))
+            {
+                writeInt64 (static_cast<int64_t> (value));
             }
             else
             {
-                append ("null", 4);
+                writeDouble (value);
             }
             endValue ();
             return 0;
@@ -415,7 +391,7 @@ namespace join
          */
         int setString (std::string_view value)
         {
-            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            if constexpr (WriteMode != JsonWriteMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
                 {
@@ -516,7 +492,7 @@ namespace join
          */
         template <typename Type, JsonWriteMode Mode = WriteMode>
         const View<Type>& members (const View<Type>& object) const noexcept
-            requires (Mode == JsonWriteMode::None)
+            requires (Mode != JsonWriteMode::Canonical)
         {
             return object;
         }
@@ -570,7 +546,7 @@ namespace join
                 reset ();
                 return -1;
             }
-            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            if constexpr (WriteMode != JsonWriteMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (key.data (), key.data () + key.size ()) == -1))
                 {
@@ -1363,7 +1339,8 @@ namespace join
             bool negative = false;
             std::error_code ec;
 
-            if (JOIN_LIKELY (dconv::atod (document, value, significand, exponent, negative, ec) == 0))
+            if (JOIN_LIKELY (
+                    dconv::atod<dconv::AtodMode::Json> (document, value, significand, exponent, negative, ec) == 0))
             {
                 return handler.setDouble (value);
             }
