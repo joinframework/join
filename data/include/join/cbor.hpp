@@ -58,11 +58,88 @@ namespace join
     /**
      * @brief CBOR serialization mode.
      */
-    enum class CborWriteMode
+    enum class CborWriteMode : uint32_t
     {
-        Definite,   /**< containers written with their length. */
-        Indefinite, /**< containers written with an indefinite length. */
+        Definite = 0,               /**< containers written with their length. */
+        Indefinite = 1L << 0,       /**< containers written with an indefinite length. */
+        ValidateEncoding = 1L << 1, /**< validate UTF-8 encoding of text strings. */
     };
+
+    /**
+     * @brief perform binary AND on CborWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary AND on CborWriteMode.
+     */
+    constexpr CborWriteMode operator& (CborWriteMode a, CborWriteMode b) noexcept
+    {
+        return CborWriteMode (static_cast<uint32_t> (a) & static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary OR on CborWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary OR on CborWriteMode.
+     */
+    constexpr CborWriteMode operator| (CborWriteMode a, CborWriteMode b) noexcept
+    {
+        return CborWriteMode (static_cast<uint32_t> (a) | static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary XOR on CborWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary XOR on CborWriteMode.
+     */
+    constexpr CborWriteMode operator^ (CborWriteMode a, CborWriteMode b) noexcept
+    {
+        return CborWriteMode (static_cast<uint32_t> (a) ^ static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary NOT on CborWriteMode.
+     * @param a bitset.
+     * @return bitset result of binary NOT on CborWriteMode.
+     */
+    constexpr CborWriteMode operator~(CborWriteMode a) noexcept
+    {
+        return CborWriteMode (~static_cast<uint32_t> (a));
+    }
+
+    /**
+     * @brief perform binary AND assignment on CborWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const CborWriteMode& operator&= (CborWriteMode& a, CborWriteMode b) noexcept
+    {
+        return a = a & b;
+    }
+
+    /**
+     * @brief perform binary OR assignment on CborWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const CborWriteMode& operator|= (CborWriteMode& a, CborWriteMode b) noexcept
+    {
+        return a = a | b;
+    }
+
+    /**
+     * @brief perform binary XOR assignment on CborWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const CborWriteMode& operator^= (CborWriteMode& a, CborWriteMode b) noexcept
+    {
+        return a = a ^ b;
+    }
 
     /**
      * @brief CBOR writer class.
@@ -223,6 +300,16 @@ namespace join
          */
         int setString (std::string_view value)
         {
+            if constexpr ((WriteMode & CborWriteMode::ValidateEncoding) != CborWriteMode::Definite)
+            {
+                if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
+                {
+                    join::lastError = make_error_code (SaxErrc::InvalidEncoding);
+                    reset ();
+                    return -1;
+                }
+            }
+
             writeHead (0x60, value.size ());
             append (value.data (), value.size ());
             endValue ();
@@ -249,7 +336,7 @@ namespace join
          */
         int startArray ()
         {
-            static_assert (WriteMode == CborWriteMode::Indefinite, "definite length containers require a size");
+            static_assert (_indefinite, "definite length containers require a size");
             append (0x9f);
             ++_depth;
             return 0;
@@ -262,7 +349,7 @@ namespace join
          */
         int startArray ([[maybe_unused]] uint32_t size)
         {
-            if constexpr (WriteMode == CborWriteMode::Indefinite)
+            if constexpr (_indefinite)
             {
                 append (0x9f);
             }
@@ -286,7 +373,7 @@ namespace join
                 reset ();
                 return -1;
             }
-            if constexpr (WriteMode == CborWriteMode::Indefinite)
+            if constexpr (_indefinite)
             {
                 append (0xff);
             }
@@ -301,7 +388,7 @@ namespace join
          */
         int startObject ()
         {
-            static_assert (WriteMode == CborWriteMode::Indefinite, "definite length containers require a size");
+            static_assert (_indefinite, "definite length containers require a size");
             append (0xbf);
             ++_depth;
             return 0;
@@ -314,7 +401,7 @@ namespace join
          */
         int startObject ([[maybe_unused]] uint32_t size)
         {
-            if constexpr (WriteMode == CborWriteMode::Indefinite)
+            if constexpr (_indefinite)
             {
                 append (0xbf);
             }
@@ -444,7 +531,7 @@ namespace join
                 reset ();
                 return -1;
             }
-            if constexpr (WriteMode == CborWriteMode::Indefinite)
+            if constexpr (_indefinite)
             {
                 append (0xff);
             }
@@ -577,6 +664,10 @@ namespace join
 
         /// number of open containers.
         size_t _depth = 0;
+
+    private:
+        /// containers written with an indefinite length.
+        static constexpr bool _indefinite = (WriteMode & CborWriteMode::Indefinite) != CborWriteMode::Definite;
     };
 
     /// CBOR writer with definite length containers.

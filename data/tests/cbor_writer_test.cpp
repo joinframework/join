@@ -250,6 +250,21 @@ TEST (CborWriter, setString)
     stream.str ("");
     EXPECT_EQ (cborWriter.setString (std::string (65536, 'x')), 0);
     EXPECT_EQ (stream.str (), std::string ({'\x7A', '\x00', '\x01', '\x00', '\x00'}) + std::string (65536, 'x'));
+
+    stream.str ("");
+    EXPECT_EQ (cborWriter.setString ("\xff"), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\x61', '\xFF'}));
+
+    join::BasicCborWriter<join::CborWriteMode::ValidateEncoding> validator (stream);
+
+    stream.str ("");
+    EXPECT_EQ (validator.setString ("caf\xc3\xa9"), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\x65', 'c', 'a', 'f', '\xC3', '\xA9'}));
+
+    stream.str ("");
+    EXPECT_EQ (validator.setString ("\xff"), -1);
+    EXPECT_EQ (join::lastError, join::SaxErrc::InvalidEncoding);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**
@@ -435,6 +450,13 @@ TEST (CborWriter, setKey)
 
     EXPECT_EQ (key (std::span<const uint8_t> (bytes, sizeof (bytes)), -1), 0);
     EXPECT_EQ (stream.str ().substr (1), std::string ({'\x42', '\x00', '\xFF'}));
+
+    join::BasicCborWriter<join::CborWriteMode::ValidateEncoding> validator (stream);
+    stream.str ("");
+    validator.startObject (1);
+    EXPECT_EQ (validator.setKey (std::string_view ("\xff")), -1);
+    EXPECT_EQ (join::lastError, join::SaxErrc::InvalidEncoding);
+    EXPECT_TRUE (stream.str ().empty ());
 }
 
 /**
