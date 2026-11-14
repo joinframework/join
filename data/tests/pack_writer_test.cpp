@@ -407,6 +407,10 @@ TEST (PackWriter, setString)
     PackWriter packWriter (stream);
 
     stream.str ("");
+    EXPECT_EQ (packWriter.setString (std::string_view ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xA0'}));
+
+    stream.str ("");
     EXPECT_EQ (packWriter.setString (std::string (31, 'x')), 0);
     EXPECT_EQ (stream.str ().compare (0, 6, std::string ({'\xBF', '\x78', '\x78', '\x78', '\x78', '\x78'})), 0);
 
@@ -460,6 +464,10 @@ TEST (PackWriter, setBinary)
     std::stringstream stream;
     PackWriter packWriter (stream);
     const std::vector<uint8_t> data (65536, 0x78);
+
+    stream.str ("");
+    EXPECT_EQ (packWriter.setBinary (std::span<const uint8_t> ()), 0);
+    EXPECT_EQ (stream.str (), std::string ({'\xC4', '\x00'}));
 
     stream.str ("");
     EXPECT_EQ (packWriter.setBinary (std::span<const uint8_t> (data.data (), 255)), 0);

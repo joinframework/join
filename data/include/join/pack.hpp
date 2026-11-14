@@ -684,6 +684,10 @@ namespace join
          */
         inline void append (const char* data, uint32_t size)
         {
+            if (JOIN_UNLIKELY (size == 0))
+            {
+                return;
+            }
             if (JOIN_UNLIKELY (size > sizeof (_buffer) - _size))
             {
                 flush ();
