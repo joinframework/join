@@ -42,6 +42,7 @@ namespace join
         StackOverflow = 1, /**< Stack overflow. */
         InvalidParent,     /**< Parent not an array nor an object. */
         InvalidKey,        /**< Key is invalid. */
+        DuplicateKey,      /**< Key is duplicated. */
         InvalidValue,      /**< Value is invalid. */
         InvalidEncoding,   /**< Character encoding is invalid. */
         ExtraData,         /**< Extra data detected. */

@@ -51,6 +51,8 @@ std::string SaxCategory::message (int code) const
             return "parent not an array nor an object";
         case SaxErrc::InvalidKey:
             return "key is invalid";
+        case SaxErrc::DuplicateKey:
+            return "key is duplicated";
         case SaxErrc::InvalidValue:
             return "value is invalid";
         case SaxErrc::InvalidEncoding:
