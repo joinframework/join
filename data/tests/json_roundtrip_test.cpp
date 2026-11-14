@@ -267,35 +267,23 @@ TEST (Json, roundtrip)
 
     stream.clear ();
     stream.str ("[Inf]");
-    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
-    stream.str ("");
-    stream.clear ();
-    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), "[Inf]");
+    ASSERT_EQ (reader.deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[-Inf]");
-    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
-    stream.str ("");
-    stream.clear ();
-    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), "[-Inf]");
+    ASSERT_EQ (reader.deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[NaN]");
-    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
-    stream.str ("");
-    stream.clear ();
-    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), "[NaN]");
+    ASSERT_EQ (reader.deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[-NaN]");
-    ASSERT_NE (reader.deserialize (stream, value), -1) << join::lastError.message ();
-    stream.str ("");
-    stream.clear ();
-    ASSERT_NE (value.serialize (writer), -1) << join::lastError.message ();
-    EXPECT_EQ (stream.str (), "[-NaN]");
+    ASSERT_EQ (reader.deserialize (stream, value), -1);
+    EXPECT_EQ (join::lastError, SaxErrc::InvalidValue);
 }
 
 /**

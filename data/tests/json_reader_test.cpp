@@ -231,51 +231,48 @@ TEST (JsonReader, pass)
 
     stream.clear ();
     stream.str ("[NaN]");
-    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isnan (value[0].getDouble ()));
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[-NaN]");
-    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isnan (value[0].getDouble ()));
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[Inf]");
-    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[-Inf]");
-    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[Infinity]");
-    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (!std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[-Infinity]");
-    ASSERT_EQ (JsonReader ().deserialize (stream, value), 0) << join::lastError.message ();
-    ASSERT_TRUE (value.isArray ());
-    ASSERT_FALSE (value.empty ());
-    ASSERT_TRUE (value[0].isDouble ());
-    ASSERT_TRUE (std::signbit (value[0].getDouble ()) && std::isinf (value[0].getDouble ()));
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
+
+    stream.clear ();
+    stream.str ("[01]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
+
+    stream.clear ();
+    stream.str ("[1.]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
+
+    stream.clear ();
+    stream.str ("[.5]");
+    ASSERT_EQ (JsonReader ().deserialize (stream, value), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::InvalidValue);
 
     stream.clear ();
     stream.str ("[true]");
