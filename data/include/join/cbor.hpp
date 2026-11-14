@@ -595,6 +595,10 @@ namespace join
          */
         inline void append (const char* data, size_t size)
         {
+            if (_size > sizeof (_buffer))
+            {
+                __builtin_unreachable ();
+            }
             if (JOIN_UNLIKELY (size == 0))
             {
                 return;
