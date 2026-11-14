@@ -74,6 +74,7 @@ namespace join
          */
         explicit BasicPackWriter (std::ostream& document)
         : _out (document.rdbuf ())
+        , _document (&document)
         {
         }
 
@@ -649,7 +650,10 @@ namespace join
         {
             if (_size)
             {
-                _out->sputn (_buffer, _size);
+                if (JOIN_UNLIKELY (_out->sputn (_buffer, _size) != static_cast<std::streamsize> (_size)))
+                {
+                    _document->setstate (std::ios_base::badbit);
+                }
                 _size = 0;
             }
         }
@@ -693,7 +697,10 @@ namespace join
                 flush ();
                 if (size >= sizeof (_buffer))
                 {
-                    _out->sputn (data, size);
+                    if (JOIN_UNLIKELY (_out->sputn (data, size) != static_cast<std::streamsize> (size)))
+                    {
+                        _document->setstate (std::ios_base::badbit);
+                    }
                     return;
                 }
             }
@@ -724,6 +731,9 @@ namespace join
 
         /// underlying output stream.
         std::streambuf* _out;
+
+        /// output stream receiving the error state.
+        std::ostream* _document;
 
         /// output buffer.
         char _buffer[1024] = {};

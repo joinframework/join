@@ -209,6 +209,7 @@ namespace join
          */
         explicit BasicJsonWriter (std::ostream& document, size_t indentation = 0)
         : _out (document.rdbuf ())
+        , _document (&document)
         , _indentation ((WriteMode == JsonWriteMode::Canonical) ? 0 : indentation)
         {
         }
@@ -636,7 +637,10 @@ namespace join
         {
             if (_size)
             {
-                _out->sputn (_buffer, _size);
+                if (JOIN_UNLIKELY (_out->sputn (_buffer, _size) != static_cast<std::streamsize> (_size)))
+                {
+                    _document->setstate (std::ios_base::badbit);
+                }
                 _size = 0;
             }
         }
@@ -773,6 +777,10 @@ namespace join
             {
                 char buf[25];
                 char* end = dconv::dtoa (buf, value);
+                if ((end - buf > 2) && (end[-2] == '.') && (end[-1] == '0'))
+                {
+                    end -= 2;
+                }
                 for (char* pos = buf; pos < end; ++pos)
                 {
                     append (*pos);
@@ -880,7 +888,10 @@ namespace join
                 flush ();
                 if (size >= sizeof (_buffer))
                 {
-                    _out->sputn (data, size);
+                    if (JOIN_UNLIKELY (_out->sputn (data, size) != static_cast<std::streamsize> (size)))
+                    {
+                        _document->setstate (std::ios_base::badbit);
+                    }
                     return;
                 }
             }
@@ -991,6 +1002,9 @@ namespace join
 
         /// underlying output stream.
         std::streambuf* _out;
+
+        /// output stream receiving the error state.
+        std::ostream* _document;
 
         /// output buffer.
         char _buffer[1024] = {};
@@ -1284,6 +1298,9 @@ namespace join
                 case 'f':
                     document.get ();
                     return readFalse (document, handler);
+                case std::char_traits<char>::eof ():
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                    return -1;
                 default:
                     return readNumber (document, handler);
             }
@@ -1581,7 +1598,14 @@ namespace join
 
                 if (ch < 0x20)
                 {
-                    join::lastError = make_error_code (JsonErrc::IllegalCharacter);
+                    if (ch == std::char_traits<char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::Truncated);
+                    }
+                    else
+                    {
+                        join::lastError = make_error_code (JsonErrc::IllegalCharacter);
+                    }
                     return -1;
                 }
             }
@@ -1654,7 +1678,14 @@ namespace join
                     break;
                 }
 
-                join::lastError = make_error_code (JsonErrc::MissingComma);
+                if (ch == std::char_traits<char>::eof ())
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                }
+                else
+                {
+                    join::lastError = make_error_code (JsonErrc::MissingComma);
+                }
                 return -1;
             }
 
@@ -1694,9 +1725,17 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_UNLIKELY (document.get () != '"'))
+                int quote = document.get ();
+                if (JOIN_UNLIKELY (quote != '"'))
                 {
-                    join::lastError = make_error_code (JsonErrc::MissingQuote);
+                    if (quote == std::char_traits<char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::Truncated);
+                    }
+                    else
+                    {
+                        join::lastError = make_error_code (JsonErrc::MissingQuote);
+                    }
                     return -1;
                 }
 
@@ -1713,9 +1752,17 @@ namespace join
                     }
                 }
 
-                if (JOIN_UNLIKELY (document.get () != ':'))
+                int colon = document.get ();
+                if (JOIN_UNLIKELY (colon != ':'))
                 {
-                    join::lastError = make_error_code (JsonErrc::MissingColon);
+                    if (colon == std::char_traits<char>::eof ())
+                    {
+                        join::lastError = make_error_code (SaxErrc::Truncated);
+                    }
+                    else
+                    {
+                        join::lastError = make_error_code (JsonErrc::MissingColon);
+                    }
                     return -1;
                 }
 
@@ -1754,7 +1801,14 @@ namespace join
                     break;
                 }
 
-                join::lastError = make_error_code (JsonErrc::MissingComma);
+                if (ch == std::char_traits<char>::eof ())
+                {
+                    join::lastError = make_error_code (SaxErrc::Truncated);
+                }
+                else
+                {
+                    join::lastError = make_error_code (JsonErrc::MissingComma);
+                }
                 return -1;
             }
 

@@ -45,6 +45,22 @@ using join::Object;
 using join::SaxErrc;
 
 /**
+ * @brief stream buffer refusing every write.
+ */
+struct RefusingBuffer : public std::streambuf
+{
+    std::streamsize xsputn (const char*, std::streamsize) override
+    {
+        return 0;
+    }
+
+    int overflow (int) override
+    {
+        return traits_type::eof ();
+    }
+};
+
+/**
  * @brief Test setNull method.
  */
 TEST (CborWriter, setNull)
@@ -189,16 +205,13 @@ TEST (CborWriter, setDouble)
         return stream.str ();
     };
 
-    EXPECT_EQ (write (0.0), std::string ({'\xFA', '\x00', '\x00', '\x00', '\x00'}));
-    EXPECT_EQ (write (-0.0), std::string ({'\xFA', '\x80', '\x00', '\x00', '\x00'}));
-    EXPECT_EQ (write (1.5), std::string ({'\xFA', '\x3F', '\xC0', '\x00', '\x00'}));
+    EXPECT_EQ (write (0.0), std::string ({'\xF9', '\x00', '\x00'}));
+    EXPECT_EQ (write (-0.0), std::string ({'\xF9', '\x80', '\x00'}));
+    EXPECT_EQ (write (1.5), std::string ({'\xF9', '\x3E', '\x00'}));
     EXPECT_EQ (write (1.1), std::string ({'\xFB', '\x3F', '\xF1', '\x99', '\x99', '\x99', '\x99', '\x99', '\x9A'}));
-    EXPECT_EQ (write (std::numeric_limits<double>::infinity ()),
-               std::string ({'\xFA', '\x7F', '\x80', '\x00', '\x00'}));
-    EXPECT_EQ (write (-std::numeric_limits<double>::infinity ()),
-               std::string ({'\xFA', '\xFF', '\x80', '\x00', '\x00'}));
-    EXPECT_EQ (write (std::numeric_limits<double>::quiet_NaN ()),
-               std::string ({'\xFA', '\x7F', '\xC0', '\x00', '\x00'}));
+    EXPECT_EQ (write (std::numeric_limits<double>::infinity ()), std::string ({'\xF9', '\x7C', '\x00'}));
+    EXPECT_EQ (write (-std::numeric_limits<double>::infinity ()), std::string ({'\xF9', '\xFC', '\x00'}));
+    EXPECT_EQ (write (std::numeric_limits<double>::quiet_NaN ()), std::string ({'\xF9', '\x7E', '\x00'}));
     EXPECT_EQ (write (std::bit_cast<double> (uint64_t (0x7ff8000000000001))),
                std::string ({'\xFB', '\x7F', '\xF8', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
     EXPECT_EQ (write (std::numeric_limits<float>::max ()), std::string ({'\xFA', '\x7F', '\x7F', '\xFF', '\xFF'}));
@@ -209,10 +222,17 @@ TEST (CborWriter, setDouble)
                std::string ({'\xFA', '\x00', '\x00', '\x00', '\x01'}));
     EXPECT_EQ (write (std::numeric_limits<double>::denorm_min ()),
                std::string ({'\xFB', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00', '\x01'}));
-    EXPECT_EQ (write (-std::numeric_limits<double>::quiet_NaN ()),
-               std::string ({'\xFA', '\xFF', '\xC0', '\x00', '\x00'}));
+    EXPECT_EQ (write (-std::numeric_limits<double>::quiet_NaN ()), std::string ({'\xF9', '\xFE', '\x00'}));
     EXPECT_EQ (write (std::bit_cast<double> (uint64_t (0x7ff4000000000000))),
                std::string ({'\xFB', '\x7F', '\xF4', '\x00', '\x00', '\x00', '\x00', '\x00', '\x00'}));
+    EXPECT_EQ (write (65504.0), std::string ({'\xF9', '\x7B', '\xFF'}));
+    EXPECT_EQ (write (65520.0), std::string ({'\xFA', '\x47', '\x7F', '\xF0', '\x00'}));
+    EXPECT_EQ (write (std::ldexp (1.0, -14)), std::string ({'\xF9', '\x04', '\x00'}));
+    EXPECT_EQ (write (std::ldexp (1.0, -24)), std::string ({'\xF9', '\x00', '\x01'}));
+    EXPECT_EQ (write (std::ldexp (1.0, -25)), std::string ({'\xFA', '\x33', '\x00', '\x00', '\x00'}));
+    EXPECT_EQ (write (std::ldexp (1.5, -24)), std::string ({'\xFA', '\x33', '\xC0', '\x00', '\x00'}));
+    EXPECT_EQ (write (std::bit_cast<double> (uint64_t (0x7ff8000020000000))),
+               std::string ({'\xFA', '\x7F', '\xC0', '\x00', '\x01'}));
 }
 
 /**
@@ -436,7 +456,7 @@ TEST (CborWriter, setKey)
     EXPECT_EQ (stream.str ().substr (1), std::string ({'\x18', '\x2A'}));
 
     EXPECT_EQ (key (1.5), 0);
-    EXPECT_EQ (stream.str ().substr (1), std::string ({'\xFA', '\x3F', '\xC0', '\x00', '\x00'}));
+    EXPECT_EQ (stream.str ().substr (1), std::string ({'\xF9', '\x3E', '\x00'}));
 
     EXPECT_EQ (key ("a"), 0);
     EXPECT_EQ (stream.str ().substr (1), std::string ({'\x61', 'a'}));
@@ -518,6 +538,16 @@ TEST (CborWriter, flush)
     EXPECT_EQ (stream.str ().size (), 1024u);
     EXPECT_EQ (cborWriter.stopArray (), 0);
     EXPECT_EQ (stream.str ().size (), 1103u);
+
+    RefusingBuffer refusing;
+    std::ostream refused (&refusing);
+    CborWriter refusedWriter (refused);
+    EXPECT_EQ (refusedWriter.setInt (1), 0);
+    EXPECT_TRUE (refused.bad ());
+
+    refused.clear ();
+    EXPECT_EQ (refusedWriter.setString (std::string (2048, 'x')), 0);
+    EXPECT_TRUE (refused.bad ());
 }
 
 /**

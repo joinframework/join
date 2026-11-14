@@ -154,6 +154,7 @@ namespace join
          */
         explicit BasicCborWriter (std::ostream& document)
         : _out (document.rdbuf ())
+        , _document (&document)
         {
         }
 
@@ -281,8 +282,17 @@ namespace join
             float f = static_cast<float> (value);
             if (std::bit_cast<uint64_t> (static_cast<double> (f)) == std::bit_cast<uint64_t> (value))
             {
-                append (0xfa);
-                pack (f);
+                uint16_t half;
+                if (toHalf (f, half))
+                {
+                    append (0xf9);
+                    pack (half);
+                }
+                else
+                {
+                    append (0xfa);
+                    pack (f);
+                }
             }
             else
             {
@@ -547,7 +557,10 @@ namespace join
         {
             if (_size)
             {
-                _out->sputn (_buffer, _size);
+                if (JOIN_UNLIKELY (_out->sputn (_buffer, _size) != static_cast<std::streamsize> (_size)))
+                {
+                    _document->setstate (std::ios_base::badbit);
+                }
                 _size = 0;
             }
         }
@@ -582,6 +595,10 @@ namespace join
          */
         inline void append (const char* data, size_t size)
         {
+            if (_size > sizeof (_buffer))
+            {
+                __builtin_unreachable ();
+            }
             if (JOIN_UNLIKELY (size == 0))
             {
                 return;
@@ -591,7 +608,10 @@ namespace join
                 flush ();
                 if (size >= sizeof (_buffer))
                 {
-                    _out->sputn (data, size);
+                    if (JOIN_UNLIKELY (_out->sputn (data, size) != static_cast<std::streamsize> (size)))
+                    {
+                        _document->setstate (std::ios_base::badbit);
+                    }
                     return;
                 }
             }
@@ -607,6 +627,60 @@ namespace join
         void pack (Type value)
         {
             append (reinterpret_cast<const char*> (&swap (value)), sizeof (value));
+        }
+
+        /**
+         * @brief convert a float to half precision when no information is lost.
+         * @param value float value to convert.
+         * @param half half precision bits.
+         * @return true if the value is exactly representable in half precision, false otherwise.
+         */
+        static bool toHalf (float value, uint16_t& half) noexcept
+        {
+            const uint32_t bits = std::bit_cast<uint32_t> (value);
+            const uint16_t sign = static_cast<uint16_t> ((bits >> 16) & 0x8000);
+            const uint32_t exponent = (bits >> 23) & 0xff;
+            const uint32_t mantissa = bits & 0x7fffff;
+
+            if (exponent == 0xff)
+            {
+                if ((mantissa != 0) && (mantissa != 0x400000))
+                {
+                    return false;
+                }
+                half = sign | 0x7c00 | static_cast<uint16_t> (mantissa >> 13);
+                return true;
+            }
+
+            if ((exponent == 0) && (mantissa == 0))
+            {
+                half = sign;
+                return true;
+            }
+
+            if ((exponent >= 113) && (exponent <= 142))
+            {
+                if ((mantissa & 0x1fff) != 0)
+                {
+                    return false;
+                }
+                half = sign | static_cast<uint16_t> (((exponent - 112) << 10) | (mantissa >> 13));
+                return true;
+            }
+
+            if ((exponent >= 103) && (exponent <= 112))
+            {
+                const uint32_t significand = 0x800000 | mantissa;
+                const uint32_t shift = 126 - exponent;
+                if ((significand & ((1u << shift) - 1)) != 0)
+                {
+                    return false;
+                }
+                half = sign | static_cast<uint16_t> (significand >> shift);
+                return true;
+            }
+
+            return false;
         }
 
         /**
@@ -655,6 +729,9 @@ namespace join
 
         /// underlying output stream.
         std::streambuf* _out;
+
+        /// output stream receiving the error state.
+        std::ostream* _document;
 
         /// output buffer.
         char _buffer[1024] = {};
@@ -1126,7 +1203,7 @@ namespace join
                     return -1;
                 }
 
-                if (JOIN_UNLIKELY (len > std::numeric_limits<uint32_t>::max ()))
+                if (JOIN_UNLIKELY (len > std::numeric_limits<uint32_t>::max () - output.size ()))
                 {
                     join::lastError = make_error_code (SaxErrc::InvalidValue);
                     return -1;

@@ -498,6 +498,7 @@ TEST (CborReader, fail)
     ASSERT_EQ (error (hex ("5f5cff")), SaxErrc::InvalidValue);
     ASSERT_EQ (error (hex ("7f7bffffffffffffffff")), SaxErrc::InvalidValue);
     ASSERT_EQ (error (hex ("5f5b0000000100000000")), SaxErrc::InvalidValue);
+    ASSERT_EQ (error (hex ("5f41005affffffff")), SaxErrc::InvalidValue);
 
     ASSERT_EQ (error (hex ("bf6161ff")), SaxErrc::InvalidKey);
     ASSERT_EQ (error (hex ("0000")), SaxErrc::ExtraData);
