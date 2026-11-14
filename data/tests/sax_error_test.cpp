@@ -49,6 +49,7 @@ TEST (SaxCategory, message)
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidParent)).c_str (),
                   "parent not an array nor an object");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidKey)).c_str (), "key is invalid");
+    EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::DuplicateKey)).c_str (), "key is duplicated");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidValue)).c_str (), "value is invalid");
     EXPECT_STREQ (SaxCategory ().message (static_cast<int> (SaxErrc::InvalidEncoding)).c_str (),
                   "character encoding is invalid");
@@ -65,9 +66,10 @@ TEST (SaxCategory, default_error_condition)
     EXPECT_EQ (SaxCategory ().default_error_condition (1).message (), "stack overflow");
     EXPECT_EQ (SaxCategory ().default_error_condition (2).message (), "parent not an array nor an object");
     EXPECT_EQ (SaxCategory ().default_error_condition (3).message (), "key is invalid");
-    EXPECT_EQ (SaxCategory ().default_error_condition (4).message (), "value is invalid");
-    EXPECT_EQ (SaxCategory ().default_error_condition (5).message (), "character encoding is invalid");
-    EXPECT_EQ (SaxCategory ().default_error_condition (6).message (), "extra data detected");
+    EXPECT_EQ (SaxCategory ().default_error_condition (4).message (), "key is duplicated");
+    EXPECT_EQ (SaxCategory ().default_error_condition (5).message (), "value is invalid");
+    EXPECT_EQ (SaxCategory ().default_error_condition (6).message (), "character encoding is invalid");
+    EXPECT_EQ (SaxCategory ().default_error_condition (7).message (), "extra data detected");
 }
 
 /**

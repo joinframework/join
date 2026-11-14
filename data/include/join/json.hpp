@@ -503,7 +503,7 @@ namespace join
          * @return sorted object members.
          */
         template <typename Type, JsonWriteMode Mode = WriteMode>
-        std::vector<std::reference_wrapper<const Type>> members (const View<Type>& object) const
+        std::vector<std::reference_wrapper<const Type>> members (const View<Type>& object)
             requires (Mode == JsonWriteMode::Canonical)
         {
             std::vector<std::reference_wrapper<const Type>> sorted (object.begin (), object.end ());
@@ -517,6 +517,13 @@ namespace join
                 return utf8::compareUtf16Order (sa.data (), sa.data () + sa.size (), sb.data (),
                                                 sb.data () + sb.size ()) < 0;
             });
+            for (size_t i = 1; i < sorted.size (); ++i)
+            {
+                if (sorted[i].get ().first.isString () && (sorted[i].get ().first == sorted[i - 1].get ().first))
+                {
+                    _duplicate = true;
+                }
+            }
             return sorted;
         }
 
@@ -603,6 +610,15 @@ namespace join
                 reset ();
                 return -1;
             }
+            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            {
+                if (JOIN_UNLIKELY (_duplicate))
+                {
+                    join::lastError = make_error_code (SaxErrc::DuplicateKey);
+                    reset ();
+                    return -1;
+                }
+            }
             --_depth;
             if (!_first)
             {
@@ -633,6 +649,7 @@ namespace join
             _size = 0;
             _depth = 0;
             _first = true;
+            _duplicate = false;
         }
 
     protected:
@@ -992,6 +1009,9 @@ namespace join
 
         /// is first element.
         bool _first = true;
+
+        /// duplicate key found in a canonical object.
+        bool _duplicate = false;
     };
 
     /// JSON default writer.
