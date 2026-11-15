@@ -55,11 +55,87 @@ namespace join
     /**
      * @brief MessagePack serialization mode.
      */
-    enum class PackWriteMode
+    enum class PackWriteMode : uint32_t
     {
-        None,             /**< no write mode set. */
-        ValidateEncoding, /**< validate UTF-8 encoding of strings. */
+        None = 0,                   /**< no write mode set. */
+        ValidateEncoding = 1L << 0, /**< validate UTF-8 encoding of strings. */
     };
+
+    /**
+     * @brief perform binary AND on PackWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary AND on PackWriteMode.
+     */
+    constexpr PackWriteMode operator& (PackWriteMode a, PackWriteMode b) noexcept
+    {
+        return PackWriteMode (static_cast<uint32_t> (a) & static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary OR on PackWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary OR on PackWriteMode.
+     */
+    constexpr PackWriteMode operator| (PackWriteMode a, PackWriteMode b) noexcept
+    {
+        return PackWriteMode (static_cast<uint32_t> (a) | static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary XOR on PackWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary XOR on PackWriteMode.
+     */
+    constexpr PackWriteMode operator^ (PackWriteMode a, PackWriteMode b) noexcept
+    {
+        return PackWriteMode (static_cast<uint32_t> (a) ^ static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary NOT on PackWriteMode.
+     * @param a bitset.
+     * @return bitset result of binary NOT on PackWriteMode.
+     */
+    constexpr PackWriteMode operator~(PackWriteMode a) noexcept
+    {
+        return PackWriteMode (~static_cast<uint32_t> (a));
+    }
+
+    /**
+     * @brief perform binary AND assignment on PackWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const PackWriteMode& operator&= (PackWriteMode& a, PackWriteMode b) noexcept
+    {
+        return a = a & b;
+    }
+
+    /**
+     * @brief perform binary OR assignment on PackWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const PackWriteMode& operator|= (PackWriteMode& a, PackWriteMode b) noexcept
+    {
+        return a = a | b;
+    }
+
+    /**
+     * @brief perform binary XOR assignment on PackWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const PackWriteMode& operator^= (PackWriteMode& a, PackWriteMode b) noexcept
+    {
+        return a = a ^ b;
+    }
 
     /**
      * @brief message pack writer class.
@@ -340,7 +416,7 @@ namespace join
                 return -1;
             }
 
-            if constexpr (WriteMode == PackWriteMode::ValidateEncoding)
+            if constexpr ((WriteMode & PackWriteMode::ValidateEncoding) != PackWriteMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
                 {
@@ -756,6 +832,7 @@ namespace join
         None = 0,                    /**< no read mode set. */
         ValidateEncoding = 1L << 0,  /**< validate UTF-8 encoding of strings. */
         StopParsingOnDone = 1L << 1, /**< stop parsing on done. */
+        ZeroCopy = 1L << 2,          /**< borrow strings and binaries from the document. */
     };
 
     /**
@@ -919,6 +996,16 @@ namespace join
         }
 
         /**
+         * @brief deserialize a temporary document, forbidden in zero copy mode.
+         * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+            requires ((ReadMode & PackReadMode::ZeroCopy) != PackReadMode::None)
+        int deserialize (std::string&& document, Handler& handler) = delete;
+
+        /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @param handler handler receiving the document.
@@ -941,7 +1028,17 @@ namespace join
         template <typename ProbeType, typename Allocator>
         int read (ProbeType& document, BasicValue<Allocator>& value)
         {
-            int result = read (document, ValueBuilder (value));
+            int result;
+            if constexpr ((ReadMode & PackReadMode::ZeroCopy) != PackReadMode::None)
+            {
+                static_assert (std::is_same_v<ProbeType, dconv::StringProbe>, "zero copy requires a memory document");
+                result = read (document,
+                               ValueBuilder<BasicValue<Allocator>, true> (value, document.tell (), document.end ()));
+            }
+            else
+            {
+                result = read (document, ValueBuilder (value));
+            }
             if (JOIN_UNLIKELY (result != 0))
             {
                 value = nullptr;

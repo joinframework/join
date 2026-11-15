@@ -85,8 +85,8 @@ sudo apt install pkg-config libssl-dev zlib1g-dev libgtest-dev libgmock-dev
 
 Install [dconv](https://github.com/joinframework/dconv) from its release package:
 ```bash
-wget https://github.com/joinframework/dconv/releases/download/v2.0.0/libdconv-dev_2.0.0_all.deb
-sudo apt install ./libdconv-dev_2.0.0_all.deb
+wget https://github.com/joinframework/dconv/releases/download/v2.0.1/libdconv-dev_2.0.1_all.deb
+sudo apt install ./libdconv-dev_2.0.1_all.deb
 ```
 
 > **Compilers:** GCC 11+ or Clang 16+ (C++20). Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  

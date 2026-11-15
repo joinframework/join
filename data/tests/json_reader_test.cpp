@@ -49,6 +49,10 @@ using join::JsonReader;
 using join::BasicJsonReader;
 using join::JsonWriter;
 
+/// reader accepting a temporary document.
+template <typename Reader>
+concept AcceptsTemporary = requires (Reader reader, Value value) { reader.deserialize (std::string (), value); };
+
 /**
  * @brief stream buffer failing on its first write.
  */
@@ -181,6 +185,17 @@ TEST (JsonReader, deserialize)
         builder.startArray ();
     }
     ASSERT_EQ (JsonReader ().deserialize (std::string ("{}"), builder), -1);
+
+    using Lender = BasicJsonReader<JsonReadMode::ZeroCopy>;
+    static_assert (!AcceptsTemporary<Lender>);
+    const std::string document (R"({"a":"b","c":"d\ne"})");
+    ASSERT_EQ (value.deserialize<Lender> (document), 0) << join::lastError.message ();
+    ASSERT_EQ (value.getObject ()[0].first.getString ().data (), document.data () + 2);
+    ASSERT_EQ (value["a"].getString ().data (), document.data () + 6);
+    ASSERT_EQ (value["c"], "d\ne");
+    ASSERT_NE (value["c"].getString ().data (), document.data () + 14);
+    ASSERT_EQ (value.deserialize<Lender> (std::string_view (document.data (), 5)), -1);
+    ASSERT_TRUE (value.isNull ());
 }
 
 /**

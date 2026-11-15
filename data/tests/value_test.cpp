@@ -4893,6 +4893,22 @@ TEST (Value, assign)
     value["moved"] = std::move (root);
     ASSERT_EQ (value["moved"][0], 2);
     ASSERT_TRUE (root.isNull ());
+
+    Value parsed;
+    ASSERT_EQ (parsed.deserialize<JsonReader> (std::string ("[\"abc\"]")), 0);
+    const char* data = parsed[0].getString ().data ();
+    parsed[0] = "xy";
+    ASSERT_NE (parsed[0].getString ().data (), data);
+    data = parsed[0].getString ().data ();
+    parsed[0] = "z";
+    ASSERT_EQ (parsed[0].getString ().data (), data);
+    ASSERT_EQ (parsed[0], "z");
+
+    const std::string document ({'\x91', '\xa3', 'a', 'b', 'c'});
+    ASSERT_EQ (parsed.deserialize<join::BasicPackReader<join::PackReadMode::ZeroCopy>> (document), 0);
+    parsed[0] = "xy";
+    ASSERT_EQ (parsed[0], "xy");
+    ASSERT_EQ (document, std::string ({'\x91', '\xa3', 'a', 'b', 'c'}));
 }
 
 /**
@@ -5225,6 +5241,14 @@ TEST (Value, reserve)
 
     value = array.getArray ();
     ASSERT_THROW (value.reserve (size_t (std::numeric_limits<uint32_t>::max ()) + 1), std::bad_alloc);
+
+    const std::string document ({'\xa3', 'f', 'o', 'o'});
+    ASSERT_EQ (value.deserialize<join::BasicPackReader<join::PackReadMode::ZeroCopy>> (document), 0);
+    ASSERT_EQ (value.getString ().data (), document.data () + 1);
+    value.reserve (8);
+    ASSERT_NE (value.getString ().data (), document.data () + 1);
+    ASSERT_EQ (value, "foo");
+    ASSERT_EQ (value.getString ().data ()[3], '\0');
 }
 
 /**

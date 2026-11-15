@@ -51,6 +51,10 @@ using join::PackReader;
 using join::PackWriter;
 using join::JsonWriter;
 
+/// reader accepting a temporary document.
+template <typename Reader>
+concept AcceptsTemporary = requires (Reader reader, Value value) { reader.deserialize (std::string (), value); };
+
 /**
  * @brief handler throwing on strings.
  */
@@ -262,6 +266,18 @@ TEST (PackReader, deserialize)
     ASSERT_EQ (value.getString (), "a");
     ASSERT_EQ (Strict ().deserialize (strict, value), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+
+    using Lender = join::BasicPackReader<join::PackReadMode::ZeroCopy>;
+    static_assert (!AcceptsTemporary<Lender>);
+    const std::string document ({'\x82', '\xa1', 'a', '\xa1', 'b', '\xc4', '\x01', '\x02', '\x03'});
+    ASSERT_EQ (value.deserialize<Lender> (document), 0) << join::lastError.message ();
+    ASSERT_EQ (value.getObject ()[0].first.getString ().data (), document.data () + 2);
+    ASSERT_EQ (value["a"].getString ().data (), document.data () + 4);
+    ASSERT_EQ (reinterpret_cast<const char*> (value.getObject ()[1].first.getBinary ().data ()), document.data () + 7);
+    ASSERT_EQ (value.getObject ()[1].second, 3);
+    ASSERT_EQ (value.deserialize<Lender> (std::string_view (document.data (), 4)), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_TRUE (value.isNull ());
 }
 
 /**
