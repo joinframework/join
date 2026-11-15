@@ -32,6 +32,7 @@ using join::Value;
 using join::Array;
 using join::Object;
 using join::JsonCanonicalizer;
+using join::JsonWriteMode;
 using join::JsonReader;
 using join::JsonErrc;
 using join::SaxErrc;
@@ -306,7 +307,11 @@ TEST (JsonCanonicalizer, invalid)
     value["a"] = "Ascii";
 
     std::stringstream out;
-    JsonCanonicalizer writer (out);
+    JsonCanonicalizer canonicalizer (out);
+    ASSERT_EQ (value.serialize (canonicalizer), 0);
+
+    out.str ("");
+    join::BasicJsonWriter<JsonWriteMode::Canonical | JsonWriteMode::ValidateEncoding> writer (out);
     ASSERT_EQ (value.serialize (writer), -1);
     ASSERT_EQ (join::lastError, JsonErrc::InvalidEncoding);
 

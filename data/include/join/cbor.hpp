@@ -64,10 +64,10 @@ namespace join
      */
     enum class CborWriteMode : uint32_t
     {
-        Definite = 0,               /**< containers written with their length. */
-        Indefinite = 1L << 0,       /**< containers written with an indefinite length. */
-        ValidateEncoding = 1L << 1, /**< validate UTF-8 encoding of text strings. */
-        Canonical = 1L << 2,        /**< canonical form. */
+        None = 0,                   /**< no write mode set. */
+        ValidateEncoding = 1L << 0, /**< validate UTF-8 encoding of text strings. */
+        Canonical = 1L << 1,        /**< canonical form. */
+        Stream = 1L << 2,           /**< containers written with an indefinite length. */
     };
 
     /**
@@ -149,7 +149,7 @@ namespace join
     /**
      * @brief CBOR writer class.
      */
-    template <CborWriteMode WriteMode = CborWriteMode::Definite>
+    template <CborWriteMode WriteMode = CborWriteMode::None>
     class BasicCborWriter
     {
     public:
@@ -315,7 +315,7 @@ namespace join
          */
         int setString (std::string_view value)
         {
-            if constexpr ((WriteMode & CborWriteMode::ValidateEncoding) != CborWriteMode::Definite)
+            if constexpr ((WriteMode & CborWriteMode::ValidateEncoding) != CborWriteMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
                 {
@@ -435,7 +435,7 @@ namespace join
          */
         template <typename Type, CborWriteMode Mode = WriteMode>
         const View<Type>& members (const View<Type>& object) const noexcept
-            requires ((Mode & CborWriteMode::Canonical) == CborWriteMode::Definite)
+            requires ((Mode & CborWriteMode::Canonical) == CborWriteMode::None)
         {
             return object;
         }
@@ -447,7 +447,7 @@ namespace join
          */
         template <typename Type, CborWriteMode Mode = WriteMode>
         std::vector<std::reference_wrapper<const Type>> members (const View<Type>& object)
-            requires ((Mode & CborWriteMode::Canonical) != CborWriteMode::Definite)
+            requires ((Mode & CborWriteMode::Canonical) != CborWriteMode::None)
         {
             std::vector<std::pair<std::string, std::reference_wrapper<const Type>>> keyed;
             keyed.reserve (object.size ());
@@ -581,7 +581,7 @@ namespace join
                 reset ();
                 return -1;
             }
-            if constexpr ((WriteMode & CborWriteMode::Canonical) != CborWriteMode::Definite)
+            if constexpr ((WriteMode & CborWriteMode::Canonical) != CborWriteMode::None)
             {
                 if (JOIN_UNLIKELY (_duplicate))
                 {
@@ -797,17 +797,17 @@ namespace join
 
     private:
         /// containers written with an indefinite length.
-        static constexpr bool _indefinite = (WriteMode & CborWriteMode::Indefinite) != CborWriteMode::Definite;
+        static constexpr bool _indefinite = (WriteMode & CborWriteMode::Stream) != CborWriteMode::None;
 
-        static_assert (!_indefinite || ((WriteMode & CborWriteMode::Canonical) == CborWriteMode::Definite),
+        static_assert (!_indefinite || ((WriteMode & CborWriteMode::Canonical) == CborWriteMode::None),
                        "canonical encoding requires definite length containers");
     };
 
     /// CBOR writer with definite length containers.
-    using CborWriter = BasicCborWriter<CborWriteMode::Definite>;
+    using CborWriter = BasicCborWriter<CborWriteMode::None>;
 
     /// CBOR writer with indefinite length containers.
-    using CborStreamWriter = BasicCborWriter<CborWriteMode::Indefinite>;
+    using CborStreamWriter = BasicCborWriter<CborWriteMode::Stream>;
 
     /// CBOR canonicalizer, sorting map keys when used with Value::serialize.
     using CborCanonicalizer = BasicCborWriter<CborWriteMode::Canonical>;
@@ -820,6 +820,7 @@ namespace join
         None = 0,                    /**< no read mode set. */
         ValidateEncoding = 1L << 0,  /**< validate UTF-8 encoding of text strings. */
         StopParsingOnDone = 1L << 1, /**< stop parsing on done. */
+        ZeroCopy = 1L << 2,          /**< borrow strings and binaries from the document. */
     };
 
     /**
@@ -983,6 +984,16 @@ namespace join
         }
 
         /**
+         * @brief deserialize a temporary document, forbidden in zero copy mode.
+         * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+            requires ((ReadMode & CborReadMode::ZeroCopy) != CborReadMode::None)
+        int deserialize (std::string&& document, Handler& handler) = delete;
+
+        /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @param handler handler receiving the document.
@@ -1005,7 +1016,17 @@ namespace join
         template <typename ProbeType, typename Allocator>
         int read (ProbeType& document, BasicValue<Allocator>& value)
         {
-            int result = read (document, ValueBuilder (value));
+            int result;
+            if constexpr ((ReadMode & CborReadMode::ZeroCopy) != CborReadMode::None)
+            {
+                static_assert (std::is_same_v<ProbeType, dconv::StringProbe>, "zero copy requires a memory document");
+                result = read (document,
+                               ValueBuilder<BasicValue<Allocator>, true> (value, document.tell (), document.end ()));
+            }
+            else
+            {
+                result = read (document, ValueBuilder (value));
+            }
             if (JOIN_UNLIKELY (result != 0))
             {
                 value = nullptr;

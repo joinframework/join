@@ -60,7 +60,7 @@ namespace join
     template <typename Allocator = HeapMem::BumpAllocator<4096, BumpPlain>>
     class BasicValue;
 
-    template <typename Value>
+    template <typename Value, bool Borrow>
     class ValueBuilder;
 
     /// scalar alternative selected by overload resolution for a type.
@@ -378,10 +378,9 @@ namespace join
          */
         Value& operator= (std::string_view value)
         {
-            if (isString () && (value.size () <= std::max<size_t> (_capacity, getString ().size ())))
+            if (isString () && (value.size () <= _capacity))
             {
                 char* data = const_cast<char*> (getString ().data ());
-                _capacity = std::max<size_t> (_capacity, getString ().size ());
                 std::char_traits<char>::move (data, value.data (), value.size ());
                 data[value.size ()] = '\0';
                 _data.template set<StringValue> (data, value.size ());
@@ -390,11 +389,13 @@ namespace join
 
             if (_owner || (_allocator == nullptr))
             {
-                return *this = BasicValue (value);
+                *this = BasicValue (value);
+                _capacity = static_cast<uint32_t> (value.size ());
+                return *this;
             }
 
             _data.template set<StringValue> (copyString (value));
-            _capacity = 0;
+            _capacity = static_cast<uint32_t> (value.size ());
 
             return *this;
         }
@@ -1206,7 +1207,8 @@ namespace join
                         }
                         std::string_view str = getString ();
                         char* data = allocate<char> (cap + 1);
-                        std::copy_n (str.data (), str.size () + 1, data);
+                        std::copy_n (str.data (), str.size (), data);
+                        data[str.size ()] = '\0';
                         _data.template set<StringValue> (data, str.size ());
                         _capacity = static_cast<uint32_t> (cap);
                     }
@@ -1631,7 +1633,8 @@ namespace join
             Variant<std::nullptr_t, bool, int32_t, uint32_t, int64_t, uint64_t, double, String, Binary, Array, Object>;
 
         // friendship with value builder.
-        friend class ValueBuilder<BasicValue>;
+        template <typename, bool>
+        friend class ValueBuilder;
 
         /**
          * @brief get the allocator shared by the tree, created when the root has none.
@@ -2285,7 +2288,7 @@ namespace join
         /// allocator shared by the tree.
         Allocator* _allocator = nullptr;
 
-        /// capacity of the nested container or string, 0 when it has no spare room.
+        /// capacity of the nested container or string, 0 when a string may not be rewritten in place.
         uint32_t _capacity = 0;
 
         /// true when the value destroys the allocator.

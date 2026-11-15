@@ -188,12 +188,88 @@ namespace join
     /**
      * @brief JSON serialization mode.
      */
-    enum class JsonWriteMode
+    enum class JsonWriteMode : uint32_t
     {
-        None,             /**< no write mode set. */
-        ValidateEncoding, /**< validate UTF-8 encoding of strings. */
-        Canonical,        /**< canonical form. */
+        None = 0,                   /**< no write mode set. */
+        ValidateEncoding = 1L << 0, /**< validate UTF-8 encoding of strings. */
+        Canonical = 1L << 1,        /**< canonical form. */
     };
+
+    /**
+     * @brief perform binary AND on JsonWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary AND on JsonWriteMode.
+     */
+    constexpr JsonWriteMode operator& (JsonWriteMode a, JsonWriteMode b) noexcept
+    {
+        return JsonWriteMode (static_cast<uint32_t> (a) & static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary OR on JsonWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary OR on JsonWriteMode.
+     */
+    constexpr JsonWriteMode operator| (JsonWriteMode a, JsonWriteMode b) noexcept
+    {
+        return JsonWriteMode (static_cast<uint32_t> (a) | static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary XOR on JsonWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return bitset result of binary XOR on JsonWriteMode.
+     */
+    constexpr JsonWriteMode operator^ (JsonWriteMode a, JsonWriteMode b) noexcept
+    {
+        return JsonWriteMode (static_cast<uint32_t> (a) ^ static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary NOT on JsonWriteMode.
+     * @param a bitset.
+     * @return bitset result of binary NOT on JsonWriteMode.
+     */
+    constexpr JsonWriteMode operator~(JsonWriteMode a) noexcept
+    {
+        return JsonWriteMode (~static_cast<uint32_t> (a));
+    }
+
+    /**
+     * @brief perform binary AND assignment on JsonWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const JsonWriteMode& operator&= (JsonWriteMode& a, JsonWriteMode b) noexcept
+    {
+        return a = a & b;
+    }
+
+    /**
+     * @brief perform binary OR assignment on JsonWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const JsonWriteMode& operator|= (JsonWriteMode& a, JsonWriteMode b) noexcept
+    {
+        return a = a | b;
+    }
+
+    /**
+     * @brief perform binary XOR assignment on JsonWriteMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const JsonWriteMode& operator^= (JsonWriteMode& a, JsonWriteMode b) noexcept
+    {
+        return a = a ^ b;
+    }
 
     /**
      * @brief JSON writer class.
@@ -210,7 +286,7 @@ namespace join
         explicit BasicJsonWriter (std::ostream& document, size_t indentation = 0)
         : _out (document.rdbuf ())
         , _document (&document)
-        , _indentation ((WriteMode == JsonWriteMode::Canonical) ? 0 : indentation)
+        , _indentation (((WriteMode & JsonWriteMode::Canonical) != JsonWriteMode::None) ? 0 : indentation)
         {
         }
 
@@ -336,7 +412,7 @@ namespace join
          */
         template <JsonWriteMode Mode = WriteMode>
         int setDouble (double value)
-            requires (Mode != JsonWriteMode::Canonical)
+            requires ((Mode & JsonWriteMode::Canonical) == JsonWriteMode::None)
         {
             if (JOIN_UNLIKELY (!std::isfinite (value)))
             {
@@ -357,7 +433,7 @@ namespace join
          */
         template <JsonWriteMode Mode = WriteMode>
         int setDouble (double value)
-            requires (Mode == JsonWriteMode::Canonical)
+            requires ((Mode & JsonWriteMode::Canonical) != JsonWriteMode::None)
         {
             if (JOIN_UNLIKELY (!std::isfinite (value)))
             {
@@ -392,7 +468,7 @@ namespace join
          */
         int setString (std::string_view value)
         {
-            if constexpr (WriteMode != JsonWriteMode::None)
+            if constexpr ((WriteMode & JsonWriteMode::ValidateEncoding) != JsonWriteMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (value.data (), value.data () + value.size ()) == -1))
                 {
@@ -493,7 +569,7 @@ namespace join
          */
         template <typename Type, JsonWriteMode Mode = WriteMode>
         const View<Type>& members (const View<Type>& object) const noexcept
-            requires (Mode != JsonWriteMode::Canonical)
+            requires ((Mode & JsonWriteMode::Canonical) == JsonWriteMode::None)
         {
             return object;
         }
@@ -505,7 +581,7 @@ namespace join
          */
         template <typename Type, JsonWriteMode Mode = WriteMode>
         std::vector<std::reference_wrapper<const Type>> members (const View<Type>& object)
-            requires (Mode == JsonWriteMode::Canonical)
+            requires ((Mode & JsonWriteMode::Canonical) != JsonWriteMode::None)
         {
             std::vector<std::reference_wrapper<const Type>> sorted (object.begin (), object.end ());
             std::sort (sorted.begin (), sorted.end (), [] (const Type& a, const Type& b) {
@@ -554,7 +630,7 @@ namespace join
                 reset ();
                 return -1;
             }
-            if constexpr (WriteMode != JsonWriteMode::None)
+            if constexpr ((WriteMode & JsonWriteMode::ValidateEncoding) != JsonWriteMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (key.data (), key.data () + key.size ()) == -1))
                 {
@@ -611,7 +687,7 @@ namespace join
                 reset ();
                 return -1;
             }
-            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            if constexpr ((WriteMode & JsonWriteMode::Canonical) != JsonWriteMode::None)
             {
                 if (JOIN_UNLIKELY (_duplicate))
                 {
@@ -773,7 +849,7 @@ namespace join
          */
         void writeDouble (double value)
         {
-            if constexpr (WriteMode == JsonWriteMode::Canonical)
+            if constexpr ((WriteMode & JsonWriteMode::Canonical) != JsonWriteMode::None)
             {
                 char buf[25];
                 char* end = dconv::dtoa (buf, value);
@@ -1037,12 +1113,13 @@ namespace join
     /**
      * @brief JSON deserialization mode.
      */
-    enum JsonReadMode
+    enum class JsonReadMode : uint32_t
     {
         None = 0,                    /**< no read mode set. */
         ParseComments = 1L << 0,     /**< parse comments. */
         ValidateEncoding = 1L << 1,  /**< validate UTF-8 encoding of strings. */
         StopParsingOnDone = 1L << 2, /**< stop parsing on done. */
+        ZeroCopy = 1L << 3,          /**< borrow strings from the document. */
     };
 
     /**
@@ -1053,7 +1130,7 @@ namespace join
      */
     constexpr JsonReadMode operator& (JsonReadMode a, JsonReadMode b) noexcept
     {
-        return JsonReadMode (static_cast<int> (a) & static_cast<int> (b));
+        return JsonReadMode (static_cast<uint32_t> (a) & static_cast<uint32_t> (b));
     }
 
     /**
@@ -1064,14 +1141,35 @@ namespace join
      */
     constexpr JsonReadMode operator| (JsonReadMode a, JsonReadMode b) noexcept
     {
-        return JsonReadMode (static_cast<int> (a) | static_cast<int> (b));
+        return JsonReadMode (static_cast<uint32_t> (a) | static_cast<uint32_t> (b));
     }
 
     /**
-     * @brief perform binary AND on JsonReadMode.
+     * @brief perform binary XOR on JsonReadMode.
      * @param a bitset.
      * @param b other bitset.
-     * @return bitset result of binary AND on JsonReadMode.
+     * @return bitset result of binary XOR on JsonReadMode.
+     */
+    constexpr JsonReadMode operator^ (JsonReadMode a, JsonReadMode b) noexcept
+    {
+        return JsonReadMode (static_cast<uint32_t> (a) ^ static_cast<uint32_t> (b));
+    }
+
+    /**
+     * @brief perform binary NOT on JsonReadMode.
+     * @param a bitset.
+     * @return bitset result of binary NOT on JsonReadMode.
+     */
+    constexpr JsonReadMode operator~(JsonReadMode a) noexcept
+    {
+        return JsonReadMode (~static_cast<uint32_t> (a));
+    }
+
+    /**
+     * @brief perform binary AND assignment on JsonReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
      */
     constexpr const JsonReadMode& operator&= (JsonReadMode& a, JsonReadMode b) noexcept
     {
@@ -1079,14 +1177,25 @@ namespace join
     }
 
     /**
-     * @brief perform binary OR on JsonReadMode.
+     * @brief perform binary OR assignment on JsonReadMode.
      * @param a bitset.
      * @param b other bitset.
-     * @return bitset result of binary OR.
+     * @return reference to updated bitset.
      */
     constexpr const JsonReadMode& operator|= (JsonReadMode& a, JsonReadMode b) noexcept
     {
         return a = a | b;
+    }
+
+    /**
+     * @brief perform binary XOR assignment on JsonReadMode.
+     * @param a bitset.
+     * @param b other bitset.
+     * @return reference to updated bitset.
+     */
+    constexpr const JsonReadMode& operator^= (JsonReadMode& a, JsonReadMode b) noexcept
+    {
+        return a = a ^ b;
     }
 
     /**
@@ -1174,6 +1283,16 @@ namespace join
         }
 
         /**
+         * @brief deserialize a temporary document, forbidden in zero copy mode.
+         * @param document document to parse.
+         * @param handler handler receiving the document.
+         * @return 0 on success, -1 otherwise.
+         */
+        template <typename Handler>
+            requires ((ReadMode & JsonReadMode::ZeroCopy) != JsonReadMode::None)
+        int deserialize (std::string&& document, Handler& handler) = delete;
+
+        /**
          * @brief deserialize a document.
          * @param document document to deserialize.
          * @param handler handler receiving the document.
@@ -1196,7 +1315,17 @@ namespace join
         template <typename ProbeType, typename Allocator>
         int read (ProbeType& document, BasicValue<Allocator>& value)
         {
-            int result = read (document, ValueBuilder (value));
+            int result;
+            if constexpr ((ReadMode & JsonReadMode::ZeroCopy) != JsonReadMode::None)
+            {
+                static_assert (std::is_same_v<ProbeType, dconv::StringProbe>, "zero copy requires a memory document");
+                result = read (document,
+                               ValueBuilder<BasicValue<Allocator>, true> (value, document.tell (), document.end ()));
+            }
+            else
+            {
+                result = read (document, ValueBuilder (value));
+            }
             if (JOIN_UNLIKELY (result != 0))
             {
                 value = nullptr;
@@ -1248,7 +1377,7 @@ namespace join
                 return -1;
             }
 
-            if (ReadMode & JsonReadMode::StopParsingOnDone)
+            if constexpr ((ReadMode & JsonReadMode::StopParsingOnDone) != JsonReadMode::None)
             {
                 return 0;
             }
@@ -1886,7 +2015,7 @@ namespace join
          */
         inline int skipWhitespaces (dconv::StringProbe& document) noexcept
         {
-            if constexpr (ReadMode & JsonReadMode::ParseComments)
+            if constexpr ((ReadMode & JsonReadMode::ParseComments) != JsonReadMode::None)
             {
                 return skipWhitespacesAndComments (document);
             }
@@ -1924,7 +2053,7 @@ namespace join
          */
         inline int skipWhitespaces (dconv::StreamProbe& document) noexcept
         {
-            if constexpr (ReadMode & JsonReadMode::ParseComments)
+            if constexpr ((ReadMode & JsonReadMode::ParseComments) != JsonReadMode::None)
             {
                 return skipWhitespacesAndComments (document);
             }
@@ -2076,7 +2205,7 @@ namespace join
          */
         inline int validateChunk ([[maybe_unused]] std::string_view chunk) noexcept
         {
-            if constexpr (ReadMode & JsonReadMode::ValidateEncoding)
+            if constexpr ((ReadMode & JsonReadMode::ValidateEncoding) != JsonReadMode::None)
             {
                 if (JOIN_UNLIKELY (utf8::validate (chunk.data (), chunk.data () + chunk.size ()) == -1))
                 {

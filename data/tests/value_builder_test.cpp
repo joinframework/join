@@ -107,6 +107,17 @@ TEST (ValueBuilder, create)
     ASSERT_EQ (nested.values[0][0], 1);
     ASSERT_EQ (nested.values[0][1].at ("a"), 2);
     ASSERT_EQ (nested.values[1], 3);
+
+    const std::string document ("[1]");
+    Value borrowed;
+    {
+        ValueBuilder<Value, true> builder (borrowed, document.data (), document.data () + document.size ());
+        ASSERT_EQ (builder.startArray (), 0);
+        ASSERT_EQ (builder.setInt (1), 0);
+        ASSERT_EQ (builder.stopArray (), 0);
+    }
+    ASSERT_EQ (borrowed.size (), 1U);
+    ASSERT_EQ (borrowed[0], 1);
 }
 
 /**
@@ -252,6 +263,21 @@ TEST (ValueBuilder, setString)
     ASSERT_EQ (value.size (), 2U);
     ASSERT_EQ (value[0], "a");
     ASSERT_EQ (value[1], "b");
+
+    const std::string document ("ab");
+    Value borrowed;
+    ValueBuilder<Value, true> lender (borrowed, document.data (), document.data () + document.size ());
+    ASSERT_EQ (lender.setString (std::string_view (document.data (), 1)), 0);
+    ASSERT_EQ (borrowed.getString ().data (), document.data ());
+    ASSERT_EQ (borrowed, "a");
+
+    ASSERT_EQ (lender.startArray (), 0);
+    ASSERT_EQ (lender.setString (std::string_view (document.data () + 1, 1)), 0);
+    ASSERT_EQ (lender.setString (b), 0);
+    ASSERT_EQ (lender.stopArray (), 0);
+    ASSERT_EQ (borrowed[0].getString ().data (), document.data () + 1);
+    ASSERT_NE (borrowed[1].getString ().data (), b.data ());
+    ASSERT_EQ (borrowed[1], "b");
 }
 
 /**
@@ -277,6 +303,18 @@ TEST (ValueBuilder, setBinary)
     ASSERT_TRUE (value.isBinary ());
     ASSERT_TRUE (std::ranges::equal (value.getBinary (), std::span<const uint8_t> (data, sizeof (data))));
     ASSERT_EQ (value.getSubtype (), -1);
+
+    const std::string document ({'\x01', '\x02'});
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*> (document.data ());
+    Value borrowed;
+    ValueBuilder<Value, true> lender (borrowed, document.data (), document.data () + document.size ());
+    ASSERT_EQ (lender.setBinary (std::span<const uint8_t> (bytes, 2), -1), 0);
+    ASSERT_EQ (borrowed.getBinary ().data (), bytes);
+    ASSERT_EQ (borrowed.getSubtype (), -1);
+
+    ASSERT_EQ (lender.setBinary (std::span<const uint8_t> (data, sizeof (data))), 0);
+    ASSERT_NE (borrowed.getBinary ().data (), data);
+    ASSERT_TRUE (std::ranges::equal (borrowed.getBinary (), std::span<const uint8_t> (data, sizeof (data))));
 }
 
 /**
@@ -458,6 +496,26 @@ TEST (ValueBuilder, setKey)
     ASSERT_EQ (value["eight"], 8);
     ASSERT_EQ (value[Value (std::span<const uint8_t> (data, sizeof (data)))], 9);
     ASSERT_EQ (value[Value (std::span<const uint8_t> (data, sizeof (data)), -1)], 10);
+
+    const std::string document ({'k', '\x01'});
+    const uint8_t* bytes = reinterpret_cast<const uint8_t*> (document.data () + 1);
+    Value borrowed;
+    ValueBuilder<Value, true> lender (borrowed, document.data (), document.data () + document.size ());
+    ASSERT_EQ (lender.startObject (), 0);
+    ASSERT_EQ (lender.setKey (std::string_view (document.data (), 1)), 0);
+    ASSERT_EQ (lender.setInt (1), 0);
+    ASSERT_EQ (lender.setKey ("copied"), 0);
+    ASSERT_EQ (lender.setInt (2), 0);
+    ASSERT_EQ (lender.setKey (std::span<const uint8_t> (bytes, 1)), 0);
+    ASSERT_EQ (lender.setInt (3), 0);
+    ASSERT_EQ (lender.setKey (std::span<const uint8_t> (data, sizeof (data))), 0);
+    ASSERT_EQ (lender.setInt (4), 0);
+    ASSERT_EQ (lender.stopObject (), 0);
+    ASSERT_EQ (borrowed.getObject ()[0].first.getString ().data (), document.data ());
+    ASSERT_EQ (borrowed["copied"], 2);
+    ASSERT_EQ (borrowed.getObject ()[2].first.getBinary ().data (), bytes);
+    ASSERT_NE (borrowed.getObject ()[3].first.getBinary ().data (), data);
+    ASSERT_EQ (borrowed[Value (std::span<const uint8_t> (data, sizeof (data)))], 4);
 }
 
 /**

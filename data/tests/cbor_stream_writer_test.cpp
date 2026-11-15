@@ -275,7 +275,7 @@ TEST (CborStreamWriter, setString)
     EXPECT_EQ (cborStreamWriter.setString ("\xff"), 0);
     EXPECT_EQ (stream.str (), std::string ({'\x61', '\xFF'}));
 
-    join::BasicCborWriter<join::CborWriteMode::Indefinite | join::CborWriteMode::ValidateEncoding> validator (stream);
+    join::BasicCborWriter<join::CborWriteMode::Stream | join::CborWriteMode::ValidateEncoding> validator (stream);
 
     stream.str ("");
     EXPECT_EQ (validator.setString ("caf\xc3\xa9"), 0);
@@ -481,7 +481,7 @@ TEST (CborStreamWriter, setKey)
     EXPECT_EQ (key (std::span<const uint8_t> (bytes, sizeof (bytes)), -1), 0);
     EXPECT_EQ (stream.str ().substr (1), std::string ({'\x42', '\x00', '\xFF'}));
 
-    join::BasicCborWriter<join::CborWriteMode::Indefinite | join::CborWriteMode::ValidateEncoding> validator (stream);
+    join::BasicCborWriter<join::CborWriteMode::Stream | join::CborWriteMode::ValidateEncoding> validator (stream);
     stream.str ("");
     validator.startObject (1);
     EXPECT_EQ (validator.setKey (std::string_view ("\xff")), -1);

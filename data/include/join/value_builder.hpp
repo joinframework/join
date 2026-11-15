@@ -32,6 +32,7 @@
 
 // C++.
 #include <string_view>
+#include <functional>
 #include <optional>
 #include <utility>
 #include <vector>
@@ -45,7 +46,7 @@ namespace join
     /**
      * @brief value builder class, filled by balanced SAX calls.
      */
-    template <typename Value>
+    template <typename Value, bool Borrow = false>
     class ValueBuilder
     {
         /// array.
@@ -63,8 +64,25 @@ namespace join
          * @param root value receiving the document.
          */
         explicit ValueBuilder (Value& root)
+            requires (!Borrow)
         : _stack (std::move (cache ()))
         , _root (root)
+        {
+            _root.reset ();
+        }
+
+        /**
+         * @brief create instance borrowing the strings and binaries of a document.
+         * @param root value receiving the document.
+         * @param first first character of the document.
+         * @param last end of the document.
+         */
+        ValueBuilder (Value& root, const char* first, const char* last)
+            requires (Borrow)
+        : _stack (std::move (cache ()))
+        , _root (root)
+        , _first (first)
+        , _last (last)
         {
             _root.reset ();
         }
@@ -180,7 +198,7 @@ namespace join
          */
         int setString (std::string_view value)
         {
-            return emplaceValue (_root.copyString (value));
+            return emplaceValue (makeString (value));
         }
 
         /**
@@ -191,7 +209,7 @@ namespace join
          */
         int setBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype = std::nullopt)
         {
-            return emplaceValue (_root.copyBinary (value, subtype));
+            return emplaceValue (makeBinary (value, subtype));
         }
 
         /**
@@ -301,7 +319,7 @@ namespace join
                 return -1;
             }
 
-            _stack.emplace_back (_root.copyString (key));
+            _stack.emplace_back (makeString (key));
 
             return 0;
         }
@@ -320,7 +338,7 @@ namespace join
                 return -1;
             }
 
-            _stack.emplace_back (_root.copyBinary (key, subtype));
+            _stack.emplace_back (makeBinary (key, subtype));
 
             return 0;
         }
@@ -397,6 +415,46 @@ namespace join
         }
 
         /**
+         * @brief get a string, borrowed when it lies in the document, copied otherwise.
+         * @param value string.
+         * @return string held by the value.
+         */
+        String makeString (std::string_view value)
+        {
+            if constexpr (Borrow)
+            {
+                if (std::less_equal<const char*> () (_first, value.data ()) &&
+                    std::less_equal<const char*> () (value.data () + value.size (), _last))
+                {
+                    return String (value.data (), value.size ());
+                }
+            }
+
+            return _root.copyString (value);
+        }
+
+        /**
+         * @brief get a binary, borrowed when it lies in the document, copied otherwise.
+         * @param value binary data.
+         * @param subtype binary subtype.
+         * @return binary held by the value.
+         */
+        Binary makeBinary (std::span<const uint8_t> value, std::optional<int8_t> subtype)
+        {
+            if constexpr (Borrow)
+            {
+                const char* data = reinterpret_cast<const char*> (value.data ());
+                if (std::less_equal<const char*> () (_first, data) &&
+                    std::less_equal<const char*> () (data + value.size (), _last))
+                {
+                    return Binary{View<const uint8_t> (value.data (), value.size ()), subtype};
+                }
+            }
+
+            return _root.copyBinary (value, subtype);
+        }
+
+        /**
          * @brief get the stack kept by the calling thread between documents.
          * @return stack.
          */
@@ -417,6 +475,12 @@ namespace join
 
         /// value receiving the document.
         Value& _root;
+
+        /// first character of the borrowed document.
+        const char* _first = nullptr;
+
+        /// end of the borrowed document.
+        const char* _last = nullptr;
     };
 }
 

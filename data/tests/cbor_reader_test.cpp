@@ -45,6 +45,10 @@ using join::SaxErrc;
 using join::CborReader;
 using join::CborStreamWriter;
 
+/// reader accepting a temporary document.
+template <typename Reader>
+concept AcceptsTemporary = requires (Reader reader, Value value) { reader.deserialize (std::string (), value); };
+
 /**
  * @brief convert hexadecimal digits to bytes.
  * @param digits hexadecimal digits.
@@ -412,6 +416,20 @@ TEST (CborReader, deserialize)
     ASSERT_EQ (value.getString (), "a");
     ASSERT_EQ (Strict ().deserialize (strict, value), -1);
     ASSERT_EQ (join::lastError, SaxErrc::InvalidEncoding);
+
+    using Lender = join::BasicCborReader<join::CborReadMode::ZeroCopy>;
+    static_assert (!AcceptsTemporary<Lender>);
+    const std::string document = hex ("a36161616241020361637f61646165ff");
+    ASSERT_EQ (value.deserialize<Lender> (document), 0) << join::lastError.message ();
+    ASSERT_EQ (value.getObject ()[0].first.getString ().data (), document.data () + 2);
+    ASSERT_EQ (value["a"].getString ().data (), document.data () + 4);
+    ASSERT_EQ (reinterpret_cast<const char*> (value.getObject ()[1].first.getBinary ().data ()), document.data () + 6);
+    ASSERT_EQ (value.getObject ()[1].second, 3);
+    ASSERT_EQ (value["c"], "de");
+    ASSERT_NE (value["c"].getString ().data (), document.data () + 12);
+    ASSERT_EQ (value.deserialize<Lender> (std::string_view (document.data (), 4)), -1);
+    ASSERT_EQ (join::lastError, SaxErrc::Truncated);
+    ASSERT_TRUE (value.isNull ());
 }
 
 /**
