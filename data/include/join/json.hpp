@@ -716,7 +716,7 @@ namespace join
          * @brief write 64 bits unsigned integer value.
          * @param value 64 bits unsigned integer value to write.
          */
-        void writeUint64 (uint64_t value)
+        JOIN_ALWAYS_INLINE void writeUint64 (uint64_t value)
         {
             static constexpr uint64_t pow10[20] = {1ULL,
                                                    10ULL,
