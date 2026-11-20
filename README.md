@@ -91,7 +91,7 @@ sudo apt install ./libdconv-dev_2.0.1_all.deb
 
 > **Compilers:** GCC 11+ or Clang 16+ (C++20). Clang requires `libclang-rt-dev` for coverage instrumentation (`--coverage`).  
 > **OpenSSL** provides the core TLS runtime.  
-> **Platform:** Linux 5.11+ and glibc 2.35+ (`epoll_pwait2`). The io_uring backend requires Linux 6.0+ (multishot `recv`).
+> **Platform:** Linux 5.11+ and glibc 2.35+ (`epoll_pwait2`). The io_uring backend requires Linux 6.1+ (zero-copy `sendmsg`).
 
 ### Optional Dependencies
 

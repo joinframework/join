@@ -909,6 +909,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
                 }
 
             case IoOperation::Opcode::SendMsg:
+            case IoOperation::Opcode::SendMsgZc:
                 {
                     ssize_t n = ::sendmsg (op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
@@ -930,6 +931,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
                 }
 
             case IoOperation::Opcode::Send:
+            case IoOperation::Opcode::SendZc:
                 {
                     ssize_t n =
                         ::send (op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags);
@@ -998,7 +1000,9 @@ inline bool join::BasicProactor::isWriteOperation (const IoOperation& op) noexce
         case IoOperation::Opcode::Write:
         case IoOperation::Opcode::WriteFixed:
         case IoOperation::Opcode::SendMsg:
+        case IoOperation::Opcode::SendMsgZc:
         case IoOperation::Opcode::Send:
+        case IoOperation::Opcode::SendZc:
             return true;
         default:
             return false;

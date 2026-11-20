@@ -283,6 +283,23 @@ IoOperation IoOperation::makeSendmsg (int fd, const msghdr* msg, int flags, Comp
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makeSendmsgZc
+// =========================================================================
+IoOperation IoOperation::makeSendmsgZc (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
+                                        bool linked) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc);
+    op.handler = handler;
+    op.linked = linked;
+    op.data.msg.fd = fd;
+    op.data.msg.msg = const_cast<msghdr*> (msg);
+    op.data.msg.flags = flags;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : makeRecv
 // =========================================================================
 IoOperation IoOperation::makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler,
@@ -337,6 +354,24 @@ IoOperation IoOperation::makeSend (int fd, const void* buf, uint32_t len, int fl
 
 // =========================================================================
 //   CLASS     : IoOperation
+//   METHOD    : makeSendZc
+// =========================================================================
+IoOperation IoOperation::makeSendZc (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+                                     bool linked) noexcept
+{
+    IoOperation op;
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendZc);
+    op.handler = handler;
+    op.linked = linked;
+    op.data.stream.fd = fd;
+    op.data.stream.buf = const_cast<void*> (buf);
+    op.data.stream.len = len;
+    op.data.stream.flags = flags;
+    return op;
+}
+
+// =========================================================================
+//   CLASS     : IoOperation
 //   METHOD    : fd
 // =========================================================================
 int IoOperation::fd () const noexcept
@@ -356,9 +391,11 @@ int IoOperation::fd () const noexcept
             return data.rw.fd;
         case Opcode::RecvMsg:
         case Opcode::SendMsg:
+        case Opcode::SendMsgZc:
             return data.msg.fd;
         case Opcode::Recv:
         case Opcode::Send:
+        case Opcode::SendZc:
             return data.stream.fd;
         default:
             return -1;

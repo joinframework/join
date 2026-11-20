@@ -71,8 +71,10 @@ namespace join
             WriteFixed, /**< write using a registered buffer. */
             RecvMsg,    /**< receive a message with ancillary data. */
             SendMsg,    /**< send a message with ancillary data. */
+            SendMsgZc,  /**< send a message with ancillary data without copy. */
             Recv,       /**< receive data from a socket. */
             Send,       /**< send data on a socket. */
+            SendZc,     /**< send data on a socket without copy. */
         };
 
         /**
@@ -281,6 +283,9 @@ namespace join
 
             /// reserved control area length.
             uint32_t controllen;
+
+            /// zero-copy send result, kept until the buffer is released.
+            int result;
         };
 
         /**
@@ -320,6 +325,18 @@ namespace join
                                         bool linked = false) noexcept;
 
         /**
+         * @brief build a zero-copy send-message operation.
+         * @param fd socket file descriptor.
+         * @param msg message header.
+         * @param flags send flags.
+         * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeSendmsgZc (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
+                                          bool linked = false) noexcept;
+
+        /**
          * @brief payload for recv / send.
          */
         struct StreamData
@@ -335,6 +352,9 @@ namespace join
 
             /// send / recv flags.
             int flags;
+
+            /// zero-copy send result, kept until the buffer is released.
+            int result;
         };
 
         /**
@@ -372,6 +392,19 @@ namespace join
          */
         static IoOperation makeSend (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
                                      bool linked = false) noexcept;
+
+        /**
+         * @brief build a zero-copy send operation.
+         * @param fd socket file descriptor.
+         * @param buf source buffer.
+         * @param len number of bytes to send.
+         * @param flags send flags.
+         * @param handler handler to notify on completion.
+         * @param linked link this SQE to the next one (io_uring only).
+         * @return initialized IoOperation.
+         */
+        static IoOperation makeSendZc (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+                                       bool linked = false) noexcept;
 
         union Data
         {
