@@ -315,6 +315,30 @@ TEST (IoOperation, makeSendmsg)
 }
 
 /**
+ * @brief Test makeSendmsgZc.
+ */
+TEST (IoOperation, makeSendmsgZc)
+{
+    const char* payload = "makeSendmsgZc";
+    iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
+    msghdr msg = {};
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+
+    auto op = IoOperation::makeSendmsgZc (8, &msg, MSG_NOSIGNAL, nullptr);
+
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc));
+    ASSERT_EQ (op.handler, nullptr);
+    ASSERT_FALSE (op.linked);
+    ASSERT_EQ (op.data.msg.fd, 8);
+    ASSERT_EQ (op.data.msg.msg, &msg);
+    ASSERT_EQ (op.data.msg.flags, MSG_NOSIGNAL);
+
+    op = IoOperation::makeSendmsgZc (8, &msg, MSG_NOSIGNAL, nullptr, true);
+    ASSERT_TRUE (op.linked);
+}
+
+/**
  * @brief Test makeRecv.
  */
 TEST (IoOperation, makeRecv)
@@ -364,6 +388,27 @@ TEST (IoOperation, makeSend)
 }
 
 /**
+ * @brief Test makeSendZc.
+ */
+TEST (IoOperation, makeSendZc)
+{
+    const char* payload = "makeSendZc";
+
+    auto op = IoOperation::makeSendZc (8, payload, strlen (payload), MSG_NOSIGNAL, nullptr);
+
+    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendZc));
+    ASSERT_EQ (op.handler, nullptr);
+    ASSERT_FALSE (op.linked);
+    ASSERT_EQ (op.data.stream.fd, 8);
+    ASSERT_EQ (op.data.stream.buf, payload);
+    ASSERT_EQ (op.data.stream.len, strlen (payload));
+    ASSERT_EQ (op.data.stream.flags, MSG_NOSIGNAL);
+
+    op = IoOperation::makeSendZc (8, payload, strlen (payload), MSG_NOSIGNAL, nullptr, true);
+    ASSERT_TRUE (op.linked);
+}
+
+/**
  * @brief Test fd.
  */
 TEST (IoOperation, fd)
@@ -406,6 +451,10 @@ TEST (IoOperation, fd)
     op.data.msg.fd = 7;
     ASSERT_EQ (op.fd (), 7);
 
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc);
+    op.data.msg.fd = 12;
+    ASSERT_EQ (op.fd (), 12);
+
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Recv);
     op.data.stream.fd = 8;
     ASSERT_EQ (op.fd (), 8);
@@ -413,6 +462,10 @@ TEST (IoOperation, fd)
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Send);
     op.data.stream.fd = 9;
     ASSERT_EQ (op.fd (), 9);
+
+    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendZc);
+    op.data.stream.fd = 11;
+    ASSERT_EQ (op.fd (), 11);
 
     op.code = 255;
     ASSERT_EQ (op.fd (), -1);

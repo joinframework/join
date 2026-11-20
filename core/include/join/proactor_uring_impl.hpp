@@ -855,6 +855,10 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             io_uring_prep_sendmsg (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
             break;
 
+        case IoOperation::Opcode::SendMsgZc:
+            io_uring_prep_sendmsg_zc (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
+            break;
+
         case IoOperation::Opcode::Recv:
             if (op.multishot)
             {
@@ -871,6 +875,11 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
 
         case IoOperation::Opcode::Send:
             io_uring_prep_send (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags);
+            break;
+
+        case IoOperation::Opcode::SendZc:
+            io_uring_prep_send_zc (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags,
+                                   0);
             break;
 
         default:                      // LCOV_EXCL_LINE
@@ -970,6 +979,24 @@ inline void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe) noexc
         else
         {
             op->data.stream.buf = br->get (bid);
+        }
+    }
+
+    IoOperation::Opcode code = static_cast<IoOperation::Opcode> (op->code);
+
+    if ((code == IoOperation::Opcode::SendZc) || (code == IoOperation::Opcode::SendMsgZc))
+    {
+        int& sent = (code == IoOperation::Opcode::SendZc) ? op->data.stream.result : op->data.msg.result;
+
+        if ((cqe->flags & IORING_CQE_F_MORE) != 0)
+        {
+            sent = result;
+            return;
+        }
+
+        if ((cqe->flags & IORING_CQE_F_NOTIF) != 0)
+        {
+            result = sent;
         }
     }
 

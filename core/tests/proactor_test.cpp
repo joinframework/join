@@ -1524,6 +1524,42 @@ TEST_F (ProactorTest, asyncSendmsg)
 }
 
 /**
+ * @brief Test async zero-copy sendmsg.
+ */
+TEST_F (ProactorTest, asyncSendmsgZc)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    const char* payload = "asyncSendmsgZc";
+    iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
+    msghdr msg = {};
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    _writeOp = IoOperation::makeSendmsgZc (_server.handle (), &msg, 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_writeOp && _result > 0;
+        }));
+        ASSERT_EQ (_result, static_cast<int> (strlen (payload)));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    char rbuf[256] = {};
+    ASSERT_EQ (_client.readExactly (rbuf, strlen (payload), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (rbuf, strlen (payload)), payload);
+}
+
+/**
  * @brief Test async recvmsg.
  */
 TEST_F (ProactorTest, asyncRecvmsg)
@@ -1698,6 +1734,38 @@ TEST_F (ProactorTest, asyncSend)
 
     const char* msg = "asyncSend";
     _writeOp = IoOperation::makeSend (_server.handle (), msg, strlen (msg), 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_writeOp && _result > 0;
+        }));
+        ASSERT_EQ (_result, static_cast<int> (strlen (msg)));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    char rbuf[256] = {};
+    ASSERT_EQ (_client.readExactly (rbuf, strlen (msg), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (rbuf, strlen (msg)), msg);
+}
+
+/**
+ * @brief Test async zero-copy send.
+ */
+TEST_F (ProactorTest, asyncSendZc)
+{
+    if (_client.connect ({_host, _port}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    const char* msg = "asyncSendZc";
+    _writeOp = IoOperation::makeSendZc (_server.handle (), msg, strlen (msg), 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
