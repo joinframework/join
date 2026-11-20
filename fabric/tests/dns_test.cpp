@@ -358,8 +358,7 @@ TEST_F (DnsTest, resolveAllName)
                   .resolveAllName (Dns::Resolver::lookupAddress ("joinframework.net", AF_INET6), 1ms);
     EXPECT_EQ (aliases.size (), 0);
 
-    aliases =
-        Dns::Resolver ("8.8.8.8", 53).resolveAllName (Dns::Resolver::lookupAddress ("www.joinframework.net", AF_INET));
+    aliases = Dns::Resolver::lookupAllName (Dns::Resolver::lookupAddress ("www.joinframework.net", AF_INET));
     EXPECT_GT (aliases.size (), 0);
 }
 
@@ -409,7 +408,7 @@ TEST_F (DnsTest, resolveName)
         Dns::Resolver ("192.0.2.1", 53).resolveName (Dns::Resolver::lookupAddress ("joinframework.net", AF_INET6), 1ms);
     EXPECT_TRUE (alias.empty ());
 
-    alias = Dns::Resolver ("8.8.8.8", 53).resolveName (Dns::Resolver::lookupAddress ("www.joinframework.net", AF_INET));
+    alias = Dns::Resolver::lookupName (Dns::Resolver::lookupAddress ("www.joinframework.net", AF_INET));
     EXPECT_FALSE (alias.empty ());
 }
 
