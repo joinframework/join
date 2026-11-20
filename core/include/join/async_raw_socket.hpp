@@ -204,51 +204,6 @@ namespace join
             return static_cast<ssize_t> (index);
         }
 
-#ifdef JOIN_HAS_IO_URING
-        /**
-         * @brief start an asynchronous read into a registered buffer.
-         * @param handler handler invoked on completion.
-         * @param data registered buffer used to store the data received, valid until the handler is invoked.
-         * @param maxSize maximum number of bytes to read.
-         * @param index index of the registered buffer area the buffer belongs to.
-         * @param flush flush the submission queue.
-         * @param link link this operation to the next one submitted.
-         * @return index of the operation on success, -1 on failure.
-         */
-        ssize_t asyncReadFixed (ReadHandler handler, char* data, size_t maxSize, uint16_t index, bool flush = true,
-                                bool link = false) noexcept
-        {
-            if (JOIN_UNLIKELY (!this->_socket.opened ()))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            AsyncRead* read = allocateRead ();
-            if (JOIN_UNLIKELY (read == nullptr))
-            {
-                lastError = make_error_code (Errc::OutOfMemory);
-                return -1;
-            }
-
-            read->readHandler = std::move (handler);
-            read->op = IoOperation::makeReadFixed (this->_socket.handle (), data, maxSize, index, this, link);
-            read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
-
-            size_t slot = this->_allocator.getIndex (read);
-
-            if (this->_proactor->submit (read->op, flush, false) == -1)
-            {
-                // LCOV_EXCL_START
-                this->releaseOperation (read);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            return static_cast<ssize_t> (slot);
-        }
-#endif
-
         /**
          * @brief start an asynchronous multishot read, staying armed until cancelled or failed.
          * @param handler handler invoked on each completion, the buffer being valid during the call only.
@@ -323,7 +278,14 @@ namespace join
             write->msg.msg_control = nullptr;
             write->msg.msg_controllen = 0;
             write->msg.msg_flags = 0;
-            write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            if constexpr (has_zero_copy_v<Protocol>)
+            {
+                write->op = IoOperation::makeSendmsgZc (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            }
+            else
+            {
+                write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            }
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator.getIndex (write);
@@ -338,51 +300,6 @@ namespace join
 
             return static_cast<ssize_t> (index);
         }
-
-#ifdef JOIN_HAS_IO_URING
-        /**
-         * @brief start an asynchronous write from a registered buffer.
-         * @param handler handler invoked on completion.
-         * @param data registered buffer to send, valid until the handler is invoked.
-         * @param size number of bytes to write.
-         * @param index index of the registered buffer area the buffer belongs to.
-         * @param flush flush the submission queue.
-         * @param link link this operation to the next one submitted.
-         * @return index of the operation on success, -1 on failure.
-         */
-        ssize_t asyncWriteFixed (WriteHandler handler, const char* data, size_t size, uint16_t index, bool flush = true,
-                                 bool link = false) noexcept
-        {
-            if (JOIN_UNLIKELY (!this->_socket.opened ()))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
-            AsyncWrite* write = allocateWrite ();
-            if (JOIN_UNLIKELY (write == nullptr))
-            {
-                lastError = make_error_code (Errc::OutOfMemory);
-                return -1;
-            }
-
-            write->writeHandler = std::move (handler);
-            write->op = IoOperation::makeWriteFixed (this->_socket.handle (), data, size, index, this, link);
-            write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
-
-            size_t slot = this->_allocator.getIndex (write);
-
-            if (this->_proactor->submit (write->op, flush, false) == -1)
-            {
-                // LCOV_EXCL_START
-                this->releaseOperation (write);
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            return static_cast<ssize_t> (slot);
-        }
-#endif
 
         /**
          * @brief cancel the connect operation in flight, if any.
@@ -425,12 +342,11 @@ namespace join
         {
             IoOperation::Opcode opcode = static_cast<IoOperation::Opcode> (op.code);
 
-            if ((opcode == IoOperation::Opcode::RecvMsg) || (opcode == IoOperation::Opcode::Recv) ||
-                (opcode == IoOperation::Opcode::ReadFixed))
+            if ((opcode == IoOperation::Opcode::RecvMsg) || (opcode == IoOperation::Opcode::Recv))
             {
                 completeRead (reinterpret_cast<AsyncRead*> (&op), code, size);
             }
-            else if ((opcode == IoOperation::Opcode::SendMsg) || (opcode == IoOperation::Opcode::WriteFixed))
+            else if ((opcode == IoOperation::Opcode::SendMsg) || (opcode == IoOperation::Opcode::SendMsgZc))
             {
                 completeWrite (reinterpret_cast<AsyncWrite*> (&op), code, size);
             }
@@ -484,10 +400,6 @@ namespace join
             {
                 case IoOperation::Opcode::Recv:
                     data = static_cast<const char*> (read->op.data.stream.buf);
-                    break;
-
-                case IoOperation::Opcode::ReadFixed:
-                    data = static_cast<const char*> (read->op.data.rw.buf);
                     break;
 
                 default:

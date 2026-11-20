@@ -28,6 +28,7 @@
 // libjoin.
 #include <join/async_operation.hpp>
 #include <join/proactor.hpp>
+#include <join/protocol.hpp>
 #include <join/backoff.hpp>
 #include <join/memory.hpp>
 #include <join/socket.hpp>
@@ -46,6 +47,24 @@
 
 namespace join
 {
+    /**
+     * @brief zero-copy send support.
+     */
+    template <class Protocol>
+    inline constexpr bool has_zero_copy_v = false;
+
+    /**
+     * @brief zero-copy send support of TCP.
+     */
+    template <>
+    inline constexpr bool has_zero_copy_v<Tcp> = true;
+
+    /**
+     * @brief zero-copy send support of UDP.
+     */
+    template <>
+    inline constexpr bool has_zero_copy_v<Udp> = true;
+
     /**
      * @brief basic asynchronous socket class.
      */
@@ -336,26 +355,6 @@ namespace join
         int flush () noexcept
         {
             return _proactor->flush (false);
-        }
-
-        /**
-         * @brief register the arena chunks as fixed buffers on the proactor driving this socket.
-         * @param arena arena to register.
-         * @return 0 on success, -1 on failure.
-         */
-        template <size_t Count, size_t... Sizes>
-        int registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena) noexcept
-        {
-            return _proactor->registerFixedBuffers (arena);
-        }
-
-        /**
-         * @brief unregister the fixed buffers from the proactor driving this socket.
-         * @return 0 on success, -1 on failure.
-         */
-        int unregisterFixedBuffers () noexcept
-        {
-            return _proactor->unregisterFixedBuffers ();
         }
 #endif
 
