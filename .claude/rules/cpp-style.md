@@ -12,6 +12,7 @@ paths:
 - C++20, no extensions. Space before every `(` (`foo (a)`, `TEST (S, n)`; except `operator~(T)`). Allman braces on every control statement, no one-line functions or lambdas. Constructor initializers one per line, leading comma. Digit separators `1'000'000`.
 - Header: MIT license, `#ifndef JOIN_<MODULE>_<NAME>_HPP` (no `#pragma once`; the `*_uring*`/`*_epoll*` backend headers have none and are quote-included by their front header), content in indented `namespace join`. Backends guarded by `JOIN_HAS_IO_URING` / `_NUMA` / `_XDP`.
 - Include groups, in order: `// dconv.` (data only), `// libjoin.`, `// Libraries.`, `// C++.`, `// C.` (kernel `<linux/...>` too); `<join/...>` for join headers.
+- Include what you use: include the header of every symbol used directly, never rely on transitive includes (standard headers above all).
 - Templates are implemented in class in the header (only the proactor / io_ring_buffer backends define out of class). Other classes go in `src/<name>.cpp` (`using join::X;` after the includes), except small or hot-path classes kept in the header (`Backoff`, clocks, `PackWriter`): follow the neighbours. Helpers nest in the owning class; helper namespaces are `details`.
 - Each out-of-class definition (`.cpp`, proactor backend headers) has this banner:
 

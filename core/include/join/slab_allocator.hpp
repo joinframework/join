@@ -33,6 +33,7 @@
 // C++.
 #include <algorithm>
 #include <utility>
+#include <limits>
 #include <atomic>
 #include <array>
 #include <tuple>
@@ -68,6 +69,7 @@ namespace join
     template <size_t Size>
     union alignas (64) BasicSlabChunk
     {
+        /// chunk size checks.
         static_assert (isPow2 (Size), "size must be a power of 2");
         static_assert (Size % alignof (std::max_align_t) == 0, "size must respects maximum alignment requirement");
         static_assert (Size >= sizeof (uint64_t), "size must respects minimum size for storing index");
@@ -88,10 +90,10 @@ namespace join
         using Chunk = BasicSlabChunk<Size>;
 
         /// magic number for initialization detection.
-        static constexpr uint64_t MAGIC = 0x9F7E3B2A8D5C4E1B;
+        static constexpr uint64_t magic = 0x9F7E3B2A8D5C4E1B;
 
         /// null index sentinel (empty free list).
-        static constexpr uint32_t NULL_IDX = UINT32_MAX;
+        static constexpr uint32_t nullIdx = std::numeric_limits<uint32_t>::max ();
 
         /// initialization state atomic.
         alignas (64) std::atomic_uint64_t _magic;
@@ -109,23 +111,27 @@ namespace join
     template <size_t Count, size_t Size>
     struct BasicSlabPool
     {
-        static_assert (Count > 0, "count must be at least 1");
-        static_assert (Count <= UINT32_MAX, "count exceeds tagged index capacity (~256 GB)");
-
         using Chunk = BasicSlabChunk<Size>;
         using Segment = BasicSlabSegment<Size>;
 
         /// total number of chunks per pool.
-        static constexpr size_t _count = Count;
+        static constexpr size_t count = Count;
 
         /// size of each chunk in bytes.
-        static constexpr size_t _size = Size;
+        static constexpr size_t size = Size;
 
         /// size in bytes between two consecutive chunks.
-        static constexpr size_t _stride = sizeof (Chunk);
+        static constexpr size_t stride = sizeof (Chunk);
 
         /// total bytes required in the mapped region for this pool.
-        static constexpr size_t _total = sizeof (Segment) + _stride * _count;
+        static constexpr size_t total = sizeof (Segment) + stride * count;
+
+        /// chunk count checks.
+        static_assert (Count > 0, "count must be at least 1");
+        static_assert (Count <= std::numeric_limits<uint32_t>::max (), "count exceeds tagged index capacity (~256 GB)");
+
+        /// chunks layout check.
+        static_assert (offsetof (Segment, _chunks) == sizeof (Segment), "chunks must follow the segment header");
 
         /**
          * @brief initialize the pool over an existing memory region.
@@ -140,12 +146,12 @@ namespace join
             {
                 releaseAll ();
 
-                _segment->_magic.store (Segment::MAGIC, std::memory_order_release);
+                _segment->_magic.store (Segment::magic, std::memory_order_release);
             }
             else
             {
                 Backoff backoff;
-                while (_segment->_magic.load (std::memory_order_acquire) != Segment::MAGIC)
+                while (_segment->_magic.load (std::memory_order_acquire) != Segment::magic)
                 {
                     backoff ();  // LCOV_EXCL_LINE
                 }
@@ -207,7 +213,7 @@ namespace join
 
             for (;;)
             {
-                if (JOIN_UNLIKELY (cur.idx == Segment::NULL_IDX))
+                if (JOIN_UNLIKELY (cur.idx == Segment::nullIdx))
                 {
                     return nullptr;
                 }
@@ -257,18 +263,18 @@ namespace join
 
             uint32_t n = 0;
 
-            for (uint32_t idx = cur.idx; idx != Segment::NULL_IDX;
+            for (uint32_t idx = cur.idx; idx != Segment::nullIdx;
                  idx = _segment->_chunks[idx]._next.load (std::memory_order_relaxed))
             {
                 ++n;
             }
 
-            if (n != _count)
+            if (n != count)
             {
                 return false;
             }
 
-            next.idx = Segment::NULL_IDX;
+            next.idx = Segment::nullIdx;
             next.gen = cur.gen + 1;
 
             return _segment->_head.compare_exchange_strong (cur.raw, next.raw, std::memory_order_acq_rel,
@@ -280,11 +286,11 @@ namespace join
          */
         void releaseAll () noexcept
         {
-            for (uint32_t i = 0; i < _count - 1; ++i)
+            for (uint32_t i = 0; i < count - 1; ++i)
             {
                 _segment->_chunks[i]._next.store (i + 1, std::memory_order_relaxed);
             }
-            _segment->_chunks[_count - 1]._next.store (Segment::NULL_IDX, std::memory_order_relaxed);
+            _segment->_chunks[count - 1]._next.store (Segment::nullIdx, std::memory_order_relaxed);
 
             SlabTaggedIndex cur, next;
             cur.raw = _segment->_head.load (std::memory_order_relaxed);
@@ -302,7 +308,7 @@ namespace join
         bool owns (void* p) const noexcept
         {
             auto base = reinterpret_cast<std::uintptr_t> (_segment->_chunks);
-            auto end = base + (_count * _stride);
+            auto end = base + (count * stride);
             auto ptr = reinterpret_cast<std::uintptr_t> (p);
             return ((ptr >= base) && (ptr < end));
         }
@@ -337,12 +343,13 @@ namespace join
     template <typename Backend, size_t Count, size_t... Sizes>
     class BasicSlabAllocator
     {
-        static_assert (sizeof...(Sizes) > 0, "slab allocator must have at least one pool size");
-        static_assert (std::ranges::is_sorted (std::array{Sizes...}), "pool sizes must be provided in ascending order");
-
     public:
         /// total bytes required in the mapped region.
-        static constexpr size_t _total = (BasicSlabPool<Count, Sizes>::_total + ...);
+        static constexpr size_t total = (BasicSlabPool<Count, Sizes>::total + ...);
+
+        /// pool sizes checks.
+        static_assert (sizeof...(Sizes) > 0, "slab allocator must have at least one pool size");
+        static_assert (std::ranges::is_sorted (std::array{Sizes...}), "pool sizes must be provided in ascending order");
 
         /**
          * @brief create instance.
@@ -350,7 +357,7 @@ namespace join
          */
         template <typename... Args>
         BasicSlabAllocator (Args&&... args)
-        : _backend (_total, std::forward<Args> (args)...)
+        : _backend (total, std::forward<Args> (args)...)
         , _pools (makePools (std::make_index_sequence<sizeof...(Sizes)>{}))
         {
         }
@@ -519,7 +526,7 @@ namespace join
          */
         static std::array<size_t, sizeof...(Sizes)> makeOffsets ()
         {
-            size_t totals[] = {BasicSlabPool<Count, Sizes>::_total...};
+            size_t totals[] = {BasicSlabPool<Count, Sizes>::total...};
             std::array<size_t, sizeof...(Sizes)> offsets{};
             for (size_t i = 1; i < sizeof...(Sizes); ++i)
             {
@@ -550,7 +557,7 @@ namespace join
             if constexpr (I < sizeof...(Sizes))
             {
                 auto& pool = std::get<I> (_pools);
-                if (size <= pool._size)
+                if (size <= pool.size)
                 {
                     void* p = pool.pop ();
                     if (p != nullptr)
@@ -575,7 +582,7 @@ namespace join
             if constexpr (I < sizeof...(Sizes))
             {
                 auto& pool = std::get<I> (_pools);
-                if (size <= pool._size)
+                if (size <= pool.size)
                 {
                     return pool.pop ();
                 }
