@@ -62,19 +62,17 @@ namespace join
          */
         enum class Opcode : uint8_t
         {
-            Poll,       /**< wait for readiness on a file descriptor. */
-            Accept,     /**< accept an incoming connection. */
-            Connect,    /**< initiate an outgoing connection. */
-            Read,       /**< read from a file descriptor. */
-            Write,      /**< write to a file descriptor. */
-            ReadFixed,  /**< read using a registered buffer. */
-            WriteFixed, /**< write using a registered buffer. */
-            RecvMsg,    /**< receive a message with ancillary data. */
-            SendMsg,    /**< send a message with ancillary data. */
-            SendMsgZc,  /**< send a message with ancillary data without copy. */
-            Recv,       /**< receive data from a socket. */
-            Send,       /**< send data on a socket. */
-            SendZc,     /**< send data on a socket without copy. */
+            Poll,      /**< wait for readiness on a file descriptor. */
+            Accept,    /**< accept an incoming connection. */
+            Connect,   /**< initiate an outgoing connection. */
+            Read,      /**< read from a file descriptor. */
+            Write,     /**< write to a file descriptor. */
+            RecvMsg,   /**< receive a message with ancillary data. */
+            SendMsg,   /**< send a message with ancillary data. */
+            SendMsgZc, /**< send a message with ancillary data without copy. */
+            Recv,      /**< receive data from a socket. */
+            Send,      /**< send data on a socket. */
+            SendZc,    /**< send data on a socket without copy. */
         };
 
         /**
@@ -194,7 +192,7 @@ namespace join
                                         CompletionHandler* handler) noexcept;
 
         /**
-         * @brief payload for read / read fixed / write / write fixed.
+         * @brief payload for read / write.
          */
         struct RwData
         {
@@ -206,12 +204,6 @@ namespace join
 
             /// number of bytes to transfer.
             unsigned long len;
-
-            /// registered buffer index (ignored with reactor backend).
-            uint16_t index;
-
-            /// use registered buffer (ignored with reactor backend).
-            bool fixed;
         };
 
         /**
@@ -237,32 +229,6 @@ namespace join
          */
         static IoOperation makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler,
                                       bool linked = false) noexcept;
-
-        /**
-         * @brief build a fixed-buffer read operation.
-         * @param fd file descriptor to read from.
-         * @param buf destination buffer.
-         * @param len number of bytes to read.
-         * @param index registered buffer index.
-         * @param handler handler to notify on completion.
-         * @param linked link this SQE to the next one (io_uring only).
-         * @return initialized IoOperation.
-         */
-        static IoOperation makeReadFixed (int fd, void* buf, uint32_t len, uint16_t index, CompletionHandler* handler,
-                                          bool linked = false) noexcept;
-
-        /**
-         * @brief build a fixed-buffer write operation.
-         * @param fd file descriptor to write to.
-         * @param buf source buffer.
-         * @param len number of bytes to write.
-         * @param index registered buffer index.
-         * @param handler handler to notify on completion.
-         * @param linked link this SQE to the next one (io_uring only).
-         * @return initialized IoOperation.
-         */
-        static IoOperation makeWriteFixed (int fd, const void* buf, uint32_t len, uint16_t index,
-                                           CompletionHandler* handler, bool linked = false) noexcept;
 
         /**
          * @brief payload for sendmsg / recvmsg.

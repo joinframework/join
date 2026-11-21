@@ -799,19 +799,27 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             break;
 
         case IoOperation::Opcode::Read:
+            if constexpr (has_fixed_buffer_v<IoPolicy>)
+            {
+                if (_fixedBuffer.owns (op.data.rw.buf, op.data.rw.len))
+                {
+                    io_uring_prep_read_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, 0);
+                    break;
+                }
+            }
             io_uring_prep_read (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0);
             break;
 
         case IoOperation::Opcode::Write:
+            if constexpr (has_fixed_buffer_v<IoPolicy>)
+            {
+                if (_fixedBuffer.owns (op.data.rw.buf, op.data.rw.len))
+                {
+                    io_uring_prep_write_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, 0);
+                    break;
+                }
+            }
             io_uring_prep_write (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0);
-            break;
-
-        case IoOperation::Opcode::ReadFixed:
-            io_uring_prep_read_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, op.data.rw.index);
-            break;
-
-        case IoOperation::Opcode::WriteFixed:
-            io_uring_prep_write_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, op.data.rw.index);
             break;
 
         case IoOperation::Opcode::RecvMsg:
@@ -857,6 +865,15 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             break;
 
         case IoOperation::Opcode::SendZc:
+            if constexpr (has_fixed_buffer_v<IoPolicy>)
+            {
+                if (_fixedBuffer.owns (op.data.stream.buf, op.data.stream.len))
+                {
+                    io_uring_prep_send_zc_fixed (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len,
+                                                 op.data.stream.flags, 0, 0);
+                    break;
+                }
+            }
             io_uring_prep_send_zc (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags,
                                    0);
             break;

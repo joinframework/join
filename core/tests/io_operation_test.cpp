@@ -201,8 +201,6 @@ TEST (IoOperation, makeRead)
     ASSERT_EQ (op.data.rw.fd, 8);
     ASSERT_EQ (op.data.rw.buf, buffer);
     ASSERT_EQ (op.data.rw.len, sizeof (buffer));
-    ASSERT_EQ (op.data.rw.index, 0);
-    ASSERT_EQ (op.data.rw.fixed, false);
 }
 
 /**
@@ -217,40 +215,6 @@ TEST (IoOperation, makeWrite)
     ASSERT_EQ (op.data.rw.fd, 8);
     ASSERT_EQ (op.data.rw.buf, buffer);
     ASSERT_EQ (op.data.rw.len, sizeof (buffer));
-    ASSERT_EQ (op.data.rw.index, 0);
-    ASSERT_EQ (op.data.rw.fixed, false);
-}
-
-/**
- * @brief Test makeReadFixed.
- */
-TEST (IoOperation, makeReadFixed)
-{
-    auto op = IoOperation::makeReadFixed (8, buffer, sizeof (buffer), 6, nullptr);
-
-    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::ReadFixed));
-    ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.rw.fd, 8);
-    ASSERT_EQ (op.data.rw.buf, buffer);
-    ASSERT_EQ (op.data.rw.len, sizeof (buffer));
-    ASSERT_EQ (op.data.rw.index, 6);
-    ASSERT_EQ (op.data.rw.fixed, true);
-}
-
-/**
- * @brief Test makeWriteFixed.
- */
-TEST (IoOperation, makeWriteFixed)
-{
-    auto op = IoOperation::makeWriteFixed (8, buffer, sizeof (buffer), 6, nullptr);
-
-    ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::WriteFixed));
-    ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.rw.fd, 8);
-    ASSERT_EQ (op.data.rw.buf, buffer);
-    ASSERT_EQ (op.data.rw.len, sizeof (buffer));
-    ASSERT_EQ (op.data.rw.index, 6);
-    ASSERT_EQ (op.data.rw.fixed, true);
 }
 
 /**
@@ -431,17 +395,9 @@ TEST (IoOperation, fd)
     op.data.rw.fd = 2;
     ASSERT_EQ (op.fd (), 2);
 
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::ReadFixed);
-    op.data.rw.fd = 3;
-    ASSERT_EQ (op.fd (), 3);
-
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Write);
     op.data.rw.fd = 4;
     ASSERT_EQ (op.fd (), 4);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::WriteFixed);
-    op.data.rw.fd = 5;
-    ASSERT_EQ (op.fd (), 5);
 
     op.code = static_cast<uint8_t> (IoOperation::Opcode::RecvMsg);
     op.data.msg.fd = 6;
