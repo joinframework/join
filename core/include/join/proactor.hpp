@@ -666,7 +666,7 @@ private:
     /**
      * @brief return true if operation requires EPOLLOUT.
      * @param op operation.
-     * @return true for Connect, Write, WriteFixed, SendMsg, Send and Poll without POLLIN.
+     * @return true for Connect, Write, SendMsg, Send and Poll without POLLIN.
      */
     static bool isWriteOperation (const IoOperation& op) noexcept;
 #endif

@@ -166,8 +166,6 @@ IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHa
     op.data.rw.fd = fd;
     op.data.rw.buf = buf;
     op.data.rw.len = len;
-    op.data.rw.index = 0;
-    op.data.rw.fixed = false;
     return op;
 }
 
@@ -185,46 +183,6 @@ IoOperation IoOperation::makeWrite (int fd, const void* buf, uint32_t len, Compl
     op.data.rw.fd = fd;
     op.data.rw.buf = const_cast<void*> (buf);
     op.data.rw.len = len;
-    op.data.rw.index = 0;
-    op.data.rw.fixed = false;
-    return op;
-}
-
-// =========================================================================
-//   CLASS     : IoOperation
-//   METHOD    : makeReadFixed
-// =========================================================================
-IoOperation IoOperation::makeReadFixed (int fd, void* buf, uint32_t len, uint16_t index, CompletionHandler* handler,
-                                        bool linked) noexcept
-{
-    IoOperation op;
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::ReadFixed);
-    op.handler = handler;
-    op.linked = linked;
-    op.data.rw.fd = fd;
-    op.data.rw.buf = buf;
-    op.data.rw.len = len;
-    op.data.rw.index = index;
-    op.data.rw.fixed = true;
-    return op;
-}
-
-// =========================================================================
-//   CLASS     : IoOperation
-//   METHOD    : makeWriteFixed
-// =========================================================================
-IoOperation IoOperation::makeWriteFixed (int fd, const void* buf, uint32_t len, uint16_t index,
-                                         CompletionHandler* handler, bool linked) noexcept
-{
-    IoOperation op;
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::WriteFixed);
-    op.handler = handler;
-    op.linked = linked;
-    op.data.rw.fd = fd;
-    op.data.rw.buf = const_cast<void*> (buf);
-    op.data.rw.len = len;
-    op.data.rw.index = index;
-    op.data.rw.fixed = true;
     return op;
 }
 
@@ -385,9 +343,7 @@ int IoOperation::fd () const noexcept
         case Opcode::Connect:
             return data.connect.fd;
         case Opcode::Read:
-        case Opcode::ReadFixed:
         case Opcode::Write:
-        case Opcode::WriteFixed:
             return data.rw.fd;
         case Opcode::RecvMsg:
         case Opcode::SendMsg:
