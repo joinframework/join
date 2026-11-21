@@ -1022,9 +1022,9 @@ inline void join::BasicProactor::resetOperation (IoOperation& op) noexcept
 }
 
 #ifdef JOIN_HAS_IO_URING
-#include "proactor_uring_impl.hpp"
+#include "proactor_uring.hpp"
 #else
-#include "proactor_epoll_impl.hpp"
+#include "proactor_epoll.hpp"
 #endif
 
 /**
