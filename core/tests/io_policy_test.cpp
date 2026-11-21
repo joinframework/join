@@ -37,6 +37,15 @@ struct PinnedPolicy : join::IoSqpollPolicy
 };
 
 /**
+ * @brief policy declaring fixed buffers.
+ */
+struct FixedPolicy : join::IoDefaultPolicy
+{
+    static constexpr uint32_t fixedBufferCount = 4;
+    static constexpr uint32_t fixedBufferSize = 4096;
+};
+
+/**
  * @brief Test has_sqpoll_v trait.
  */
 TEST (IoPolicy, has_sqpoll_v)
@@ -75,6 +84,17 @@ TEST (IoPolicy, has_sq_thread_cpu_v)
     ASSERT_FALSE (join::has_sq_thread_cpu_v<join::IoHybridPolicy>);
     ASSERT_FALSE (join::has_sq_thread_cpu_v<join::IoSqpollPolicy>);
     ASSERT_TRUE (join::has_sq_thread_cpu_v<PinnedPolicy>);
+}
+
+/**
+ * @brief Test has_fixed_buffer_v trait.
+ */
+TEST (IoPolicy, has_fixed_buffer_v)
+{
+    ASSERT_FALSE (join::has_fixed_buffer_v<join::IoDefaultPolicy>);
+    ASSERT_FALSE (join::has_fixed_buffer_v<join::IoHybridPolicy>);
+    ASSERT_FALSE (join::has_fixed_buffer_v<join::IoSqpollPolicy>);
+    ASSERT_TRUE (join::has_fixed_buffer_v<FixedPolicy>);
 }
 
 /**
