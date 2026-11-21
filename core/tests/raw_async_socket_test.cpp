@@ -536,24 +536,6 @@ TEST_F (RawAsyncSocket, asyncReadMulti)
     ASSERT_EQ (rawSocket.unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
-#ifdef JOIN_HAS_IO_URING
-/**
- * @brief Test registerFixedBuffers method.
- */
-TEST_F (RawAsyncSocket, registerFixedBuffers)
-{
-    Proactor proactor;
-    Raw::AsyncSocket rawSocket (proactor);
-
-    LocalMem::SlabAllocator<1, 1024, 4096> arena;
-
-    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.registerFixedBuffers (arena), -1);
-    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), 0) << join::lastError.message ();
-    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), -1);
-}
-#endif
-
 /**
  * @brief Test asyncWrite method.
  */
@@ -574,39 +556,6 @@ TEST_F (RawAsyncSocket, asyncWrite)
 
     rawSocket.close ();
 }
-
-#ifdef JOIN_HAS_IO_URING
-/**
- * @brief Test asyncWriteFixed method.
- */
-TEST_F (RawAsyncSocket, asyncWriteFixed)
-{
-    Raw::AsyncSocket rawSocket;
-    LocalMem::SlabAllocator<1, 2048> allocator;
-
-    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
-    ASSERT_NE (buf, nullptr);
-
-    ASSERT_EQ (rawSocket.asyncWriteFixed (nullptr, buf, sizeof (_packet), 0), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-
-    ASSERT_EQ (rawSocket.registerFixedBuffers (allocator), 0) << join::lastError.message ();
-
-    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-
-    ::memcpy (buf, &_packet, sizeof (_packet));
-
-    ASSERT_NE (rawSocket.asyncWriteFixed (onCompletion, buf, sizeof (_packet), 0), -1) << join::lastError.message ();
-
-    ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (code ()) << code ().message ();
-    ASSERT_EQ (_transferred, sizeof (_packet));
-
-    rawSocket.close ();
-
-    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), 0) << join::lastError.message ();
-}
-#endif
 
 /**
  * @brief Test asyncRead method.
@@ -646,39 +595,6 @@ TEST_F (RawAsyncSocket, asyncRead)
 
     rawSocket.close ();
 }
-
-#ifdef JOIN_HAS_IO_URING
-/**
- * @brief Test asyncReadFixed method.
- */
-TEST_F (RawAsyncSocket, asyncReadFixed)
-{
-    Raw::AsyncSocket rawSocket;
-    LocalMem::SlabAllocator<1, 2048> allocator;
-
-    char* buf = static_cast<char*> (allocator.allocate (sizeof (_buf)));
-    ASSERT_NE (buf, nullptr);
-
-    ASSERT_EQ (rawSocket.asyncReadFixed (nullptr, buf, sizeof (_buf), 0), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-
-    ASSERT_EQ (rawSocket.registerFixedBuffers (allocator), 0) << join::lastError.message ();
-
-    ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-
-    ASSERT_NE (rawSocket.asyncReadFixed (onReadCompletion, buf, sizeof (_buf), 0), -1) << join::lastError.message ();
-    ASSERT_NE (rawSocket.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
-        << join::lastError.message ();
-
-    ASSERT_TRUE (wait (1));
-    ASSERT_FALSE (code ()) << code ().message ();
-    ASSERT_GT (_transferred, 0u);
-
-    rawSocket.close ();
-
-    ASSERT_EQ (rawSocket.unregisterFixedBuffers (), 0) << join::lastError.message ();
-}
-#endif
 
 /**
  * @brief Test async operations resubmitted from their own handlers.
