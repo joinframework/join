@@ -77,6 +77,20 @@ namespace join
     };
 
     template <typename T>
+    inline constexpr uint32_t fixed_buffer_count_v = 0;
+
+    template <typename T>
+        requires has_fixed_buffer_v<T>
+    inline constexpr uint32_t fixed_buffer_count_v<T> = T::fixedBufferCount;
+
+    template <typename T>
+    inline constexpr uint32_t fixed_buffer_size_v = 0;
+
+    template <typename T>
+        requires has_fixed_buffer_v<T>
+    inline constexpr uint32_t fixed_buffer_size_v<T> = T::fixedBufferSize;
+
+    template <typename T>
     inline constexpr bool has_spin_v = requires { T::spinNs; };
 
     template <typename T>

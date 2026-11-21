@@ -46,6 +46,13 @@
 namespace join
 {
     /**
+     * @brief empty registered I/O buffers.
+     */
+    struct NoFixedBuffer
+    {
+    };
+
+    /**
      * @brief registered I/O buffers.
      */
     template <size_t Count, size_t... Sizes>
@@ -118,56 +125,6 @@ namespace join
         }
 
         /**
-         * @brief register buffers.
-         * @param ring io_uring instance.
-         * @return 0 on success, -1 on failure.
-         */
-        int attach (io_uring* ring) noexcept
-        {
-            if (JOIN_UNLIKELY (_uring != nullptr))
-            {
-                lastError = make_error_code (Errc::InUse);
-                return -1;
-            }
-
-            iovec iov = {data (), length};
-
-            int ret = io_uring_register_buffers (ring, &iov, 1);
-            if (JOIN_UNLIKELY (ret < 0))
-            {
-                lastError = std::error_code (-ret, std::system_category ());
-                return -1;
-            }
-
-            _uring = ring;
-            return 0;
-        }
-
-        /**
-         * @brief unregister buffers.
-         * @return 0 on success, -1 on failure.
-         */
-        int detach () noexcept
-        {
-            if (_uring == nullptr)
-            {
-                return 0;
-            }
-
-            int ret = io_uring_unregister_buffers (_uring);
-            if (JOIN_UNLIKELY (ret < 0))
-            {
-                // LCOV_EXCL_START
-                lastError = std::error_code (-ret, std::system_category ());
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-
-            _uring = nullptr;
-            return 0;
-        }
-
-        /**
          * @brief acquire a buffer.
          * @param size minimum size.
          * @return buffer, nullptr if none.
@@ -214,11 +171,67 @@ namespace join
         }
 
     private:
+        /**
+         * @brief register buffers.
+         * @param ring io_uring instance.
+         * @return 0 on success, -1 on failure.
+         */
+        int attach (io_uring* ring) noexcept
+        {
+            if (JOIN_UNLIKELY (_uring != nullptr))
+            {
+                // LCOV_EXCL_START
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            iovec iov = {data (), length};
+
+            int ret = io_uring_register_buffers (ring, &iov, 1);
+            if (JOIN_UNLIKELY (ret < 0))
+            {
+                lastError = std::error_code (-ret, std::system_category ());
+                return -1;
+            }
+
+            _uring = ring;
+            return 0;
+        }
+
+        /**
+         * @brief unregister buffers.
+         * @return 0 on success, -1 on failure.
+         */
+        int detach () noexcept
+        {
+            if (_uring == nullptr)
+            {
+                return 0;
+            }
+
+            int ret = io_uring_unregister_buffers (_uring);
+            if (JOIN_UNLIKELY (ret < 0))
+            {
+                // LCOV_EXCL_START
+                lastError = std::error_code (-ret, std::system_category ());
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            _uring = nullptr;
+            return 0;
+        }
+
         /// buffer arena.
         Arena _arena;
 
         /// io_uring instance.
         io_uring* _uring = nullptr;
+
+        /// friendship with proactor.
+        template <typename>
+        friend class BasicProactor;
     };
 }
 
