@@ -59,9 +59,9 @@ set(PUBLIC_HEADERS
 )
 
 if(JOIN_ENABLE_IO_URING)
-    list(APPEND PUBLIC_HEADERS include/join/io_policy.hpp include/join/io_fixed_buffer.hpp include/join/io_ring_buffer_uring.hpp include/join/proactor_uring_impl.hpp)
+    list(APPEND PUBLIC_HEADERS include/join/io_policy.hpp include/join/io_fixed_buffer.hpp include/join/io_ring_buffer_uring.hpp include/join/proactor_uring.hpp)
 else()
-    list(APPEND PUBLIC_HEADERS include/join/io_ring_buffer_epoll.hpp include/join/proactor_epoll_impl.hpp)
+    list(APPEND PUBLIC_HEADERS include/join/io_ring_buffer_epoll.hpp include/join/proactor_epoll.hpp)
 endif()
 
 set(SOURCES
