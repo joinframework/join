@@ -71,6 +71,12 @@ namespace join
     inline constexpr bool has_sq_thread_cpu_v = requires { T::sqThreadCpu; };
 
     template <typename T>
+    inline constexpr bool has_fixed_buffer_v = requires {
+        T::fixedBufferCount;
+        T::fixedBufferSize;
+    };
+
+    template <typename T>
     inline constexpr bool has_spin_v = requires { T::spinNs; };
 
     template <typename T>
