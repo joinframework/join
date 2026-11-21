@@ -61,6 +61,18 @@ join::BasicProactor<IoPolicy>::BasicProactor ()
         // LCOV_EXCL_STOP
     }
 
+    if constexpr (has_fixed_buffer_v<IoPolicy>)
+    {
+        if (_fixedBuffer.attach (&_ring) == -1)
+        {
+            // LCOV_EXCL_START
+            io_uring_queue_exit (&_ring);
+            ::close (_wakeup);
+            throw std::system_error (lastError, "io_uring_register_buffers failed");
+            // LCOV_EXCL_STOP
+        }
+    }
+
     if constexpr (is_default_v<IoPolicy>)
     {
         _wakeupOp = IoOperation::makeRead (_wakeup, &_wakeupBuf, sizeof (_wakeupBuf), nullptr);
@@ -77,6 +89,11 @@ template <typename IoPolicy>
 join::BasicProactor<IoPolicy>::~BasicProactor () noexcept
 {
     stop (true);
+
+    if constexpr (has_fixed_buffer_v<IoPolicy>)
+    {
+        _fixedBuffer.detach ();
+    }
 
     io_uring_queue_exit (&_ring);
 
@@ -195,34 +212,6 @@ void join::BasicProactor<IoPolicy>::waitStopped () const noexcept
     {
         backoff ();
     }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : registerFixedBuffers
-// =========================================================================
-template <typename IoPolicy>
-template <size_t Count, size_t... Sizes>
-int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena) noexcept
-{
-    return registerFixedBuffers (arena, std::make_index_sequence<sizeof...(Sizes)>{});
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : unregisterFixedBuffers
-// =========================================================================
-template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::unregisterFixedBuffers () noexcept
-{
-    int ret = io_uring_unregister_buffers (&_ring);
-    if (JOIN_UNLIKELY (ret < 0))
-    {
-        lastError = std::error_code (-ret, std::system_category ());
-        return -1;
-    }
-
-    return 0;
 }
 
 // =========================================================================
@@ -455,6 +444,17 @@ template <typename IoPolicy>
 typename join::BasicProactor<IoPolicy>::Wheel& join::BasicProactor<IoPolicy>::wheel () noexcept
 {
     return _wheel;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : fixedBuffer
+// =========================================================================
+template <typename IoPolicy>
+typename join::BasicProactor<IoPolicy>::FixedBuffer& join::BasicProactor<IoPolicy>::fixedBuffer () noexcept
+    requires has_fixed_buffer_v<IoPolicy>
+{
+    return _fixedBuffer;
 }
 
 // =========================================================================
@@ -742,27 +742,6 @@ void join::BasicProactor<IoPolicy>::endOperation (IoOperation& op, int result, b
     }
 
     dispatchOperation (op, result, cancelled);
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : registerFixedBuffers
-// =========================================================================
-template <typename IoPolicy>
-template <size_t Count, size_t... Sizes, size_t... Is>
-int join::BasicProactor<IoPolicy>::registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena,
-                                                         std::index_sequence<Is...>) noexcept
-{
-    iovec iovecs[] = {iovec{arena.template getPtr<Is> (0), Count * Sizes}...};
-
-    int ret = io_uring_register_buffers (&_ring, iovecs, sizeof...(Sizes));
-    if (JOIN_UNLIKELY (ret < 0))
-    {
-        lastError = std::error_code (-ret, std::system_category ());
-        return -1;
-    }
-
-    return 0;
 }
 
 // =========================================================================

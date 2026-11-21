@@ -98,6 +98,28 @@ TEST (IoPolicy, has_fixed_buffer_v)
 }
 
 /**
+ * @brief Test fixed_buffer_count_v trait.
+ */
+TEST (IoPolicy, fixed_buffer_count_v)
+{
+    ASSERT_EQ (join::fixed_buffer_count_v<join::IoDefaultPolicy>, 0u);
+    ASSERT_EQ (join::fixed_buffer_count_v<join::IoHybridPolicy>, 0u);
+    ASSERT_EQ (join::fixed_buffer_count_v<join::IoSqpollPolicy>, 0u);
+    ASSERT_EQ (join::fixed_buffer_count_v<FixedPolicy>, 4u);
+}
+
+/**
+ * @brief Test fixed_buffer_size_v trait.
+ */
+TEST (IoPolicy, fixed_buffer_size_v)
+{
+    ASSERT_EQ (join::fixed_buffer_size_v<join::IoDefaultPolicy>, 0u);
+    ASSERT_EQ (join::fixed_buffer_size_v<join::IoHybridPolicy>, 0u);
+    ASSERT_EQ (join::fixed_buffer_size_v<join::IoSqpollPolicy>, 0u);
+    ASSERT_EQ (join::fixed_buffer_size_v<FixedPolicy>, 4096u);
+}
+
+/**
  * @brief Test has_spin_v trait.
  */
 TEST (IoPolicy, has_spin_v)

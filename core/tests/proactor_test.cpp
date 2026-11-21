@@ -26,6 +26,9 @@
 #include <join/datagram_socket.hpp>
 #include <join/condition.hpp>
 #include <join/proactor.hpp>
+#ifdef JOIN_HAS_IO_URING
+#include <join/io_policy.hpp>
+#endif
 #include <join/acceptor.hpp>
 
 // Libraries.
@@ -35,6 +38,9 @@
 #include <thread>
 #include <chrono>
 #include <atomic>
+
+// C.
+#include <cstdint>
 
 using namespace std::chrono_literals;
 
@@ -50,6 +56,19 @@ using join::CompletionHandler;
 using join::Tcp;
 using join::Udp;
 using join::LocalMem;
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief policy declaring fixed buffers.
+ */
+struct FixedPolicy : join::IoDefaultPolicy
+{
+    static constexpr uint32_t fixedBufferCount = 4;
+    static constexpr uint32_t fixedBufferSize = 4096;
+};
+
+using FixedProactorThread = join::BasicProactorThread<FixedPolicy>;
+#endif
 
 /**
  * @brief Class used to test Proactor.
@@ -86,6 +105,10 @@ protected:
         proactor.cancel (_spareOp, true, true);
         proactor.cancel (_invalidOp, true, true);
         proactor.cancel (_resubmitOp, true, true);
+#ifdef JOIN_HAS_IO_URING
+        FixedProactorThread::proactor ().cancel (_readOp, true, true);
+        FixedProactorThread::proactor ().cancel (_writeOp, true, true);
+#endif
 
         _server.close ();
         _client.close ();
@@ -1038,20 +1061,16 @@ TEST_F (ProactorTest, wheel)
 
 #ifdef JOIN_HAS_IO_URING
 /**
- * @brief Test registerFixedBuffers and unregisterFixedBuffers.
+ * @brief Test fixedBuffer method.
  */
-TEST_F (ProactorTest, registerFixedBuffers)
+TEST_F (ProactorTest, fixedBuffer)
 {
-    Proactor proactor;
+    join::BasicProactor<FixedPolicy> proactor;
 
-    LocalMem::SlabAllocator<1, 1024, 4096> arena;
-
-    ASSERT_EQ (proactor.registerFixedBuffers (arena), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.registerFixedBuffers (arena), -1);
-    ASSERT_EQ (proactor.unregisterFixedBuffers (), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.registerFixedBuffers (arena), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.unregisterFixedBuffers (), 0) << join::lastError.message ();
-    ASSERT_EQ (proactor.unregisterFixedBuffers (), -1);
+    char* buf = proactor.fixedBuffer ().acquire (4096);
+    ASSERT_NE (buf, nullptr) << join::lastError.message ();
+    ASSERT_TRUE (proactor.fixedBuffer ().owns (buf, 4096));
+    proactor.fixedBuffer ().release (buf);
 }
 #endif
 
@@ -1413,15 +1432,12 @@ TEST_F (ProactorTest, asyncWriteFixed)
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
     const char* msg = "asyncWriteFixed";
-    LocalMem::SlabAllocator<4, sizeof (_buf)> allocator;
-    allocator.tryAllocate (sizeof (_buf));
-    void* regbuf = allocator.tryAllocate (sizeof (_buf));
+    char* regbuf = FixedProactorThread::proactor ().fixedBuffer ().acquire (sizeof (_buf));
+    ASSERT_NE (regbuf, nullptr) << join::lastError.message ();
     ::memcpy (regbuf, msg, strlen (msg));
 
-    ASSERT_EQ (ProactorThread::proactor ().registerFixedBuffers (allocator), 0) << join::lastError.message ();
-
     _writeOp = IoOperation::makeWriteFixed (_server.handle (), regbuf, strlen (msg), 0, this);
-    ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (FixedProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1437,7 +1453,7 @@ TEST_F (ProactorTest, asyncWriteFixed)
     ASSERT_EQ (_client.readExactly (rbuf, strlen (msg), _timeout), 0) << join::lastError.message ();
     ASSERT_EQ (std::string (rbuf, strlen (msg)), msg);
 
-    ASSERT_EQ (ProactorThread::proactor ().unregisterFixedBuffers (), 0) << join::lastError.message ();
+    FixedProactorThread::proactor ().fixedBuffer ().release (regbuf);
 }
 
 /**
@@ -1452,14 +1468,11 @@ TEST_F (ProactorTest, asyncReadFixed)
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
 
-    LocalMem::SlabAllocator<4, 64, sizeof (_buf)> allocator;
-    allocator.tryAllocate (sizeof (_buf));
-    void* regbuf = allocator.tryAllocate (sizeof (_buf));
+    char* regbuf = FixedProactorThread::proactor ().fixedBuffer ().acquire (sizeof (_buf));
+    ASSERT_NE (regbuf, nullptr) << join::lastError.message ();
 
-    ASSERT_EQ (ProactorThread::proactor ().registerFixedBuffers (allocator), 0) << join::lastError.message ();
-
-    _readOp = IoOperation::makeReadFixed (_server.handle (), regbuf, sizeof (_buf), 1, this);
-    ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
+    _readOp = IoOperation::makeReadFixed (_server.handle (), regbuf, sizeof (_buf), 0, this);
+    ASSERT_EQ (FixedProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncReadFixed", strlen ("asyncReadFixed"), _timeout), 0)
         << join::lastError.message ();
 
@@ -1468,12 +1481,12 @@ TEST_F (ProactorTest, asyncReadFixed)
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
             return _op == &_readOp && _result > 0;
         }));
-        ASSERT_EQ (std::string (static_cast<char*> (regbuf), _result), "asyncReadFixed");
+        ASSERT_EQ (std::string (regbuf, _result), "asyncReadFixed");
         _op = nullptr;
         _result = 0;
     }
 
-    ASSERT_EQ (ProactorThread::proactor ().unregisterFixedBuffers (), 0) << join::lastError.message ();
+    FixedProactorThread::proactor ().fixedBuffer ().release (regbuf);
 }
 #endif
 

@@ -30,6 +30,7 @@
 #include <join/io_operation.hpp>
 #include <join/function.hpp>
 #ifdef JOIN_HAS_IO_URING
+#include <join/io_fixed_buffer.hpp>
 #include <join/io_policy.hpp>
 #include <join/wheel.hpp>
 #else
@@ -42,6 +43,7 @@
 
 // C++.
 #include <unordered_map>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -274,6 +276,11 @@ public:
 
     /// timer wheel, able to arm a timer for every queued command.
     using Wheel = BasicWheel<Monotonic, WheelPolicy, _queueSize, tick_ns_v<IoPolicy>>;
+
+    /// registered I/O buffers.
+    using FixedBuffer =
+        std::conditional_t<has_fixed_buffer_v<IoPolicy>,
+                           IoFixedBuffer<fixed_buffer_count_v<IoPolicy>, fixed_buffer_size_v<IoPolicy>>, NoFixedBuffer>;
 #else
     /// timer wheel of the underlying reactor.
     using Wheel = Reactor::Wheel;
@@ -281,6 +288,7 @@ public:
 
     /**
      * @brief initialize the proactor and its I/O backend.
+     * @throw std::system_error on initialization failure.
      */
     explicit BasicProactor ();
 
@@ -379,22 +387,6 @@ public:
      */
     void waitStopped () const noexcept;
 
-#ifdef JOIN_HAS_IO_URING
-    /**
-     * @brief register the arena chunks as fixed buffers.
-     * @param arena arena to register.
-     * @return 0 on success, -1 on failure.
-     */
-    template <size_t Count, size_t... Sizes>
-    int registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena) noexcept;
-
-    /**
-     * @brief unregister previously registered fixed buffers.
-     * @return 0 on success, -1 on failure.
-     */
-    int unregisterFixedBuffers () noexcept;
-#endif
-
     /**
      * @brief register a provided buffer ring.
      * @param group buffer group id.
@@ -453,6 +445,15 @@ public:
      * @return timer wheel.
      */
     Wheel& wheel () noexcept;
+
+#ifdef JOIN_HAS_IO_URING
+    /**
+     * @brief get the registered I/O buffers.
+     * @return registered I/O buffers.
+     */
+    FixedBuffer& fixedBuffer () noexcept
+        requires has_fixed_buffer_v<IoPolicy>;
+#endif
 
 private:
     /**
@@ -578,15 +579,6 @@ private:
 
 #ifdef JOIN_HAS_IO_URING
     /**
-     * @brief register one fixed buffer per arena pool.
-     * @param arena arena to register.
-     * @param index sequence used to expand the pool sizes.
-     * @return 0 on success, -1 on failure.
-     */
-    template <size_t Count, size_t... Sizes, size_t... Is>
-    int registerFixedBuffers (LocalMem::SlabAllocator<Count, Sizes...>& arena, std::index_sequence<Is...>) noexcept;
-
-    /**
      * @brief get a free submission queue entry, submitting pending entries if the ring is full.
      * @return pointer to sqe, or nullptr if unavailable.
      */
@@ -682,6 +674,9 @@ private:
 #ifdef JOIN_HAS_IO_URING
     /// timer wheel advanced by the event loop, built first so that nothing leaks if it throws.
     Wheel _wheel{*this};
+
+    /// registered I/O buffers.
+    [[no_unique_address]] FixedBuffer _fixedBuffer;
 #endif
 
     /// command queue.

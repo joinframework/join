@@ -44,67 +44,17 @@ TEST (IoFixedBuffer, create)
 
     IoFixedBuffer<4, 256> buffer;
     ASSERT_NE (buffer.data (), nullptr);
-    ASSERT_EQ (buffer.attach (&ring), 0) << join::lastError.message ();
-    ASSERT_EQ (buffer.detach (), 0) << join::lastError.message ();
-
-    IoFixedBuffer<4, 256> attached (&ring);
-    ASSERT_NE (attached.data (), nullptr);
-    ASSERT_EQ (attached.attach (&ring), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    ASSERT_THROW ((IoFixedBuffer<4, 256> (&ring)), std::system_error);
-
-    ASSERT_EQ (attached.detach (), 0) << join::lastError.message ();
-
-    io_uring_queue_exit (&ring);
-}
-
-/**
- * @brief Test attach method.
- */
-TEST (IoFixedBuffer, attach)
-{
-    io_uring ring;
-    ASSERT_EQ (io_uring_queue_init (8, &ring, 0), 0);
-
-    IoFixedBuffer<4, 256> buffer;
-    ASSERT_EQ (buffer.attach (&ring), 0) << join::lastError.message ();
-
-    ASSERT_EQ (buffer.attach (&ring), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    IoFixedBuffer<4, 256> other;
-    ASSERT_EQ (other.attach (&ring), -1);
-    ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
-
-    ASSERT_EQ (buffer.detach (), 0) << join::lastError.message ();
-
-    io_uring_queue_exit (&ring);
-}
-
-/**
- * @brief Test detach method.
- */
-TEST (IoFixedBuffer, detach)
-{
-    io_uring ring;
-    ASSERT_EQ (io_uring_queue_init (8, &ring, 0), 0);
-
-    IoFixedBuffer<4, 256> buffer;
-    ASSERT_EQ (buffer.detach (), 0);
-
-    ASSERT_EQ (buffer.attach (&ring), 0) << join::lastError.message ();
-    ASSERT_EQ (buffer.detach (), 0) << join::lastError.message ();
-    ASSERT_EQ (buffer.detach (), 0);
-
-    ASSERT_EQ (buffer.attach (&ring), 0) << join::lastError.message ();
-    ASSERT_EQ (buffer.detach (), 0) << join::lastError.message ();
 
     {
-        IoFixedBuffer<4, 256> other (&ring);
+        IoFixedBuffer<4, 256> attached (&ring);
+        ASSERT_NE (attached.data (), nullptr);
+        ASSERT_THROW ((IoFixedBuffer<4, 256> (&ring)), std::system_error);
     }
-    ASSERT_EQ (buffer.attach (&ring), 0) << join::lastError.message ();
-    ASSERT_EQ (buffer.detach (), 0) << join::lastError.message ();
+
+    {
+        IoFixedBuffer<4, 256> attached (&ring);
+        ASSERT_NE (attached.data (), nullptr);
+    }
 
     io_uring_queue_exit (&ring);
 }
