@@ -30,6 +30,7 @@ paths:
 
 ## Classes
 - Order: `public`, `protected`, `private`; constructors, special members, destructor, API.
+- Accessors follow the order of the members they expose, in the declaration, the out-of-class definition and the tests.
 - Special members explicit (`= delete` copy then move, or `= default`); moved-from objects stay valid and empty. `explicit` single-argument constructors, `override` always, `virtual ~X` only on real bases, `final` on new leaves (legacy `Arp`, `Ping` are not).
 - `noexcept` when it cannot throw, `constexpr` wherever possible, `[[maybe_unused]]` on unused parameters, `static_assert` with message. No `[[nodiscard]]`.
 
