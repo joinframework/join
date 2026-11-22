@@ -40,6 +40,7 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
     resume = other.resume;
 #ifdef JOIN_HAS_IO_URING
     index = other.index;
+    result = other.result;
 #else
     next = other.next;
 #endif
@@ -50,6 +51,7 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
     handler = other.handler;
     data = other.data;
     ring = other.ring;
+    timer = other.timer;
 }
 
 // =========================================================================
@@ -61,6 +63,7 @@ IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
     code = other.code;
 #ifdef JOIN_HAS_IO_URING
     index = other.index;
+    result = other.result;
 #else
     next = other.next;
 #endif
@@ -71,6 +74,7 @@ IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
     handler = other.handler;
     data = other.data;
     ring = other.ring;
+    timer = other.timer;
     return *this;
 }
 
