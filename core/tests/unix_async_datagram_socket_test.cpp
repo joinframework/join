@@ -395,6 +395,20 @@ TEST_F (UnixAsyncDatagramSocket, close)
 }
 
 /**
+ * @brief Test destruction without closing the socket.
+ */
+TEST_F (UnixAsyncDatagramSocket, destroy)
+{
+    for (int i = 0; i < 100; ++i)
+    {
+        UnixDgram::AsyncSocket client;
+
+        ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+    }
+}
+
+/**
  * @brief Test bind method.
  */
 TEST_F (UnixAsyncDatagramSocket, bind)

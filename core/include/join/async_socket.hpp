@@ -169,7 +169,7 @@ namespace join
         /**
          * @brief destroy the socket instance.
          */
-        ~BasicAsyncSocket ()
+        virtual ~BasicAsyncSocket ()
         {
             close ();
         }

@@ -357,6 +357,20 @@ TEST_F (IcmpAsyncSocket, close)
 }
 
 /**
+ * @brief Test destruction without closing the socket.
+ */
+TEST_F (IcmpAsyncSocket, destroy)
+{
+    for (int i = 0; i < 100; ++i)
+    {
+        Icmp::AsyncSocket client;
+
+        ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
+        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+    }
+}
+
+/**
  * @brief Test bind method.
  */
 TEST_F (IcmpAsyncSocket, bind)
