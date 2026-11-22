@@ -49,6 +49,7 @@
 
 // C.
 #include <sys/eventfd.h>
+#include <sys/socket.h>
 #include <sys/prctl.h>
 #include <cerrno>
 

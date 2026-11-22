@@ -33,9 +33,11 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <system_error>
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <vector>
 
 // C.
 #include <cstdint>
@@ -65,6 +67,14 @@ struct FixedPolicy : join::IoHybridPolicy
 };
 
 using FixedProactorThread = join::BasicProactorThread<FixedPolicy>;
+
+/**
+ * @brief policy declaring an unsupported ring size.
+ */
+struct InvalidPolicy : join::IoHybridPolicy
+{
+    static constexpr uint32_t sqEntries = 65536;
+};
 
 /**
  * @brief Class used to test HybridProactor.
@@ -317,6 +327,14 @@ socklen_t HybridProactorTest::_namelen = 0;
 void* HybridProactorTest::_control = nullptr;
 int HybridProactorTest::_flags = 0;
 char HybridProactorTest::_buf[256] = {};
+
+/**
+ * @brief Test create.
+ */
+TEST_F (HybridProactorTest, create)
+{
+    ASSERT_THROW (join::BasicProactor<InvalidPolicy> (), std::system_error);
+}
 
 /**
  * @brief Test stop.
@@ -661,6 +679,32 @@ TEST_F (HybridProactorTest, chain)
             return _op == &_readOp && _result > 0;
         }));
         ASSERT_EQ (std::string (_buf, _result), "pong");
+        _op = nullptr;
+        _result = 0;
+    }
+
+    std::vector<char> data (8 * 1024 * 1024, 'x');
+    std::vector<char> received (data.size ());
+
+    _writeOp = IoOperation::makeSend (_server.handle (), data.data (), data.size (), MSG_NOSIGNAL, this, true);
+    _spareOp = IoOperation::makeSend (_server.handle (), "tail", 4, MSG_NOSIGNAL, this);
+
+    HybridProactor::InvokeHandler fn = [&proactor] () {
+        ASSERT_EQ (proactor.submit (_writeOp, false), 0) << join::lastError.message ();
+        ASSERT_EQ (proactor.submit (_spareOp, true), 0) << join::lastError.message ();
+    };
+    ASSERT_EQ (proactor.invoke (&fn), 0) << join::lastError.message ();
+
+    ASSERT_EQ (_client.readExactly (received.data (), received.size (), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (received, data);
+    ASSERT_EQ (_client.readExactly (tmp, 4, _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (tmp, 4), "tail");
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_spareOp && _result == 4;
+        }));
         _op = nullptr;
         _result = 0;
     }
