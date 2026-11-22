@@ -61,6 +61,9 @@ namespace join
     template <typename IoPolicy>
     class BasicProactorThread;
 
+    template <typename IoPolicy>
+    inline constexpr bool has_fixed_buffer_v<BasicProactor<IoPolicy>> = has_fixed_buffer_v<IoPolicy>;
+
     using Proactor = BasicProactor<IoDefaultPolicy>;
     using HybridProactor = BasicProactor<IoHybridPolicy>;
     using SqpollProactor = BasicProactor<IoSqpollPolicy>;
@@ -70,6 +73,9 @@ namespace join
 #else
     class BasicProactor;
     class BasicProactorThread;
+
+    template <typename T>
+    inline constexpr bool has_fixed_buffer_v = false;
 
     using Proactor = BasicProactor;
     using ProactorThread = BasicProactorThread;

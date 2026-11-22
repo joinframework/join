@@ -33,6 +33,9 @@
 #include <vector>
 #include <thread>
 
+// C.
+#include <sys/socket.h>
+
 using join::Errc;
 using join::IpAddress;
 using join::ReactorThread;
@@ -519,6 +522,9 @@ TEST_F (TcpSocket, write)
     ASSERT_TRUE (tcpSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_GT (tcpSocket.write (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (tcpSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (::shutdown (tcpSocket.handle (), SHUT_WR), 0);
+    ASSERT_EQ (tcpSocket.write (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, std::errc::broken_pipe);
     ASSERT_EQ (tcpSocket.disconnect (), 0) << join::lastError.message ();
     tcpSocket.close ();
 }

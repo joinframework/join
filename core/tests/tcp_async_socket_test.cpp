@@ -26,6 +26,9 @@
 #include <join/async_acceptor.hpp>
 #include <join/async_socket.hpp>
 #include <join/condition.hpp>
+#ifdef JOIN_HAS_IO_URING
+#include <join/io_policy.hpp>
+#endif
 #include <join/proactor.hpp>
 #include <join/thread.hpp>
 
@@ -39,6 +42,8 @@
 // C.
 #include <sys/socket.h>
 #include <unistd.h>
+#include <cstdint>
+#include <cstring>
 
 using join::Errc;
 using join::Mutex;
@@ -49,6 +54,20 @@ using join::Thread;
 using join::Tcp;
 using join::LocalMem;
 using join::Proactor;
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief policy declaring fixed buffers.
+ */
+struct FixedPolicy : join::IoDefaultPolicy
+{
+    static constexpr uint32_t fixedBufferCount = 4;
+    static constexpr uint32_t fixedBufferSize = 4096;
+};
+
+using FixedProactorThread = join::BasicProactorThread<FixedPolicy>;
+using FixedAsyncSocket = join::BasicAsyncStreamSocket<Tcp, join::BasicProactor<FixedPolicy>>;
+#endif
 
 /**
  * @brief Class used to test the unix asynchronous stream socket API.
@@ -834,6 +853,61 @@ TEST_F (TcpAsyncSocket, asyncWrite)
     }
 
     client.close ();
+
+#ifdef JOIN_HAS_IO_URING
+    FixedAsyncSocket fixed (FixedProactorThread::proactor ());
+    int base = 0;
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        base = _completions;
+    }
+
+    ASSERT_EQ (_server.asyncAccept (onEchoAccept), 0) << join::lastError.message ();
+    ASSERT_EQ (fixed.asyncConnect (onConnect, {_host, _port}), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [base] () {
+            return _completions > base;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        base = _completions;
+    }
+
+    char* arena = FixedProactorThread::proactor ().fixedBuffer ().acquire (4096);
+    ASSERT_NE (arena, nullptr) << join::lastError.message ();
+    ::memcpy (arena, "arena", 5);
+
+    ASSERT_NE (fixed.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_NE (fixed.asyncWrite (nullptr, arena, 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [base] () {
+            return _completions > base;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (std::string (_buf, _transferred), "arena");
+        base = _completions;
+    }
+
+    ASSERT_NE (fixed.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_NE (fixed.asyncWrite (nullptr, "plain", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [base] () {
+            return _completions > base;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (std::string (_buf, _transferred), "plain");
+    }
+
+    fixed.close ();
+
+    FixedProactorThread::proactor ().fixedBuffer ().release (arena);
+#endif
 }
 
 /**

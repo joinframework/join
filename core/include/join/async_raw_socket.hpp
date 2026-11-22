@@ -278,14 +278,7 @@ namespace join
             write->msg.msg_control = nullptr;
             write->msg.msg_controllen = 0;
             write->msg.msg_flags = 0;
-            if constexpr (has_zero_copy_v<Protocol>)
-            {
-                write->op = IoOperation::makeSendmsgZc (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
-            }
-            else
-            {
-                write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
-            }
+            write->op = IoOperation::makeSendmsg (this->_socket.handle (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator.getIndex (write);
@@ -346,7 +339,8 @@ namespace join
             {
                 completeRead (reinterpret_cast<AsyncRead*> (&op), code, size);
             }
-            else if ((opcode == IoOperation::Opcode::SendMsg) || (opcode == IoOperation::Opcode::SendMsgZc))
+            else if ((opcode == IoOperation::Opcode::SendMsg) || (opcode == IoOperation::Opcode::Send) ||
+                     (opcode == IoOperation::Opcode::SendZc))
             {
                 completeWrite (reinterpret_cast<AsyncWrite*> (&op), code, size);
             }

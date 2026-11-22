@@ -215,7 +215,7 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler,
+        static IoOperation makeRead (int fd, void* buf, size_t len, CompletionHandler* handler,
                                      bool linked = false) noexcept;
 
         /**
@@ -227,7 +227,7 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler,
+        static IoOperation makeWrite (int fd, const void* buf, size_t len, CompletionHandler* handler,
                                       bool linked = false) noexcept;
 
         /**
@@ -333,7 +333,7 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler,
+        static IoOperation makeRecv (int fd, void* buf, size_t len, int flags, CompletionHandler* handler,
                                      bool linked = false) noexcept;
 
         /**
@@ -356,7 +356,7 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSend (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+        static IoOperation makeSend (int fd, const void* buf, size_t len, int flags, CompletionHandler* handler,
                                      bool linked = false) noexcept;
 
         /**
@@ -369,7 +369,7 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSendZc (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+        static IoOperation makeSendZc (int fd, const void* buf, size_t len, int flags, CompletionHandler* handler,
                                        bool linked = false) noexcept;
 
         union Data

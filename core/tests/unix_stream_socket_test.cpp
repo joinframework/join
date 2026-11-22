@@ -30,6 +30,7 @@
 #include <gtest/gtest.h>
 
 // C.
+#include <sys/socket.h>
 #include <unistd.h>
 
 using join::Errc;
@@ -367,6 +368,9 @@ TEST_F (UnixStreamSocket, write)
     ASSERT_TRUE (unixSocket.waitReadyWrite (_timeout)) << join::lastError.message ();
     ASSERT_GT (unixSocket.write (data, sizeof (data)), 0) << join::lastError.message ();
     ASSERT_TRUE (unixSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (::shutdown (unixSocket.handle (), SHUT_WR), 0);
+    ASSERT_EQ (unixSocket.write (data, sizeof (data)), -1);
+    ASSERT_EQ (join::lastError, std::errc::broken_pipe);
     ASSERT_EQ (unixSocket.disconnect (), 0) << join::lastError.message ();
     unixSocket.close ();
 }
