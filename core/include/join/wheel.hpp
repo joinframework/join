@@ -141,7 +141,22 @@ namespace join
         template <class Rep, class Period, typename Func, typename... Args>
         ssize_t setOneShot (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args) noexcept
         {
-            return createTimer (ticksFor (duration), 0, std::forward<Func> (callback), std::forward<Args> (args)...);
+            return createTimer (toTick (ClockPolicy::now ()) + ticksFor (duration) + 1, 0,
+                                std::forward<Func> (callback), std::forward<Args> (args)...);
+        }
+
+        /**
+         * @brief arm a one-shot timer.
+         * @param deadline time point, rounded up to a tick.
+         * @param callback callback.
+         * @param args callback arguments.
+         * @return timer handle on success, -1 on failure.
+         */
+        template <typename Func, typename... Args>
+        ssize_t setOneShot (typename ClockPolicy::TimePoint deadline, Func&& callback, Args&&... args) noexcept
+        {
+            return createTimer (ticksFor (deadline.time_since_epoch ()), 0, std::forward<Func> (callback),
+                                std::forward<Args> (args)...);
         }
 
         /**
@@ -155,7 +170,8 @@ namespace join
         ssize_t setInterval (std::chrono::duration<Rep, Period> duration, Func&& callback, Args&&... args) noexcept
         {
             const uint64_t ticks = ticksFor (duration);
-            return createTimer (ticks, ticks, std::forward<Func> (callback), std::forward<Args> (args)...);
+            return createTimer (toTick (ClockPolicy::now ()) + ticks + 1, ticks, std::forward<Func> (callback),
+                                std::forward<Args> (args)...);
         }
 
         /**
@@ -473,14 +489,14 @@ namespace join
 
         /**
          * @brief create and arm a timer.
-         * @param ticks delay in ticks.
+         * @param deadline deadline in ticks.
          * @param interval interval in ticks, zero if one-shot.
          * @param callback callback.
          * @param args callback arguments.
          * @return timer handle on success, -1 on failure.
          */
         template <typename Func, typename... Args>
-        ssize_t createTimer (uint64_t ticks, uint64_t interval, Func&& callback, Args&&... args) noexcept
+        ssize_t createTimer (uint64_t deadline, uint64_t interval, Func&& callback, Args&&... args) noexcept
         {
             void* ptr = _allocator.tryAllocate (sizeof (Node));
 
@@ -494,8 +510,7 @@ namespace join
             node->callback = std::bind (std::forward<Func> (callback), std::forward<Args> (args)...);
             node->interval.store (interval, std::memory_order_release);
             node->state = State::Idle;
-            const uint64_t now = toTick (ClockPolicy::now ());
-            node->deadline.store (now + ticks + 1, std::memory_order_release);
+            node->deadline.store (deadline, std::memory_order_release);
 
             const uint32_t place = _allocator.getIndex (node);
             const uint32_t occupant = _generations[place].load (std::memory_order_relaxed) & _occupantMask;
@@ -504,7 +519,7 @@ namespace join
             {
                 if (_armed++ == 0)
                 {
-                    _tick = now;
+                    _tick = toTick (ClockPolicy::now ());
                     _due = std::numeric_limits<uint64_t>::max ();
                 }
 

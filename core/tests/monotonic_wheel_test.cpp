@@ -66,8 +66,25 @@ TEST (MonotonicWheel, setOneShot)
                                  }),
                0);
 
+    const auto deadline = Monotonic::now () + 50ms;
+    std::atomic<bool> early{false};
+
+    ASSERT_GT (wheel.setOneShot (deadline,
+                                 [&count, &early, deadline] () {
+                                     early = (Monotonic::now () < deadline);
+                                     ++count;
+                                 }),
+               0);
+
+    ASSERT_GT (wheel.setOneShot (deadline - 100ms,
+                                 [&count] () {
+                                     ++count;
+                                 }),
+               0);
+
     std::this_thread::sleep_for (200ms);
-    EXPECT_EQ (count, 3);
+    EXPECT_EQ (count, 5);
+    EXPECT_FALSE (early);
 
     ASSERT_GT (wheel.setOneShot (10ms,
                                  [&wheel, &count] () {
@@ -80,7 +97,7 @@ TEST (MonotonicWheel, setOneShot)
                0);
 
     std::this_thread::sleep_for (200ms);
-    EXPECT_EQ (count, 4);
+    EXPECT_EQ (count, 6);
 
     Monotonic::Wheel<64, 1'000> fine;
     std::atomic<int> cascaded{0};
