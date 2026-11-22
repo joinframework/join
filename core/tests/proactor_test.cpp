@@ -35,9 +35,11 @@
 #include <gtest/gtest.h>
 
 // C++.
+#include <system_error>
 #include <thread>
 #include <chrono>
 #include <atomic>
+#include <vector>
 
 // C.
 #include <sys/socket.h>
@@ -72,6 +74,14 @@ struct FixedPolicy : join::IoDefaultPolicy
 };
 
 using FixedProactorThread = join::BasicProactorThread<FixedPolicy>;
+
+/**
+ * @brief policy declaring an unsupported ring size.
+ */
+struct InvalidPolicy : join::IoDefaultPolicy
+{
+    static constexpr uint32_t sqEntries = 65536;
+};
 #endif
 
 /**
@@ -346,6 +356,16 @@ socklen_t ProactorTest::_namelen = 0;
 void* ProactorTest::_control = nullptr;
 int ProactorTest::_flags = 0;
 char ProactorTest::_buf[256] = {};
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test create.
+ */
+TEST_F (ProactorTest, create)
+{
+    ASSERT_THROW (join::BasicProactor<InvalidPolicy> (), std::system_error);
+}
+#endif
 
 /**
  * @brief Test stop.
@@ -856,6 +876,32 @@ TEST_F (ProactorTest, chain)
             return _op == &_readOp && _result > 0;
         }));
         ASSERT_EQ (std::string (_buf, _result), "pong");
+        _op = nullptr;
+        _result = 0;
+    }
+
+    std::vector<char> data (8 * 1024 * 1024, 'x');
+    std::vector<char> received (data.size ());
+
+    _writeOp = IoOperation::makeSend (_server.handle (), data.data (), data.size (), MSG_NOSIGNAL, this, true);
+    _spareOp = IoOperation::makeSend (_server.handle (), "tail", 4, MSG_NOSIGNAL, this);
+
+    Proactor::InvokeHandler fn = [&proactor] () {
+        ASSERT_EQ (proactor.submit (_writeOp, false), 0) << join::lastError.message ();
+        ASSERT_EQ (proactor.submit (_spareOp, true), 0) << join::lastError.message ();
+    };
+    ASSERT_EQ (proactor.invoke (&fn), 0) << join::lastError.message ();
+
+    ASSERT_EQ (_client.readExactly (received.data (), received.size (), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (received, data);
+    ASSERT_EQ (_client.readExactly (tmp, 4, _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (tmp, 4), "tail");
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_spareOp && _result == 4;
+        }));
         _op = nullptr;
         _result = 0;
     }

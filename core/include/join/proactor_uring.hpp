@@ -53,12 +53,11 @@ join::BasicProactor<IoPolicy>::BasicProactor ()
         params.sq_thread_cpu = IoPolicy::sqThreadCpu;
     }
 
-    if (io_uring_queue_init_params (IoPolicy::sqEntries, &_ring, &params) < 0)
+    int result = io_uring_queue_init_params (IoPolicy::sqEntries, &_ring, &params);
+    if (result < 0)
     {
-        // LCOV_EXCL_START
         ::close (_wakeup);
-        throw std::system_error (errno, std::system_category (), "io_uring_queue_init failed");
-        // LCOV_EXCL_STOP
+        throw std::system_error (-result, std::system_category (), "io_uring_queue_init failed");
     }
 
     if constexpr (has_fixed_buffer_v<IoPolicy>)
@@ -887,6 +886,19 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
     if (JOIN_UNLIKELY (op.linked))
     {
         sqe->flags |= IOSQE_IO_LINK;
+
+        switch (static_cast<IoOperation::Opcode> (op.code))
+        {
+            case IoOperation::Opcode::SendMsg:
+            case IoOperation::Opcode::SendMsgZc:
+            case IoOperation::Opcode::Send:
+            case IoOperation::Opcode::SendZc:
+                sqe->msg_flags |= MSG_WAITALL;
+                break;
+
+            default:
+                break;
+        }
     }
 }
 
