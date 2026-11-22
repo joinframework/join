@@ -289,7 +289,7 @@ inline int join::BasicProactor::mlock () const noexcept
 {
     if (_commands.mlock () == -1)
     {
-        return -1;
+        return -1;  // LCOV_EXCL_LINE
     }
 
     return _reactor.mlock ();
@@ -427,7 +427,7 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
-        backoff ();
+        backoff ();  // LCOV_EXCL_LINE
     }
 
     IoOperation::State expected = IoOperation::State::Idle;
@@ -576,19 +576,20 @@ inline void join::BasicProactor::cancelAllOperations () noexcept
 {
     for (size_t fd = 0; fd < _readOps.size (); ++fd)
     {
-        IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
-        IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
-        if (rOp || wOp)
+        for (auto* ops : {&_readOps, &_writeOps})
         {
-            _reactor.delHandler (fd);
-        }
-        if (rOp != nullptr)
-        {
-            drainQueue (*rOp, -ECANCELED, 0, true);
-        }
-        if (wOp != nullptr)
-        {
-            drainQueue (*wOp, -ECANCELED, 0, true);
+            IoOperation* last = (*ops)[fd];
+            size_t count = 0;
+
+            for (IoOperation* op = last; op != nullptr; op = (op->next != last) ? op->next : nullptr)
+            {
+                ++count;
+            }
+
+            for (; (count > 0) && ((*ops)[fd] != nullptr); --count)
+            {
+                endOperation (*(*ops)[fd]->next, -ECANCELED, true);
+            }
         }
     }
 }
@@ -632,64 +633,17 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
         return;
     }
 
-    if (JOIN_UNLIKELY (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)))
-    {
-        IoOperation* rOp = std::exchange (_readOps[fd], nullptr);
-        IoOperation* wOp = std::exchange (_writeOps[fd], nullptr);
-        if (JOIN_LIKELY (rOp || wOp))
-        {
-            _reactor.delHandler (fd);
-        }
+    const bool closing = (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) != 0;
+    const bool reading = closing && (_readOps[fd] != nullptr);
 
-        int result = (revents & EPOLLERR) ? -ECONNRESET : 0;
-
-        if (rOp != nullptr)
-        {
-            drainQueue (*rOp, result, revents, false);
-        }
-        if (wOp != nullptr)
-        {
-            drainQueue (*wOp, result, revents, false);
-        }
-
-        return;
-    }
-
-    if (revents & EPOLLIN)
+    if (closing || (revents & EPOLLIN))
     {
         processQueue (fd, false, revents);
     }
 
-    if (revents & EPOLLOUT)
+    if (!reading && (revents & (EPOLLOUT | EPOLLERR | EPOLLHUP)))
     {
         processQueue (fd, true, revents);
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : drainQueue
-// =========================================================================
-inline void join::BasicProactor::drainQueue (IoOperation& tail, int result, uint32_t revents, bool cancelled) noexcept
-{
-    IoOperation* op = tail.next;
-    tail.next = nullptr;
-
-    while (op != nullptr)
-    {
-        IoOperation* next = op->next;
-        op->next = nullptr;
-
-        int res = result;
-
-        if ((revents != 0) && (op->code == static_cast<uint8_t> (IoOperation::Opcode::Poll)))
-        {
-            res = executeOperation (*op, revents);
-        }
-
-        dispatchOperation (*op, res, cancelled);
-
-        op = next;
     }
 }
 
@@ -805,7 +759,8 @@ inline void join::BasicProactor::processOperation (IoOperation& op, uint32_t rev
 
     int result = executeOperation (op, revents);
 
-    if (JOIN_UNLIKELY ((result == -EAGAIN) && (op.code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
+    if (JOIN_UNLIKELY ((result == -EAGAIN) && !(revents & EPOLLERR) &&
+                       (op.code != static_cast<uint8_t> (IoOperation::Opcode::Connect))))
     {
         if (br != nullptr)
         {
@@ -824,7 +779,10 @@ inline void join::BasicProactor::processOperation (IoOperation& op, uint32_t rev
         }
     }
 
-    if (op.multishot &&
+    const bool failed = (op.code == static_cast<uint8_t> (IoOperation::Opcode::Poll)) &&
+                        ((revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) != 0);
+
+    if (op.multishot && !failed &&
         ((result > 0) || ((result == 0) && (op.code == static_cast<uint8_t> (IoOperation::Opcode::Accept)))))
     {
         op.more = true;
@@ -871,7 +829,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
                     socklen_t len = sizeof (err);
                     if (JOIN_UNLIKELY (::getsockopt (op.data.connect.fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1))
                     {
-                        return -errno;
+                        return -errno;  // LCOV_EXCL_LINE
                     }
                     return JOIN_UNLIKELY (err) ? -err : 0;
                 }
@@ -940,8 +898,8 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
                     return (n == -1) ? -errno : static_cast<int> (n);
                 }
 
-            default:
-                return -EINVAL;
+            default:             // LCOV_EXCL_LINE
+                return -EINVAL;  // LCOV_EXCL_LINE
         }
     }
 }

@@ -25,6 +25,8 @@
 // libjoin.
 #include <join/async_raw_socket.hpp>
 #include <join/condition.hpp>
+#include <join/proactor.hpp>
+#include <join/thread.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -42,6 +44,7 @@ using join::ScopedLock;
 using join::IpAddress;
 using join::MacAddress;
 using join::Raw;
+using join::Thread;
 using join::Proactor;
 using join::LocalMem;
 
@@ -648,6 +651,81 @@ TEST_F (RawAsyncSocket, closeFromWriteHandler)
     ASSERT_FALSE (code ()) << code ().message ();
     ASSERT_FALSE (client.opened ());
 
+    _current = nullptr;
+}
+
+/**
+ * @brief Test close from within the read completion handler.
+ */
+TEST_F (RawAsyncSocket, closeFromReadHandler)
+{
+    Raw::AsyncSocket client;
+
+    _current = &client;
+
+    ASSERT_EQ (client.bind (_interface), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 3; ++i)
+    {
+        ASSERT_NE (client.asyncRead (
+                       [] (const std::error_code&, const char*, size_t, bool) {
+                           _current->close ();
+
+                           ScopedLock<Mutex> lock (_mut);
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _buf, sizeof (_buf)),
+                   -1)
+            << join::lastError.message ();
+    }
+
+    ASSERT_NE (client.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+    }
+
+    ASSERT_FALSE (client.opened ());
+    client.close ();
+
+    Proactor proactor;
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+    while (!proactor.isRunning ())
+    {
+    }
+    Raw::AsyncSocket stopped (proactor);
+
+    _current = &stopped;
+
+    ASSERT_EQ (stopped.bind (_interface), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 3; ++i)
+    {
+        ASSERT_NE (stopped.asyncRead (
+                       [] (const std::error_code&, const char*, size_t, bool) {
+                           _current->close ();
+
+                           ScopedLock<Mutex> lock (_mut);
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _buf, sizeof (_buf)),
+                   -1)
+            << join::lastError.message ();
+    }
+
+    proactor.stop ();
+    th.join ();
+
+    ASSERT_EQ (_completions, 6);
+    ASSERT_FALSE (stopped.opened ());
     _current = nullptr;
 }
 
