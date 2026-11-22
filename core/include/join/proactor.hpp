@@ -42,9 +42,9 @@
 #include <join/queue.hpp>
 
 // C++.
+#include <initializer_list>
 #include <unordered_map>
 #include <type_traits>
-#include <utility>
 #include <vector>
 
 // C.
@@ -623,15 +623,6 @@ private:
      * @param revents events reported by the reactor.
      */
     void onEvent (int fd, uint32_t revents) noexcept override;
-
-    /**
-     * @brief complete every operation of a queue detached from its descriptor, in submission order.
-     * @param tail last operation of the queue.
-     * @param result result reported to the operations.
-     * @param revents events reported by the reactor, handed to poll operations.
-     * @param cancelled true if the operations are cancelled.
-     */
-    void drainQueue (IoOperation& tail, int result, uint32_t revents, bool cancelled) noexcept;
 
     /**
      * @brief notify every poll operation of a queue whose descriptor is ready and execute its first other operation.

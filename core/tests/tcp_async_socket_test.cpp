@@ -26,11 +26,18 @@
 #include <join/async_acceptor.hpp>
 #include <join/async_socket.hpp>
 #include <join/condition.hpp>
+#include <join/proactor.hpp>
+#include <join/thread.hpp>
 
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <algorithm>
+#include <vector>
+
 // C.
+#include <sys/socket.h>
 #include <unistd.h>
 
 using join::Errc;
@@ -38,6 +45,7 @@ using join::Mutex;
 using join::Condition;
 using join::ScopedLock;
 using join::IpAddress;
+using join::Thread;
 using join::Tcp;
 using join::LocalMem;
 using join::Proactor;
@@ -1052,6 +1060,183 @@ TEST_F (TcpAsyncSocket, closeFromWriteHandler)
 
     ASSERT_FALSE (client.opened ());
     _current = nullptr;
+}
+
+/**
+ * @brief Test close from within the read completion handler.
+ */
+TEST_F (TcpAsyncSocket, closeFromReadHandler)
+{
+    const std::vector<char> data (1 << 20);
+    Tcp::Acceptor acceptor;
+    Tcp::AsyncSocket client;
+
+    _current = &client;
+
+    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncConnect (onConnect, {_host, _stallport}), 0) << join::lastError.message ();
+
+    Tcp::Socket server = acceptor.accept ();
+    ASSERT_TRUE (server.connected ()) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_EQ (client.setOption (Tcp::Socket::SndBuffer, 65536), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncRead (
+                   [] (const std::error_code& ec, const char*, size_t, bool) {
+                       _current->close ();
+                       _current->asyncConnect (nullptr, {_blackhole, _port});
+
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   _buf, sizeof (_buf)),
+               -1)
+        << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, data.data (), data.size ()), -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, data.data (), data.size ()), -1) << join::lastError.message ();
+
+    const linger option{.l_onoff = 1, .l_linger = 0};
+    ASSERT_EQ (::setsockopt (server.handle (), SOL_SOCKET, SO_LINGER, &option, sizeof (option)), 0);
+    server.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_TRUE (_code);
+    }
+
+    Proactor::InvokeHandler barrier = [] () {
+    };
+    ASSERT_EQ (join::ProactorThread::proactor ().invoke (&barrier), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.connecting ());
+
+    client.close ();
+
+    Proactor proactor;
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+    Tcp::AsyncSocket stopped (proactor);
+
+    _current = &stopped;
+
+    ASSERT_EQ (stopped.asyncConnect (onConnect, {_host, _port}), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    for (int i = 0; i < 3; ++i)
+    {
+        ASSERT_NE (stopped.asyncRead (
+                       [] (const std::error_code&, const char*, size_t, bool) {
+                           _current->close ();
+
+                           ScopedLock<Mutex> lock (_mut);
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _buf, sizeof (_buf)),
+                   -1)
+            << join::lastError.message ();
+    }
+
+    proactor.stop ();
+    th.join ();
+
+    ASSERT_EQ (_completions, 6);
+    ASSERT_FALSE (stopped.opened ());
+    _current = nullptr;
+}
+
+/**
+ * @brief Test a peer closing its side of the connection.
+ */
+TEST_F (TcpAsyncSocket, halfClose)
+{
+    const std::vector<char> data (1 << 20);
+    std::vector<char> sink (1 << 16);
+    size_t smallest = data.size ();
+    Tcp::Acceptor acceptor;
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncConnect (onConnect, {_host, _stallport}), 0) << join::lastError.message ();
+
+    Tcp::Socket server = acceptor.accept ();
+    ASSERT_TRUE (server.connected ()) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_EQ (client.setOption (Tcp::Socket::SndBuffer, 65536), 0) << join::lastError.message ();
+    ASSERT_EQ (server.writeExactly ("hello", 5), 0) << join::lastError.message ();
+    ASSERT_EQ (::shutdown (server.handle (), SHUT_WR), 0);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        ASSERT_NE (client.asyncWrite (
+                       [&smallest] (const std::error_code& ec, size_t size) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           smallest = std::min (smallest, size);
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       data.data (), data.size ()),
+                   -1)
+            << join::lastError.message ();
+    }
+
+    ASSERT_NE (client.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+
+    while (server.waitReadyRead (std::chrono::milliseconds (100)))
+    {
+        ASSERT_GT (server.read (sink.data (), sink.size ()), 0) << join::lastError.message ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_GT (smallest, 0u);
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
+    }
+
+    ASSERT_NE (client.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 5;
+        }));
+        ASSERT_EQ (_code, Errc::ConnectionClosed) << _code.message ();
+    }
+
+    client.close ();
 }
 
 /**

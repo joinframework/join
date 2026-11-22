@@ -40,7 +40,11 @@
 #include <atomic>
 
 // C.
+#include <sys/socket.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <cstdint>
+#include <poll.h>
 
 using namespace std::chrono_literals;
 
@@ -577,6 +581,20 @@ TEST_F (ProactorTest, submit)
         _result = 0;
     }
 
+    ASSERT_EQ (::dup2 (_server.handle (), 512), 512) << strerror (errno);
+    _readOp = IoOperation::makeRead (512, _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+    ASSERT_EQ (::close (512), 0) << strerror (errno);
+
 #ifdef JOIN_HAS_IO_URING
     std::error_code errc;
     int result = 0;
@@ -697,6 +715,62 @@ TEST_F (ProactorTest, cancel)
         _op = nullptr;
         _result = 0;
     }
+
+    _spareOp = IoOperation::makeRead (4096, _buf, sizeof (_buf), this);
+    _spareOp.state = IoOperation::State::Submitted;
+    ASSERT_EQ (proactor.cancel (_spareOp, true, true), -1);
+
+    while (::send (_server.handle (), tail, sizeof (tail), MSG_DONTWAIT) > 0)
+    {
+    }
+
+    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    _writeOp = IoOperation::makePoll (_server.handle (), POLLOUT, this);
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_writeOp, true, true), 0) << join::lastError.message ();
+
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _cancelled == &_readOp;
+        }));
+    }
+
+    ASSERT_EQ (proactor.cancel (_writeOp, true, true), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _cancelled == &_writeOp;
+        }));
+    }
+
+    int base = 0;
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        base = _completions + _cancellations;
+    }
+
+    _handlerProactor = &proactor;
+    _cancelTarget = &_spareOp;
+
+    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    _spareOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    tailOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.submit (tailOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("next", 4), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_completions + _cancellations) == (base + 3);
+        }));
+    }
+
+    _handlerProactor = nullptr;
 
     proactor.stop ();
     th.join ();
@@ -900,6 +974,8 @@ TEST_F (ProactorTest, mbind)
     Proactor proactor;
 
     ASSERT_EQ (proactor.mbind (0), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.mbind (-1), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
 }
 #endif
 
@@ -1876,6 +1952,77 @@ TEST_F (ProactorTest, asyncRecvMulti)
         _result = 0;
     }
 
+    struct Drainer : public CompletionHandler
+    {
+        void onComplete (IoOperation& op, [[maybe_unused]] int result) override
+        {
+            char data[3] = {};
+            ::recv (op.fd (), data, sizeof (data), MSG_DONTWAIT | MSG_PEEK);
+
+            if (::memcmp (data, "one", sizeof (data)) == 0)
+            {
+                ::recv (op.fd (), data, sizeof (data), MSG_DONTWAIT);
+            }
+
+            ScopedLock<Mutex> lock (_mut);
+            drained = true;
+            _cond.signal ();
+        }
+
+        bool drained = false;
+    } drainer;
+
+    _spareOp = IoOperation::makePoll (_server.handle (), POLLIN, &drainer);
+    _readOp = IoOperation::makeRecvMulti (_server.handle (), 0, 0, this);
+
+    ASSERT_EQ (ProactorThread::proactor ().submit (_spareOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("one", 3, _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return drainer.drained || ((_op == &_readOp) && (_result == 3));
+        }));
+    }
+
+    ASSERT_EQ (_client.writeExactly ("three", 5, _timeout), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return (_op == &_readOp) && (_result == 5);
+        }));
+        ASSERT_EQ (std::string (_buf, 5), "three");
+    }
+
+    ASSERT_EQ (ProactorThread::proactor ().cancel (_readOp, true, true), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    int fd = ::memfd_create ("asyncRecvMulti", MFD_CLOEXEC);
+    ASSERT_NE (fd, -1) << strerror (errno);
+
+    _readOp = IoOperation::makeRecvMulti (fd, 0, 0, this);
+
+    if (ProactorThread::proactor ().submit (_readOp, true, true) == 0)
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result < 0;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (::close (fd), 0) << strerror (errno);
     ASSERT_EQ (ProactorThread::proactor ().unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
