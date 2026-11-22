@@ -105,6 +105,14 @@ namespace join
         BasicAsyncDatagramSocket& operator= (BasicAsyncDatagramSocket&& other) noexcept = default;
 
         /**
+         * @brief destroy the socket instance.
+         */
+        ~BasicAsyncDatagramSocket ()
+        {
+            this->close ();
+        }
+
+        /**
          * @brief assign the default remote endpoint for this socket.
          * @param endpoint endpoint to assign.
          * @return 0 on success, -1 on failure.

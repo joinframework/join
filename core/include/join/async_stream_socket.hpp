@@ -100,6 +100,14 @@ namespace join
         BasicAsyncStreamSocket& operator= (BasicAsyncStreamSocket&& other) noexcept = default;
 
         /**
+         * @brief destroy the socket instance.
+         */
+        ~BasicAsyncStreamSocket ()
+        {
+            this->close ();
+        }
+
+        /**
          * @brief start an asynchronous connection to the given endpoint.
          * @param handler handler invoked on completion.
          * @param endpoint endpoint to connect to.

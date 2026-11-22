@@ -432,6 +432,31 @@ TEST_F (TcpAsyncSocket, close)
 }
 
 /**
+ * @brief Test destruction without closing the socket.
+ */
+TEST_F (TcpAsyncSocket, destroy)
+{
+    Tcp::Acceptor acceptor;
+
+    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 100; ++i)
+    {
+        Tcp::Socket sock;
+
+        if (sock.connect ({_host, _stallport}) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        Tcp::AsyncSocket client (std::move (sock));
+
+        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+    }
+}
+
+/**
  * @brief Test bind method.
  */
 TEST_F (TcpAsyncSocket, bind)

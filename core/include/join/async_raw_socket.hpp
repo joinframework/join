@@ -119,7 +119,7 @@ namespace join
         /**
          * @brief destroy the socket instance.
          */
-        ~BasicAsyncRawSocket ()
+        virtual ~BasicAsyncRawSocket ()
         {
             this->close ();
         }

@@ -330,6 +330,31 @@ TEST_F (UnixAsyncStreamSocket, close)
 }
 
 /**
+ * @brief Test destruction without closing the socket.
+ */
+TEST_F (UnixAsyncStreamSocket, destroy)
+{
+    UnixStream::Acceptor acceptor;
+
+    ASSERT_EQ (acceptor.create (_stallpath), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 100; ++i)
+    {
+        UnixStream::Socket sock;
+
+        if (sock.connect (_stallpath) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        UnixStream::AsyncSocket client (std::move (sock));
+
+        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+    }
+}
+
+/**
  * @brief Test bind method.
  */
 TEST_F (UnixAsyncStreamSocket, bind)
