@@ -152,6 +152,7 @@ namespace join
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (connect);
+                this->cancelAll ();
                 this->_socket.close ();
                 return -1;
                 // LCOV_EXCL_STOP

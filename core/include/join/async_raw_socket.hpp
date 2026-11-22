@@ -364,6 +364,7 @@ namespace join
 
             if (code)
             {
+                this->cancelAll ();
                 this->_socket.close ();
             }
             else
