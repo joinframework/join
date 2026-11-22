@@ -258,7 +258,7 @@ namespace join
             message.msg_control = nullptr;
             message.msg_controllen = 0;
 
-            ssize_t result = ::sendmsg (this->_handle, &message, 0);
+            ssize_t result = ::sendmsg (this->_handle, &message, MSG_NOSIGNAL);
             if (result == -1)
             {
                 lastError = std::error_code (errno, std::generic_category ());

@@ -651,6 +651,20 @@ TEST_F (UnixAsyncDatagramSocket, asyncWrite)
     }
 
     client.close ();
+
+    UnixDgram::AsyncSocket full;
+
+    ASSERT_EQ (full.connect (_serverpath), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncWrite (nullptr, "hello", 5), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**
@@ -822,6 +836,20 @@ TEST_F (UnixAsyncDatagramSocket, asyncRead)
     }
 
     client.close ();
+
+    UnixDgram::AsyncSocket full;
+
+    ASSERT_EQ (full.connect (_serverpath), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**

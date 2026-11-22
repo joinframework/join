@@ -76,8 +76,7 @@ namespace join
                 throw std::system_error (errno, std::system_category (), "timerfd_create failed");  // LCOV_EXCL_LINE
             }
 
-            _ops->op = IoOperation::makeRead (_handle, &_ops->expirations,
-                                              static_cast<uint32_t> (sizeof (_ops->expirations)), this);
+            _ops->op = IoOperation::makeRead (_handle, &_ops->expirations, sizeof (_ops->expirations), this);
 
             if (_proactor.submit (_ops->op, true, true) == -1)
             {

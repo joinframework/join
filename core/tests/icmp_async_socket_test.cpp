@@ -680,6 +680,20 @@ TEST_F (IcmpAsyncSocket, asyncWrite)
     }
 
     client.close ();
+
+    Icmp::AsyncSocket full;
+
+    ASSERT_EQ (full.connect (_host), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncWrite (nullptr, _data, sizeof (_data)), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**
@@ -718,6 +732,20 @@ TEST_F (IcmpAsyncSocket, asyncRead)
     }
 
     client.close ();
+
+    Icmp::AsyncSocket full;
+
+    ASSERT_EQ (full.connect (_host), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < Icmp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**

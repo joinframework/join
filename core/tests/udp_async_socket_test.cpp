@@ -981,6 +981,20 @@ TEST_F (UdpAsyncSocket, asyncWrite)
     }
 
     client.close ();
+
+    Udp::AsyncSocket full;
+
+    ASSERT_EQ (full.connect ({_host, _port}), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncWrite (nullptr, "hello", 5), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**
@@ -1046,6 +1060,20 @@ TEST_F (UdpAsyncSocket, asyncRead)
     }
 
     client.close ();
+
+    Udp::AsyncSocket full;
+
+    ASSERT_EQ (full.connect ({_host, _port}), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**

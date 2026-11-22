@@ -157,7 +157,7 @@ IoOperation IoOperation::makeConnect (int fd, const sockaddr* addr, socklen_t ad
 //   CLASS     : IoOperation
 //   METHOD    : makeRead
 // =========================================================================
-IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHandler* handler, bool linked) noexcept
+IoOperation IoOperation::makeRead (int fd, void* buf, size_t len, CompletionHandler* handler, bool linked) noexcept
 {
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Read);
@@ -173,7 +173,7 @@ IoOperation IoOperation::makeRead (int fd, void* buf, uint32_t len, CompletionHa
 //   CLASS     : IoOperation
 //   METHOD    : makeWrite
 // =========================================================================
-IoOperation IoOperation::makeWrite (int fd, const void* buf, uint32_t len, CompletionHandler* handler,
+IoOperation IoOperation::makeWrite (int fd, const void* buf, size_t len, CompletionHandler* handler,
                                     bool linked) noexcept
 {
     IoOperation op;
@@ -260,7 +260,7 @@ IoOperation IoOperation::makeSendmsgZc (int fd, const msghdr* msg, int flags, Co
 //   CLASS     : IoOperation
 //   METHOD    : makeRecv
 // =========================================================================
-IoOperation IoOperation::makeRecv (int fd, void* buf, uint32_t len, int flags, CompletionHandler* handler,
+IoOperation IoOperation::makeRecv (int fd, void* buf, size_t len, int flags, CompletionHandler* handler,
                                    bool linked) noexcept
 {
     IoOperation op;
@@ -296,7 +296,7 @@ IoOperation IoOperation::makeRecvMulti (int fd, uint16_t group, int flags, Compl
 //   CLASS     : IoOperation
 //   METHOD    : makeSend
 // =========================================================================
-IoOperation IoOperation::makeSend (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+IoOperation IoOperation::makeSend (int fd, const void* buf, size_t len, int flags, CompletionHandler* handler,
                                    bool linked) noexcept
 {
     IoOperation op;
@@ -314,7 +314,7 @@ IoOperation IoOperation::makeSend (int fd, const void* buf, uint32_t len, int fl
 //   CLASS     : IoOperation
 //   METHOD    : makeSendZc
 // =========================================================================
-IoOperation IoOperation::makeSendZc (int fd, const void* buf, uint32_t len, int flags, CompletionHandler* handler,
+IoOperation IoOperation::makeSendZc (int fd, const void* buf, size_t len, int flags, CompletionHandler* handler,
                                      bool linked) noexcept
 {
     IoOperation op;

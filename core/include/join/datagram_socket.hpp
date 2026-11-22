@@ -325,7 +325,7 @@ namespace join
             message.msg_controllen = controlSize;
             message.msg_flags = 0;
 
-            ssize_t result = ::sendmsg (this->_handle, &message, 0);
+            ssize_t result = ::sendmsg (this->_handle, &message, MSG_NOSIGNAL);
             if (result < 0)
             {
                 lastError = std::error_code (errno, std::generic_category ());

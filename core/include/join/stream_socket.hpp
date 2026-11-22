@@ -29,10 +29,12 @@
 #include <join/raw_socket.hpp>
 
 // C++.
+#include <system_error>
 #include <chrono>
 
 // C.
 #include <sys/socket.h>
+#include <cerrno>
 
 namespace join
 {
@@ -236,7 +238,7 @@ namespace join
                 // we have to do a "lingering close"
                 for (;;)
                 {
-                    int result = this->read (buffer, sizeof (buffer));
+                    int result = read (buffer, sizeof (buffer));
                     if (result <= 0)
                     {
                         if ((result == -1) && (lastError == Errc::TemporaryError))
@@ -331,7 +333,13 @@ namespace join
          */
         ssize_t read (char* data, size_t maxSize) noexcept
         {
-            ssize_t size = BasicRawSocket<Protocol>::read (data, maxSize);
+            ssize_t size = ::recv (this->_handle, data, maxSize, 0);
+            if (size == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+            }
+
             if (size == 0)
             {
                 lastError = make_error_code (Errc::ConnectionClosed);
@@ -383,7 +391,7 @@ namespace join
 
             while (numRead < size)
             {
-                ssize_t result = this->read (data + numRead, size - numRead);
+                ssize_t result = read (data + numRead, size - numRead);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
@@ -401,6 +409,24 @@ namespace join
             }
 
             return 0;
+        }
+
+        /**
+         * @brief write data.
+         * @param data data buffer to send.
+         * @param maxSize maximum number of bytes to write.
+         * @return the number of bytes written, -1 on failure.
+         */
+        ssize_t write (const char* data, size_t maxSize) noexcept
+        {
+            ssize_t result = ::send (this->_handle, data, maxSize, MSG_NOSIGNAL);
+            if (result == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+            }
+
+            return result;
         }
 
         /**
@@ -445,7 +471,7 @@ namespace join
 
             while (numWrite < size)
             {
-                ssize_t result = this->write (data + numWrite, size - numWrite);
+                ssize_t result = write (data + numWrite, size - numWrite);
                 if (result == -1)
                 {
                     if (lastError == Errc::TemporaryError)
