@@ -33,6 +33,7 @@
 
 // C.
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <cstdint>
 #include <cstddef>
 
@@ -134,14 +135,14 @@ namespace join
             /// file descriptor.
             int fd;
 
+            /// accept flags.
+            int flags;
+
             /// peer address.
             sockaddr* addr;
 
             /// peer address length.
             socklen_t* addrlen;
-
-            /// accept flags.
-            int flags;
         };
 
         /**
@@ -238,20 +239,17 @@ namespace join
             /// file descriptor.
             int fd;
 
-            /// message header.
-            msghdr* msg;
-
             /// sendmsg / recvmsg flags.
             int flags;
+
+            /// message header.
+            msghdr* msg;
 
             /// reserved name area length.
             uint32_t namelen;
 
             /// reserved control area length.
             uint32_t controllen;
-
-            /// zero-copy send result, kept until the buffer is released.
-            int result;
         };
 
         /**
@@ -310,17 +308,14 @@ namespace join
             /// file descriptor.
             int fd;
 
+            /// send / recv flags.
+            int flags;
+
             /// buffer.
             void* buf;
 
             /// number of bytes to transfer.
             unsigned long len;
-
-            /// send / recv flags.
-            int flags;
-
-            /// zero-copy send result, kept until the buffer is released.
-            int result;
         };
 
         /**
@@ -391,6 +386,9 @@ namespace join
 #ifdef JOIN_HAS_IO_URING
         /// index of this operation in the proactor pending ops.
         uint32_t index = 0;
+
+        /// zero-copy send result.
+        int result = 0;
 #else
         /// next operation queued on the same descriptor and direction.
         IoOperation* next = nullptr;
@@ -425,6 +423,9 @@ namespace join
 
         /// buffer ring bound to this operation.
         IoRingBuffer* ring = nullptr;
+
+        /// timer id.
+        ssize_t timer = 0;
     };
 
     static_assert (offsetof (IoOperation, state) >= sizeof (uint32_t),
