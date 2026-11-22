@@ -54,6 +54,7 @@ using join::Thread;
 using join::Tcp;
 using join::LocalMem;
 using join::Proactor;
+using join::ProactorThread;
 
 #ifdef JOIN_HAS_IO_URING
 /**
@@ -750,6 +751,58 @@ TEST_F (TcpAsyncSocket, asyncConnect)
 
     retry.close ();
     _current = nullptr;
+
+    Tcp::AsyncSocket refused;
+
+    Proactor::InvokeHandler connectRead = [&refused] () {
+        ASSERT_EQ (refused.asyncConnect (onConnect, Tcp::Endpoint (_host, 1)), 0) << join::lastError.message ();
+        ASSERT_NE (refused.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&connectRead), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 5;
+        }));
+        ASSERT_EQ (_code, std::errc::connection_refused);
+    }
+
+    ASSERT_FALSE (refused.opened ());
+
+    Proactor::InvokeHandler connectWait = [&refused] () {
+        ASSERT_EQ (refused.asyncConnect (onConnect, Tcp::Endpoint (_host, 1)), 0) << join::lastError.message ();
+        ASSERT_NE (refused.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&connectWait), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 6;
+        }));
+        ASSERT_EQ (_code, std::errc::connection_refused);
+    }
+
+    ASSERT_FALSE (refused.opened ());
+
+    Proactor::InvokeHandler waitConnect = [&refused] () {
+        ASSERT_EQ (refused.open (Tcp::v6 ()), 0) << join::lastError.message ();
+        ASSERT_NE (refused.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+        ASSERT_EQ (refused.asyncConnect (onConnect, Tcp::Endpoint (_host, 1)), 0) << join::lastError.message ();
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&waitConnect), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 7;
+        }));
+        ASSERT_EQ (_code, std::errc::connection_refused);
+    }
+
+    ASSERT_FALSE (refused.opened ());
+    refused.close ();
 }
 
 /**
@@ -1597,6 +1650,22 @@ TEST_F (TcpAsyncSocket, cancelConnect)
         }));
         ASSERT_EQ (_code, std::errc::operation_canceled);
     }
+
+    Tcp::AsyncSocket reading;
+
+    ASSERT_EQ (reading.asyncConnect (nullptr, {_blackhole, _port}), 0) << join::lastError.message ();
+    ASSERT_NE (reading.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_EQ (reading.cancelConnect (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    reading.close ();
 }
 
 /**

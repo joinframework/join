@@ -497,7 +497,12 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
     {
         op.next = last->next;
         last->next = &op;
-        last = &op;
+
+        if (JOIN_LIKELY (static_cast<IoOperation::Opcode> (op.code) != IoOperation::Opcode::Connect))
+        {
+            last = &op;
+        }
+
         return 0;
     }
 
@@ -634,6 +639,14 @@ inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
     }
 
     const bool closing = (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) != 0;
+
+    if (JOIN_UNLIKELY (closing && (_writeOps[fd] != nullptr) &&
+                       (_writeOps[fd]->next->code == static_cast<uint8_t> (IoOperation::Opcode::Connect))))
+    {
+        processQueue (fd, true, revents);
+        return;
+    }
+
     const bool reading = closing && (_readOps[fd] != nullptr);
 
     if (closing || (revents & EPOLLIN))
