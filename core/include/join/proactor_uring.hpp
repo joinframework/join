@@ -982,7 +982,7 @@ inline void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe) noexc
 
     if ((code == IoOperation::Opcode::SendZc) || (code == IoOperation::Opcode::SendMsgZc))
     {
-        int& sent = (code == IoOperation::Opcode::SendZc) ? op->data.stream.result : op->data.msg.result;
+        int& sent = op->result;
 
         if ((cqe->flags & IORING_CQE_F_MORE) != 0)
         {

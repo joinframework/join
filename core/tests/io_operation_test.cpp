@@ -29,6 +29,9 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C.
+#include <poll.h>
+
 using join::IoOperation;
 using join::CompletionHandler;
 using join::Tcp;
@@ -51,10 +54,12 @@ TEST (IoOperation, copy)
     op.resume = IoOperation::State::Submitted;
 #ifdef JOIN_HAS_IO_URING
     op.index = 4;
+    op.result = 5;
 #else
     op.next = &op;
 #endif
     op.linked = true;
+    op.timer = 6;
 
     IoOperation copy (op);
 
@@ -63,6 +68,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (copy.resume, op.resume);
 #ifdef JOIN_HAS_IO_URING
     ASSERT_EQ (copy.index, op.index);
+    ASSERT_EQ (copy.result, op.result);
 #else
     ASSERT_EQ (copy.next, op.next);
 #endif
@@ -73,6 +79,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (copy.data.msg.fd, op.data.msg.fd);
     ASSERT_EQ (copy.data.msg.msg, op.data.msg.msg);
     ASSERT_EQ (copy.ring, op.ring);
+    ASSERT_EQ (copy.timer, op.timer);
 
     IoOperation assigned;
     assigned = op;
@@ -82,6 +89,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (assigned.resume, IoOperation::State::Idle);
 #ifdef JOIN_HAS_IO_URING
     ASSERT_EQ (assigned.index, op.index);
+    ASSERT_EQ (assigned.result, op.result);
 #else
     ASSERT_EQ (assigned.next, op.next);
 #endif
@@ -92,6 +100,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (assigned.data.msg.fd, op.data.msg.fd);
     ASSERT_EQ (assigned.data.msg.msg, op.data.msg.msg);
     ASSERT_EQ (assigned.ring, op.ring);
+    ASSERT_EQ (assigned.timer, op.timer);
 }
 
 /**
