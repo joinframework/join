@@ -39,12 +39,14 @@
 #include <join/backoff.hpp>
 #include <join/thread.hpp>
 #include <join/memory.hpp>
+#include <join/clock.hpp>
 #include <join/queue.hpp>
 
 // C++.
 #include <initializer_list>
 #include <unordered_map>
 #include <type_traits>
+#include <chrono>
 #include <vector>
 
 // C.
@@ -277,6 +279,9 @@ public:
     /// function invoked on the proactor thread.
     using InvokeHandler = Function<void (), 64>;
 
+    /// deadline of an operation.
+    using TimePoint = std::chrono::steady_clock::time_point;
+
 #ifdef JOIN_HAS_IO_URING
     static_assert (sleep_ns_v<IoPolicy> == 0 || tick_ns_v<IoPolicy> >= sleep_ns_v<IoPolicy>,
                    "tick must not be finer than the backoff sleep");
@@ -338,6 +343,26 @@ public:
      * @return 0 on success, -1 on failure.
      */
     int submit (IoOperation& op, bool flush = false, bool sync = false) noexcept;
+
+    /**
+     * @brief submit an asynchronous operation, cancelled after the given duration.
+     * @param op operation to submit.
+     * @param timeout maximum time granted to the operation.
+     * @param flush call io_uring_submit after pushing the SQE if true (io_uring only).
+     * @param sync wait for submission acknowledgment if true (default: false).
+     * @return 0 on success, -1 on failure.
+     */
+    int submit (IoOperation& op, std::chrono::nanoseconds timeout, bool flush = false, bool sync = false) noexcept;
+
+    /**
+     * @brief submit an asynchronous operation, cancelled at the given time point.
+     * @param op operation to submit.
+     * @param deadline time point at which to give up, max to wait indefinitely.
+     * @param flush call io_uring_submit after pushing the SQE if true (io_uring only).
+     * @param sync wait for submission acknowledgment if true (default: false).
+     * @return 0 on success, -1 on failure.
+     */
+    int submit (IoOperation& op, TimePoint deadline, bool flush = false, bool sync = false) noexcept;
 
     /**
      * @brief cancel an in-flight operation.
@@ -492,12 +517,13 @@ private:
      */
     struct alignas (64) Command
     {
-        CommandType type;        /**< command type. */
-        IoOperation* op;         /**< target operation, or nullptr for Stop/Flush. */
-        bool flush;              /**< if true, call io_uring_submit after processing (io_uring only). */
-        std::atomic<bool>* done; /**< set to true when the command is processed. */
-        std::error_code* errc;   /**< filled with the error code on failure. */
-        InvokeHandler* fn;       /**< function to invoke, or nullptr for other commands. */
+        CommandType type;                       /**< command type. */
+        IoOperation* op;                        /**< target operation, or nullptr for Stop/Flush. */
+        bool flush;                             /**< if true, call io_uring_submit after processing (io_uring only). */
+        std::atomic<bool>* done;                /**< set to true when the command is processed. */
+        std::error_code* errc;                  /**< filled with the error code on failure. */
+        InvokeHandler* fn;                      /**< function to invoke, or nullptr for other commands. */
+        TimePoint deadline = TimePoint::max (); /**< deadline of the submitted operation. */
     };
 
     /**
@@ -530,9 +556,30 @@ private:
      * @brief submit an operation directly to the backend.
      * @param op operation to submit.
      * @param flush if true, flush pending submissions to the kernel after submitting (io_uring only).
+     * @param deadline time point at which to give up, max to wait indefinitely.
      * @return 0 on success, -1 on failure.
      */
-    int submitOperation (IoOperation& op, bool flush) noexcept;
+    int submitOperation (IoOperation& op, bool flush, TimePoint deadline = TimePoint::max ()) noexcept;
+
+    /**
+     * @brief arm the timer of an operation.
+     * @param op operation to arm.
+     * @param deadline time point at which to give up.
+     * @return 0 on success, -1 on failure.
+     */
+    int armOperation (IoOperation& op, TimePoint deadline) noexcept;
+
+    /**
+     * @brief disarm the timer of an operation.
+     * @param op operation to disarm.
+     */
+    void disarmOperation (IoOperation& op) noexcept;
+
+    /**
+     * @brief expire an operation.
+     * @param op operation to expire.
+     */
+    void expireOperation (IoOperation& op) noexcept;
 
     /**
      * @brief cancel an in-flight operation directly in the backend.
@@ -734,9 +781,39 @@ int join::BasicProactor<IoPolicy>::submit (IoOperation& op, bool flush, bool syn
 inline int join::BasicProactor::submit (IoOperation& op, bool flush, bool sync) noexcept
 #endif
 {
+    return submit (op, TimePoint::max (), flush, sync);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : submit
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::submit (IoOperation& op, std::chrono::nanoseconds timeout, bool flush,
+                                           bool sync) noexcept
+#else
+inline int join::BasicProactor::submit (IoOperation& op, std::chrono::nanoseconds timeout, bool flush,
+                                        bool sync) noexcept
+#endif
+{
+    return submit (op, std::chrono::steady_clock::now () + timeout, flush, sync);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : submit
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::submit (IoOperation& op, TimePoint deadline, bool flush, bool sync) noexcept
+#else
+inline int join::BasicProactor::submit (IoOperation& op, TimePoint deadline, bool flush, bool sync) noexcept
+#endif
+{
     if (isProactorThread ())
     {
-        return submitOperation (op, flush);
+        return submitOperation (op, flush, deadline);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
@@ -748,7 +825,7 @@ inline int join::BasicProactor::submit (IoOperation& op, bool flush, bool sync) 
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Submit, &op, flush, pdone, perrc, nullptr}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Submit, &op, flush, pdone, perrc, nullptr, deadline}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -940,6 +1017,55 @@ inline int join::BasicProactor::invokeFunction (InvokeHandler* fn) noexcept
 
 // =========================================================================
 //   CLASS     : BasicProactor
+//   METHOD    : armOperation
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename IoPolicy>
+int join::BasicProactor<IoPolicy>::armOperation (IoOperation& op, TimePoint deadline) noexcept
+#else
+inline int join::BasicProactor::armOperation (IoOperation& op, TimePoint deadline) noexcept
+#endif
+{
+    if (JOIN_UNLIKELY (op.multishot || op.linked))
+    {
+        lastError = make_error_code (Errc::InvalidParam);
+        return -1;
+    }
+
+    ssize_t timer = wheel ().setOneShot (Monotonic::TimePoint (deadline.time_since_epoch ()), [this, &op] () {
+        expireOperation (op);
+    });
+    if (JOIN_UNLIKELY (timer == -1))
+    {
+        return -1;
+    }
+
+    op.timer = timer;
+
+    return 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : disarmOperation
+// =========================================================================
+#ifdef JOIN_HAS_IO_URING
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::disarmOperation (IoOperation& op) noexcept
+#else
+inline void join::BasicProactor::disarmOperation (IoOperation& op) noexcept
+#endif
+{
+    if (op.timer > 0)
+    {
+        wheel ().cancel (op.timer);
+    }
+
+    op.timer = 0;
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
 //   METHOD    : notifyOperation
 // =========================================================================
 #ifdef JOIN_HAS_IO_URING
@@ -996,6 +1122,16 @@ inline void join::BasicProactor::dispatchOperation (IoOperation& op, int result,
 
     op.more = false;
 
+    if (JOIN_UNLIKELY (op.timer != 0))
+    {
+        if ((op.timer < 0) && cancelled)
+        {
+            result = -ETIMEDOUT;
+        }
+
+        disarmOperation (op);
+    }
+
     notifyOperation (op, result, cancelled);
 }
 
@@ -1010,6 +1146,8 @@ void join::BasicProactor<IoPolicy>::resetOperation (IoOperation& op) noexcept
 inline void join::BasicProactor::resetOperation (IoOperation& op) noexcept
 #endif
 {
+    disarmOperation (op);
+
     IoOperation::State expected = IoOperation::State::Submitted;
     if (!op.state.compare_exchange_strong (expected, IoOperation::State::Idle, std::memory_order_release,
                                            std::memory_order_relaxed) &&
