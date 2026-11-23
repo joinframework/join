@@ -41,6 +41,7 @@
 
 // C.
 #include <cstdint>
+#include <poll.h>
 
 using namespace std::chrono_literals;
 
@@ -516,6 +517,76 @@ TEST_F (SqpollProactorTest, submit)
         _result = 0;
     }
 
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (_readOp, 10ms, true, true), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ETIMEDOUT;
+        }));
+        ASSERT_EQ (_readOp.timer, 0);
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (_client.writeExactly ("timed", 5), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == 5;
+        }));
+        ASSERT_EQ (_readOp.timer, 0);
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ECANCELED;
+        }));
+        ASSERT_EQ (_readOp.timer, 0);
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ASSERT_EQ (proactor.submit (_readOp, std::chrono::steady_clock::now () - 1s, true, true), 0)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == -ETIMEDOUT;
+        }));
+        _op = nullptr;
+        _result = 0;
+    }
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this, true);
+    ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    _readOp = IoOperation::makePollMulti (_server.handle (), POLLIN, this);
+    ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
+    ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+    _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (_spareOp, 10s, true, true), 0) << join::lastError.message ();
+
+    SqpollProactor::InvokeHandler fill = [&proactor] () {
+        while (proactor.wheel ().setOneShot (1h, [] () {
+        }) != -1)
+        {
+        }
+    };
+    ASSERT_EQ (proactor.invoke (&fill), 0) << join::lastError.message ();
+
+    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
     std::error_code errc;
     int result = 0;
     SqpollProactor::InvokeHandler stopThenSubmit = [&proactor, &result, &errc] () {
@@ -527,6 +598,9 @@ TEST_F (SqpollProactorTest, submit)
     th.join ();
     ASSERT_EQ (result, -1);
     ASSERT_EQ (errc, std::errc::operation_canceled);
+
+    ASSERT_EQ (_cancelled, &_spareOp);
+    ASSERT_EQ (_spareOp.timer, 0);
 }
 
 /**
@@ -1631,7 +1705,7 @@ TEST_F (SqpollProactorTest, asyncSendZc)
     const char* msg = "asyncSendZc";
     _writeOp = IoOperation::makeSendZc (_server.handle (), msg, strlen (msg), 0, this);
 
-    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (SqpollProactorThread::proactor ().submit (_writeOp, 10s, true, true), 0) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1639,6 +1713,7 @@ TEST_F (SqpollProactorTest, asyncSendZc)
             return _op == &_writeOp && _result > 0;
         }));
         ASSERT_EQ (_result, static_cast<int> (strlen (msg)));
+        ASSERT_EQ (_writeOp.timer, 0);
         _op = nullptr;
         _result = 0;
     }

@@ -529,7 +529,7 @@ void join::BasicProactor<IoPolicy>::processCommand (const Command& cmd) noexcept
     switch (cmd.type)
     {
         case CommandType::Submit:
-            err = submitOperation (*cmd.op, cmd.flush);
+            err = submitOperation (*cmd.op, cmd.flush, cmd.deadline);
             if (JOIN_UNLIKELY ((err == -1) && (cmd.done == nullptr) &&
                                (cmd.op->state.load (std::memory_order_relaxed) == IoOperation::State::Idle)))
             {
@@ -583,7 +583,7 @@ void join::BasicProactor<IoPolicy>::processCommand (const Command& cmd) noexcept
 //   METHOD    : submitOperation
 // =========================================================================
 template <typename IoPolicy>
-int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush) noexcept
+int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush, TimePoint deadline) noexcept
 {
     if (JOIN_UNLIKELY (!_running.load (std::memory_order_acquire)))
     {
@@ -632,6 +632,12 @@ int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush)
         }
 
         ring = &it->second;
+    }
+
+    if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (armOperation (op, deadline) == -1)))
+    {
+        resetOperation (op);
+        return -1;
     }
 
     io_uring_sqe* sqe = getSqe ();
@@ -741,6 +747,28 @@ void join::BasicProactor<IoPolicy>::endOperation (IoOperation& op, int result, b
     }
 
     dispatchOperation (op, result, cancelled);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : expireOperation
+// =========================================================================
+template <typename IoPolicy>
+void join::BasicProactor<IoPolicy>::expireOperation (IoOperation& op) noexcept
+{
+    io_uring_sqe* sqe = getSqe ();
+    if (JOIN_UNLIKELY (sqe == nullptr))
+    {
+        // LCOV_EXCL_START
+        armOperation (op, std::chrono::steady_clock::now () + std::chrono::milliseconds (1));
+        return;
+        // LCOV_EXCL_STOP
+    }
+
+    op.timer = -op.timer;
+    io_uring_prep_cancel (sqe, &op, 0);
+    io_uring_sqe_set_data (sqe, nullptr);
+    io_uring_submit (&_ring);
 }
 
 // =========================================================================
@@ -999,6 +1027,12 @@ inline void join::BasicProactor<IoPolicy>::dispatchCqe (io_uring_cqe* cqe) noexc
         if ((cqe->flags & IORING_CQE_F_MORE) != 0)
         {
             sent = result;
+
+            if (op->timer > 0)
+            {
+                disarmOperation (*op);
+            }
+
             return;
         }
 

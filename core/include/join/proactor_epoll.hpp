@@ -384,7 +384,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
     switch (cmd.type)
     {
         case CommandType::Submit:
-            err = submitOperation (*cmd.op, cmd.flush);
+            err = submitOperation (*cmd.op, cmd.flush, cmd.deadline);
             if (JOIN_UNLIKELY ((err != 0) && (cmd.done == nullptr) && (cmd.op->state == IoOperation::State::Idle)))
             {
                 dispatchOperation (*cmd.op, -lastError.default_error_condition ().value (), false);
@@ -422,7 +422,8 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : submitOperation
 // =========================================================================
-inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused]] bool flush) noexcept
+inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused]] bool flush,
+                                                 TimePoint deadline) noexcept
 {
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
@@ -461,6 +462,18 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         ring = &it->second;
     }
 
+    if (JOIN_UNLIKELY (op.next != nullptr))
+    {
+        lastError = make_error_code (std::errc::device_or_resource_busy);
+        return -1;
+    }
+
+    if (JOIN_UNLIKELY ((deadline != TimePoint::max ()) && (armOperation (op, deadline) == -1)))
+    {
+        resetOperation (op);
+        return -1;
+    }
+
     if (JOIN_UNLIKELY (static_cast<IoOperation::Opcode> (op.code) == IoOperation::Opcode::Connect))
     {
         if (JOIN_UNLIKELY (::connect (op.data.connect.fd, op.data.connect.addr, op.data.connect.addrlen) == -1 &&
@@ -477,12 +490,6 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         size_t newSize = static_cast<size_t> (op.fd ()) + 1;
         _readOps.resize (newSize, nullptr);
         _writeOps.resize (newSize, nullptr);
-    }
-
-    if (JOIN_UNLIKELY (op.next != nullptr))
-    {
-        lastError = make_error_code (std::errc::device_or_resource_busy);
-        return -1;
     }
 
     IoOperation*& last = isWriteOperation (op) ? _writeOps[op.fd ()] : _readOps[op.fd ()];
@@ -624,6 +631,17 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
     }
 
     dispatchOperation (op, result, cancelled);
+}
+
+// =========================================================================
+//   CLASS     : BasicProactor
+//   METHOD    : expireOperation
+// =========================================================================
+inline void join::BasicProactor::expireOperation (IoOperation& op) noexcept
+{
+    op.timer = -op.timer;
+
+    endOperation (op, -ETIMEDOUT, true);
 }
 
 // =========================================================================

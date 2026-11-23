@@ -303,9 +303,9 @@ namespace join
          * @param op cancelled operation.
          * @param result negative errno.
          */
-        void onCancel (IoOperation& op, [[maybe_unused]] int result) override
+        void onCancel (IoOperation& op, int result) override
         {
-            dispatch (op, make_error_code (std::errc::operation_canceled), 0);
+            dispatch (op, std::error_code (-result, std::generic_category ()), 0);
         }
 
         /**
