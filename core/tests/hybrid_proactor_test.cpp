@@ -587,7 +587,7 @@ TEST_F (HybridProactorTest, cancel)
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
-            return _cancelled == &_spareOp;
+            return (_cancelled == &_spareOp) && (_completions >= 1);
         }));
         _op = nullptr;
         _result = 0;
