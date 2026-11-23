@@ -32,6 +32,7 @@
 // C++.
 #include <system_error>
 #include <utility>
+#include <chrono>
 
 namespace join
 {
@@ -48,6 +49,7 @@ namespace join
         using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
         using ReadFromHandler = typename AsyncRead::ReadFrom;
         using WriteHandler = typename AsyncWrite::Write;
+        using TimePoint = typename ProactorType::TimePoint;
 
         /**
          * @brief create the socket instance.
@@ -151,6 +153,47 @@ namespace join
                                char* control = nullptr, size_t controlSize = 0, bool flush = true,
                                bool link = false) noexcept
         {
+            return asyncReadFrom (std::move (handler), data, maxSize, endpoint, TimePoint::max (), control, controlSize,
+                                  flush, link);
+        }
+
+        /**
+         * @brief start an asynchronous read reporting the endpoint, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param endpoint endpoint from where data are coming, valid until the handler is invoked.
+         * @param timeout maximum time granted to the operation.
+         * @param control buffer used to store the control messages received, valid until the handler is invoked.
+         * @param controlSize size of the control buffer, zero to receive no control message.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncReadFrom (ReadFromHandler handler, char* data, size_t maxSize, Endpoint& endpoint,
+                               std::chrono::nanoseconds timeout, char* control = nullptr, size_t controlSize = 0,
+                               bool flush = true) noexcept
+        {
+            return asyncReadFrom (std::move (handler), data, maxSize, endpoint,
+                                  std::chrono::steady_clock::now () + timeout, control, controlSize, flush);
+        }
+
+        /**
+         * @brief start an asynchronous read reporting the endpoint, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param endpoint endpoint from where data are coming, valid until the handler is invoked.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param control buffer used to store the control messages received, valid until the handler is invoked.
+         * @param controlSize size of the control buffer, zero to receive no control message.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncReadFrom (ReadFromHandler handler, char* data, size_t maxSize, Endpoint& endpoint,
+                               TimePoint deadline, char* control = nullptr, size_t controlSize = 0, bool flush = true,
+                               bool link = false) noexcept
+        {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -179,7 +222,7 @@ namespace join
 
             size_t index = this->_allocator.getIndex (read);
 
-            if (this->_proactor->submit (read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, deadline, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (read);
@@ -254,6 +297,47 @@ namespace join
                               const char* control = nullptr, size_t controlSize = 0, bool flush = true,
                               bool link = false) noexcept
         {
+            return asyncWriteTo (std::move (handler), data, size, endpoint, TimePoint::max (), control, controlSize,
+                                 flush, link);
+        }
+
+        /**
+         * @brief start an asynchronous write to the given endpoint, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param endpoint endpoint where to write the data, valid until the handler is invoked.
+         * @param timeout maximum time granted to the operation.
+         * @param control control messages to send, valid until the handler is invoked.
+         * @param controlSize size of the control messages, zero to send none.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWriteTo (WriteHandler handler, const char* data, size_t size, Endpoint& endpoint,
+                              std::chrono::nanoseconds timeout, const char* control = nullptr, size_t controlSize = 0,
+                              bool flush = true) noexcept
+        {
+            return asyncWriteTo (std::move (handler), data, size, endpoint, std::chrono::steady_clock::now () + timeout,
+                                 control, controlSize, flush);
+        }
+
+        /**
+         * @brief start an asynchronous write to the given endpoint, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param endpoint endpoint where to write the data, valid until the handler is invoked.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param control control messages to send, valid until the handler is invoked.
+         * @param controlSize size of the control messages, zero to send none.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWriteTo (WriteHandler handler, const char* data, size_t size, Endpoint& endpoint,
+                              TimePoint deadline, const char* control = nullptr, size_t controlSize = 0,
+                              bool flush = true, bool link = false) noexcept
+        {
             if (JOIN_UNLIKELY (!this->_allocator.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -287,7 +371,7 @@ namespace join
 
             size_t index = this->_allocator.getIndex (write);
 
-            if (this->_proactor->submit (write->op, flush, false) == -1)
+            if (this->_proactor->submit (write->op, deadline, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (write);

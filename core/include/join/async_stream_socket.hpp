@@ -32,6 +32,7 @@
 // C++.
 #include <system_error>
 #include <utility>
+#include <chrono>
 
 // C.
 #include <sys/socket.h>
@@ -53,6 +54,7 @@ namespace join
         using ConnectHandler = typename AsyncWrite::Connect;
         using ReadHandler = typename AsyncRead::Read;
         using WriteHandler = typename AsyncWrite::Write;
+        using TimePoint = typename ProactorType::TimePoint;
 
         /**
          * @brief create the socket instance.
@@ -177,6 +179,37 @@ namespace join
         ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, bool flush = true,
                            bool link = false) noexcept
         {
+            return asyncRead (std::move (handler), data, maxSize, TimePoint::max (), flush, link);
+        }
+
+        /**
+         * @brief start an asynchronous read, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param timeout maximum time granted to the operation.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, std::chrono::nanoseconds timeout,
+                           bool flush = true) noexcept
+        {
+            return asyncRead (std::move (handler), data, maxSize, std::chrono::steady_clock::now () + timeout, flush);
+        }
+
+        /**
+         * @brief start an asynchronous read, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, TimePoint deadline, bool flush = true,
+                           bool link = false) noexcept
+        {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -196,7 +229,7 @@ namespace join
 
             size_t index = this->_allocator.getIndex (read);
 
-            if (this->_proactor->submit (read->op, flush, false) == -1)
+            if (this->_proactor->submit (read->op, deadline, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (read);
@@ -217,6 +250,37 @@ namespace join
          * @return index of the operation on success, -1 on failure.
          */
         ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, bool flush = true,
+                            bool link = false) noexcept
+        {
+            return asyncWrite (std::move (handler), data, size, TimePoint::max (), flush, link);
+        }
+
+        /**
+         * @brief start an asynchronous write, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param timeout maximum time granted to the operation.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, std::chrono::nanoseconds timeout,
+                            bool flush = true) noexcept
+        {
+            return asyncWrite (std::move (handler), data, size, std::chrono::steady_clock::now () + timeout, flush);
+        }
+
+        /**
+         * @brief start an asynchronous write, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, TimePoint deadline, bool flush = true,
                             bool link = false) noexcept
         {
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
@@ -254,7 +318,7 @@ namespace join
 
             size_t index = this->_allocator.getIndex (write);
 
-            if (this->_proactor->submit (write->op, flush, false) == -1)
+            if (this->_proactor->submit (write->op, deadline, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (write);

@@ -33,11 +33,14 @@
 
 // C++.
 #include <algorithm>
+#include <chrono>
 #include <vector>
 
 // C.
 #include <sys/socket.h>
 #include <unistd.h>
+
+using namespace std::chrono_literals;
 
 using join::Errc;
 using join::Mutex;
@@ -46,6 +49,7 @@ using join::ScopedLock;
 using join::UnixStream;
 using join::Thread;
 using join::Proactor;
+using join::ProactorThread;
 using join::LocalMem;
 
 /**
@@ -480,6 +484,50 @@ TEST_F (UnixAsyncStreamSocket, asyncWait)
     }
 
     client.close ();
+
+    UnixStream::Acceptor timedAcceptor;
+    UnixStream::Socket timedSock;
+
+    ASSERT_EQ (timedAcceptor.create (_stallpath), 0) << join::lastError.message ();
+    if (timedSock.connect (_stallpath) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (timedSock.waitConnected (_timeout)) << join::lastError.message ();
+
+    UnixStream::Socket timedPeer = timedAcceptor.accept ();
+    ASSERT_TRUE (timedPeer.connected ()) << join::lastError.message ();
+
+    UnixStream::AsyncSocket timed (std::move (timedSock));
+
+    ASSERT_NE (timed.asyncWait (onReportWait, true, false, 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        ASSERT_FALSE (_more);
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncWait (onReportWait, true, false, std::chrono::steady_clock::now () - 1s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    ASSERT_NE (timed.asyncWait (onReportWait, false, true, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return !_code;
+        }));
+    }
+
+    timed.close ();
 }
 
 /**
@@ -698,6 +746,68 @@ TEST_F (UnixAsyncStreamSocket, asyncWrite)
     }
 
     client.close ();
+
+    UnixStream::Acceptor timedAcceptor;
+    UnixStream::Socket timedSock;
+
+    ASSERT_EQ (timedAcceptor.create (_stallpath), 0) << join::lastError.message ();
+    if (timedSock.connect (_stallpath) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (timedSock.waitConnected (_timeout)) << join::lastError.message ();
+
+    UnixStream::Socket timedPeer = timedAcceptor.accept ();
+    ASSERT_TRUE (timedPeer.connected ()) << join::lastError.message ();
+
+    UnixStream::AsyncSocket timed (std::move (timedSock));
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onWrite, "hello", 5, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onWrite, "hello", 5, std::chrono::steady_clock::now () + 10s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    while (::send (timed.handle (), _buf, sizeof (_buf), MSG_DONTWAIT) > 0)
+    {
+    }
+
+    ASSERT_NE (timed.asyncWrite (onWrite, _buf, sizeof (_buf), 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncWrite (nullptr, "hello", 5, std::chrono::steady_clock::now () + 10s, true, true), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**
@@ -751,6 +861,35 @@ TEST_F (UnixAsyncStreamSocket, move)
     }
 
     client3.close ();
+
+    UnixStream::Acceptor timedAcceptor;
+    UnixStream::Socket timedSock;
+
+    ASSERT_EQ (timedAcceptor.create (_stallpath), 0) << join::lastError.message ();
+    if (timedSock.connect (_stallpath) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (timedSock.waitConnected (_timeout)) << join::lastError.message ();
+
+    UnixStream::Socket timedPeer = timedAcceptor.accept ();
+    ASSERT_TRUE (timedPeer.connected ()) << join::lastError.message ();
+
+    UnixStream::AsyncSocket timed (std::move (timedSock));
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 50ms), -1) << join::lastError.message ();
+
+    UnixStream::AsyncSocket target (std::move (timed));
+    ASSERT_FALSE (timed.opened ());
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    target.close ();
 }
 
 /**
@@ -926,6 +1065,58 @@ TEST_F (UnixAsyncStreamSocket, asyncRead)
     }
 
     client.close ();
+
+    UnixStream::Acceptor timedAcceptor;
+    UnixStream::Socket timedSock;
+
+    ASSERT_EQ (timedAcceptor.create (_stallpath), 0) << join::lastError.message ();
+    if (timedSock.connect (_stallpath) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (timedSock.waitConnected (_timeout)) << join::lastError.message ();
+
+    UnixStream::Socket timedPeer = timedAcceptor.accept ();
+    ASSERT_TRUE (timedPeer.connected ()) << join::lastError.message ();
+
+    UnixStream::AsyncSocket timed (std::move (timedSock));
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        ASSERT_EQ (_transferred, 0u);
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), std::chrono::steady_clock::now () - 1s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 10s), -1) << join::lastError.message ();
+    ASSERT_EQ (timedPeer.writeExactly ("hello", 5), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return !_code && (_transferred == 5u);
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncRead (nullptr, _buf, sizeof (_buf), std::chrono::steady_clock::now () + 10s, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**
