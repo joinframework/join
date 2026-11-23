@@ -428,6 +428,31 @@ TEST_F (TcpAsyncSocket, move)
 }
 
 /**
+ * @brief Test destruction without closing the socket.
+ */
+TEST_F (TcpAsyncSocket, destroy)
+{
+    Tcp::Acceptor acceptor;
+
+    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+
+    for (int i = 0; i < 100; ++i)
+    {
+        Tcp::Socket sock;
+
+        if (sock.connect ({_host, _stallport}) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        Tcp::AsyncSocket client (std::move (sock));
+
+        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+    }
+}
+
+/**
  * @brief Test open method.
  */
 TEST_F (TcpAsyncSocket, open)
@@ -462,57 +487,6 @@ TEST_F (TcpAsyncSocket, close)
         closing.close ();
         ASSERT_FALSE (closing.opened ());
     }
-}
-
-/**
- * @brief Test destruction without closing the socket.
- */
-TEST_F (TcpAsyncSocket, destroy)
-{
-    Tcp::Acceptor acceptor;
-
-    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
-
-    for (int i = 0; i < 100; ++i)
-    {
-        Tcp::Socket sock;
-
-        if (sock.connect ({_host, _stallport}) == -1)
-        {
-            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-        }
-        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
-
-        Tcp::AsyncSocket client (std::move (sock));
-
-        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
-    }
-}
-
-/**
- * @brief Test bind method.
- */
-TEST_F (TcpAsyncSocket, bind)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (client.bind (IpAddress (AF_INET6)), 0) << join::lastError.message ();
-    client.close ();
-}
-
-/**
- * @brief Test bindToDevice method.
- */
-TEST_F (TcpAsyncSocket, bindToDevice)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.bindToDevice ("lo"), -1);
-    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (client.bindToDevice ("lo"), 0) << join::lastError.message ();
-    ASSERT_EQ (client.bindToDevice ("foo"), -1);
-    client.close ();
 }
 
 /**
@@ -752,6 +726,533 @@ TEST_F (TcpAsyncSocket, asyncWaitMulti)
         }));
     }
 
+    client.close ();
+}
+
+/**
+ * @brief Test cancel method.
+ */
+TEST_F (TcpAsyncSocket, cancel)
+{
+    {
+        Tcp::AsyncSocket client;
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+        ASSERT_EQ (client.asyncConnect (
+                       [] (const std::error_code& ec) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       {_host, _port}),
+                   0)
+            << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+        }
+
+        ssize_t index = client.asyncWait (onReportWait, true, false);
+        ASSERT_NE (index, -1) << join::lastError.message ();
+
+        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 2;
+            }));
+            ASSERT_EQ (_code, std::errc::operation_canceled);
+            ASSERT_FALSE (_more);
+        }
+
+        client.close ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _completions = 0;
+        _more = false;
+        _transferred = 0;
+    }
+
+    {
+        Tcp::AsyncSocket client;
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+        ASSERT_EQ (client.asyncConnect (
+                       [] (const std::error_code& ec) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       {_host, _port}),
+                   0)
+            << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+        }
+
+        ASSERT_NE (client.asyncRead (
+                       [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
+                           [[maybe_unused]] bool more) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           _transferred = size;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       _buf, sizeof (_buf)),
+                   -1)
+            << join::lastError.message ();
+
+        for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
+        {
+            ASSERT_NE (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        }
+
+        ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
+        ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 2;
+            }));
+            ASSERT_EQ (_code, std::errc::operation_canceled);
+        }
+
+        client.close ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _completions = 0;
+        _more = false;
+        _transferred = 0;
+    }
+
+    {
+        Tcp::AsyncSocket client;
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+        ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        client.close ();
+
+        Tcp::Acceptor stall;
+        Tcp::AsyncSocket sender;
+
+        ASSERT_EQ (stall.create ({IpAddress::ipv6Wildcard, _stallport}), 0) << join::lastError.message ();
+
+        ASSERT_EQ (sender.asyncConnect (
+                       [] (const std::error_code& ec) {
+                           ScopedLock<Mutex> lock (_mut);
+                           _code = ec;
+                           ++_completions;
+                           _cond.signal ();
+                       },
+                       {_host, _stallport}),
+                   0)
+            << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+        }
+
+        Tcp::Socket peer = stall.accept ();
+        ASSERT_TRUE (peer.connected ());
+
+        ASSERT_EQ (sender.setOption (Tcp::Socket::SndBuffer, 4096), 0) << join::lastError.message ();
+        ASSERT_EQ (peer.setOption (Tcp::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
+
+        int filled = 0;
+        while ((filled < 4096) && (::write (sender.handle (), _buf, sizeof (_buf)) != -1))
+        {
+            ++filled;
+        }
+
+        ASSERT_LT (filled, 4096);
+
+        ASSERT_NE (sender.asyncWrite (onWrite, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+
+        for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
+        {
+            ASSERT_NE (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        }
+
+        ASSERT_EQ (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1);
+        ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+
+        ASSERT_EQ (sender.asyncConnect (nullptr, {_host, _stallport}), -1);
+        ASSERT_EQ (join::lastError, Errc::InUse);
+
+        ASSERT_EQ (sender.cancel (0), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 2;
+            }));
+            ASSERT_EQ (_code, std::errc::operation_canceled);
+        }
+
+        ASSERT_NE (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+
+        sender.close ();
+        peer.close ();
+        stall.close ();
+    }
+}
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief Test flush method.
+ */
+TEST_F (TcpAsyncSocket, flush)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncWait (onReportWait, true, false, false), -1) << join::lastError.message ();
+    ASSERT_EQ (client.flush (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_EQ (_code, Errc::ConnectionClosed);
+    }
+
+    client.close ();
+}
+
+#endif
+
+/**
+ * @brief Test localEndpoint method.
+ */
+TEST_F (TcpAsyncSocket, localEndpoint)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.localEndpoint (), Tcp::Endpoint{});
+    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (client.bind (IpAddress (AF_INET6)), 0) << join::lastError.message ();
+    ASSERT_EQ (client.localEndpoint ().ip (), IpAddress (AF_INET6));
+    client.close ();
+}
+
+/**
+ * @brief Test opened method.
+ */
+TEST_F (TcpAsyncSocket, opened)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_FALSE (client.opened ());
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.opened ());
+    client.close ();
+    ASSERT_FALSE (client.opened ());
+}
+
+/**
+ * @brief Test family method.
+ */
+TEST_F (TcpAsyncSocket, family)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (client.family (), AF_INET6);
+    client.close ();
+}
+
+/**
+ * @brief Test type method.
+ */
+TEST_F (TcpAsyncSocket, type)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.type (), SOCK_STREAM);
+    client.close ();
+}
+
+/**
+ * @brief Test protocol method.
+ */
+TEST_F (TcpAsyncSocket, protocol)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.protocol (), IPPROTO_TCP);
+    client.close ();
+}
+
+/**
+ * @brief Test handle method.
+ */
+TEST_F (TcpAsyncSocket, handle)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.handle (), -1);
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_GT (client.handle (), -1);
+    client.close ();
+    ASSERT_EQ (client.handle (), -1);
+}
+
+/**
+ * @brief Test bind method.
+ */
+TEST_F (TcpAsyncSocket, bind)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (client.bind (IpAddress (AF_INET6)), 0) << join::lastError.message ();
+    client.close ();
+}
+
+/**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (TcpAsyncSocket, bindToDevice)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.bindToDevice ("lo"), -1);
+    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
+    ASSERT_EQ (client.bindToDevice ("lo"), 0) << join::lastError.message ();
+    ASSERT_EQ (client.bindToDevice ("foo"), -1);
+    client.close ();
+}
+
+/**
+ * @brief Test canRead method.
+ */
+TEST_F (TcpAsyncSocket, canRead)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.canRead (), -1);
+
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   {_host, _port}),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+    }
+
+    ASSERT_EQ (client.canRead (), 0);
+    client.close ();
+}
+
+/**
+ * @brief Test cancelConnect method.
+ */
+TEST_F (TcpAsyncSocket, cancelConnect)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
+    client.close ();
+
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   {_blackhole, _port}),
+               0)
+        << join::lastError.message ();
+
+    ASSERT_TRUE (client.connecting ());
+
+    ASSERT_EQ (client.asyncConnect (nullptr, {_blackhole, _port}), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+
+    ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    client.close ();
+
+    Tcp::AsyncSocket closing;
+
+    ASSERT_EQ (closing.asyncConnect (onConnect, {_blackhole, _port}), 0) << join::lastError.message ();
+    ASSERT_TRUE (closing.connecting ());
+
+    closing.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    Tcp::AsyncSocket reading;
+
+    ASSERT_EQ (reading.asyncConnect (nullptr, {_blackhole, _port}), 0) << join::lastError.message ();
+    ASSERT_NE (reading.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_EQ (reading.cancelConnect (), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+    }
+
+    reading.close ();
+}
+
+/**
+ * @brief Test asyncReadMulti method.
+ */
+TEST_F (TcpAsyncSocket, asyncReadMulti)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   {_host, _port}),
+               0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    ssize_t index = client.asyncReadMulti (onReportMulti, 0);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    for (int i = 2; i <= 3; ++i)
+    {
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
+                return _completions >= i;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+            ASSERT_TRUE (_more);
+        }
+    }
+
+    ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+        ASSERT_FALSE (_more);
+    }
+
+    for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    client.close ();
+
+    ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test setOption method.
+ */
+TEST_F (TcpAsyncSocket, setOption)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.setOption (Tcp::Socket::RcvBuffer, 1500), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setOption (Tcp::Socket::NoDelay, 1), 0) << join::lastError.message ();
     client.close ();
 }
 
@@ -1106,13 +1607,13 @@ TEST_F (TcpAsyncSocket, asyncDisconnect)
 }
 
 /**
- * @brief Test asyncReadMulti method.
+ * @brief Test asyncRead method.
  */
-TEST_F (TcpAsyncSocket, asyncReadMulti)
+TEST_F (TcpAsyncSocket, asyncRead)
 {
     Tcp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
+    ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.asyncConnect (
@@ -1134,50 +1635,238 @@ TEST_F (TcpAsyncSocket, asyncReadMulti)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
-    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
-    ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
+    ASSERT_NE (
+        client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf)),
+        -1)
+        << join::lastError.message ();
 
-    ssize_t index = client.asyncReadMulti (onReportMulti, 0);
-    ASSERT_NE (index, -1) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
-    for (int i = 2; i <= 3; ++i)
     {
-        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
-                return _completions >= i;
-            }));
-            ASSERT_FALSE (_code) << _code.message ();
-            ASSERT_EQ (_transferred, 5u);
-            ASSERT_EQ (std::string (_buf, 5), "hello");
-            ASSERT_TRUE (_more);
-        }
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
     }
 
-    ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+    ASSERT_NE (
+        client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf)),
+        -1)
+        << join::lastError.message ();
+
+    peer ().close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, Errc::ConnectionClosed) << _code.message ();
+        ASSERT_EQ (_transferred, 0u);
+    }
+
+    ASSERT_EQ (::close (client.handle ()), 0);
+
+    ASSERT_NE (
+        client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf)),
+        -1)
+        << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
             return _completions >= 4;
         }));
-        ASSERT_EQ (_code, std::errc::operation_canceled);
-        ASSERT_FALSE (_more);
+        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
+    }
+
+    client.close ();
+
+    Tcp::Acceptor timedAcceptor;
+    Tcp::Socket timedSock;
+
+    ASSERT_EQ (timedAcceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+    if (timedSock.connect ({_host, _stallport}) == -1)
+    {
+        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+    }
+    ASSERT_TRUE (timedSock.waitConnected (_timeout)) << join::lastError.message ();
+
+    Tcp::Socket timedPeer = timedAcceptor.accept ();
+    ASSERT_TRUE (timedPeer.connected ()) << join::lastError.message ();
+
+    Tcp::AsyncSocket timed (std::move (timedSock));
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        ASSERT_EQ (_transferred, 0u);
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), std::chrono::steady_clock::now () - 1s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 10s), -1) << join::lastError.message ();
+    ASSERT_EQ (timedPeer.writeExactly ("hello", 5), 0) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return !_code && (_transferred == 5u);
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncRead (nullptr, _buf, sizeof (_buf), std::chrono::steady_clock::now () + 10s, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
+}
+
+/**
+ * @brief Test asyncReadExactly method.
+ */
+TEST_F (TcpAsyncSocket, asyncReadExactly)
+{
+    Tcp::AsyncSocket client;
+    Tcp::Acceptor acceptor;
+
+    ASSERT_EQ (client.asyncReadExactly (onRead, _buf, 10), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+
+    {
+        Tcp::Socket sock;
+
+        if (sock.connect ({_host, _stallport}) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        client = Tcp::AsyncSocket (std::move (sock));
+    }
+
+    Tcp::Socket remote = acceptor.accept ();
+    ASSERT_TRUE (remote.connected ()) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncReadExactly (onRead, _buf, 10), -1) << join::lastError.message ();
+    ASSERT_EQ (remote.writeExactly ("hello", 5), 0) << join::lastError.message ();
+    ASSERT_EQ (remote.writeExactly ("world", 5), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 10u);
+        ASSERT_EQ (std::string (_buf, 10), "helloworld");
+    }
+
+    ASSERT_NE (client.asyncReadExactly (onRead, _buf, 10), -1) << join::lastError.message ();
+    ASSERT_EQ (remote.writeExactly ("abc", 3), 0) << join::lastError.message ();
+    remote.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, Errc::ConnectionClosed);
+        ASSERT_EQ (_transferred, 3u);
+    }
+
+    {
+        Tcp::Socket sock;
+
+        if (sock.connect ({_host, _stallport}) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        client = Tcp::AsyncSocket (std::move (sock));
+    }
+
+    Tcp::Socket remote2 = acceptor.accept ();
+    ASSERT_TRUE (remote2.connected ()) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncReadExactly (onRead, _buf, 10, 50ms), -1) << join::lastError.message ();
+    ASSERT_EQ (remote2.writeExactly ("abc", 3), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, std::errc::timed_out);
+        ASSERT_EQ (_transferred, 3u);
+    }
+
+    ASSERT_NE (client.asyncReadExactly (onRead, _buf, 5, std::chrono::steady_clock::now () + 10s), -1)
+        << join::lastError.message ();
+    ASSERT_EQ (remote2.writeExactly ("hello", 5), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
     }
 
     for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
     {
-        ASSERT_NE (client.asyncReadMulti (nullptr, 0), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncReadExactly (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
     }
 
-    ASSERT_EQ (client.asyncReadMulti (nullptr, 0), -1);
+    ASSERT_EQ (client.asyncReadExactly (nullptr, _buf, sizeof (_buf)), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
     client.close ();
-
-    ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
 /**
@@ -1351,14 +2040,81 @@ TEST_F (TcpAsyncSocket, asyncWrite)
 }
 
 /**
- * @brief Test asyncRead method.
+ * @brief Test asyncWriteExactly method.
  */
-TEST_F (TcpAsyncSocket, asyncRead)
+TEST_F (TcpAsyncSocket, asyncWriteExactly)
+{
+    std::vector<char> data (1 << 20, 'x');
+    std::vector<char> sink (data.size ());
+    Tcp::AsyncSocket client;
+    Tcp::Acceptor acceptor;
+
+    ASSERT_EQ (client.asyncWriteExactly (onWrite, "hello", 5), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (acceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
+
+    {
+        Tcp::Socket sock;
+
+        if (sock.connect ({_host, _stallport}) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        client = Tcp::AsyncSocket (std::move (sock));
+    }
+
+    Tcp::Socket remote = acceptor.accept ();
+    ASSERT_TRUE (remote.connected ()) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncWriteExactly (onWrite, data.data (), data.size ()), -1) << join::lastError.message ();
+    ASSERT_EQ (remote.readExactly (sink.data (), sink.size (), _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (sink, data);
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, data.size ());
+    }
+
+    data.resize (32 << 20, 'x');
+
+    ASSERT_NE (client.asyncWriteExactly (onWrite, data.data (), data.size (), 50ms), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::timed_out);
+        ASSERT_LT (_transferred, data.size ());
+    }
+
+    for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncWriteExactly (nullptr, data.data (), data.size ()), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncWriteExactly (nullptr, data.data (), data.size ()), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    remote.close ();
+    client.close ();
+}
+
+/**
+ * @brief Test remoteEndpoint method.
+ */
+TEST_F (TcpAsyncSocket, remoteEndpoint)
 {
     Tcp::AsyncSocket client;
 
-    ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client.remoteEndpoint (), Tcp::Endpoint{});
 
     ASSERT_EQ (client.asyncConnect (
                    [] (const std::error_code& ec) {
@@ -1376,134 +2132,87 @@ TEST_F (TcpAsyncSocket, asyncRead)
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
             return _completions >= 1;
         }));
-        ASSERT_FALSE (_code) << _code.message ();
     }
 
-    ASSERT_NE (
-        client.asyncRead (
-            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
-                ScopedLock<Mutex> lock (_mut);
-                _code = ec;
-                _transferred = size;
-                ++_completions;
-                _cond.signal ();
-            },
-            _buf, sizeof (_buf)),
-        -1)
-        << join::lastError.message ();
-
-    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 2;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 5u);
-        ASSERT_EQ (std::string (_buf, 5), "hello");
-    }
-
-    ASSERT_NE (
-        client.asyncRead (
-            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
-                ScopedLock<Mutex> lock (_mut);
-                _code = ec;
-                _transferred = size;
-                ++_completions;
-                _cond.signal ();
-            },
-            _buf, sizeof (_buf)),
-        -1)
-        << join::lastError.message ();
-
-    peer ().close ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 3;
-        }));
-        ASSERT_EQ (_code, Errc::ConnectionClosed) << _code.message ();
-        ASSERT_EQ (_transferred, 0u);
-    }
-
-    ASSERT_EQ (::close (client.handle ()), 0);
-
-    ASSERT_NE (
-        client.asyncRead (
-            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
-                ScopedLock<Mutex> lock (_mut);
-                _code = ec;
-                _transferred = size;
-                ++_completions;
-                _cond.signal ();
-            },
-            _buf, sizeof (_buf)),
-        -1)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 4;
-        }));
-        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
-    }
-
+    ASSERT_EQ (client.remoteEndpoint (), Tcp::Endpoint (_host, _port));
     client.close ();
+}
 
-    Tcp::Acceptor timedAcceptor;
-    Tcp::Socket timedSock;
+/**
+ * @brief Test connected method.
+ */
+TEST_F (TcpAsyncSocket, connected)
+{
+    Tcp::AsyncSocket client;
 
-    ASSERT_EQ (timedAcceptor.create ({_host, _stallport}), 0) << join::lastError.message ();
-    if (timedSock.connect ({_host, _stallport}) == -1)
-    {
-        ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
-    }
-    ASSERT_TRUE (timedSock.waitConnected (_timeout)) << join::lastError.message ();
+    ASSERT_FALSE (client.connected ());
 
-    Tcp::Socket timedPeer = timedAcceptor.accept ();
-    ASSERT_TRUE (timedPeer.connected ()) << join::lastError.message ();
-
-    Tcp::AsyncSocket timed (std::move (timedSock));
-
-    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 10ms), -1) << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _code == std::errc::timed_out;
-        }));
-        ASSERT_EQ (_transferred, 0u);
-        _code = {};
-    }
-
-    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), std::chrono::steady_clock::now () - 1s), -1)
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   {_host, _port}),
+               0)
         << join::lastError.message ();
+
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _code == std::errc::timed_out;
+            return _completions >= 1;
         }));
     }
 
-    ASSERT_NE (timed.asyncRead (onRead, _buf, sizeof (_buf), 10s), -1) << join::lastError.message ();
-    ASSERT_EQ (timedPeer.writeExactly ("hello", 5), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.connected ());
+    client.close ();
+    ASSERT_FALSE (client.connected ());
+}
+
+/**
+ * @brief Test connecting method.
+ */
+TEST_F (TcpAsyncSocket, connecting)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_FALSE (client.connecting ());
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_FALSE (client.connecting ());
+    client.close ();
+}
+
+/**
+ * @brief Test mtu method.
+ */
+TEST_F (TcpAsyncSocket, mtu)
+{
+    Tcp::AsyncSocket client;
+
+    ASSERT_EQ (client.mtu (), -1);
+
+    ASSERT_EQ (client.asyncConnect (
+                   [] (const std::error_code& ec) {
+                       ScopedLock<Mutex> lock (_mut);
+                       _code = ec;
+                       ++_completions;
+                       _cond.signal ();
+                   },
+                   {_host, _port}),
+               0)
+        << join::lastError.message ();
+
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return !_code && (_transferred == 5u);
+            return _completions >= 1;
         }));
     }
 
-    Proactor::InvokeHandler linkTimed = [&timed] () {
-        ASSERT_EQ (timed.asyncRead (nullptr, _buf, sizeof (_buf), std::chrono::steady_clock::now () + 10s, true, true),
-                   -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    };
-    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
-
-    timed.close ();
+    ASSERT_NE (client.mtu (), -1) << join::lastError.message ();
+    client.close ();
+    ASSERT_EQ (client.mtu (), -1);
 }
 
 /**
@@ -1806,514 +2515,6 @@ TEST_F (TcpAsyncSocket, halfClose)
 }
 
 /**
- * @brief Test cancel method.
- */
-TEST_F (TcpAsyncSocket, cancel)
-{
-    {
-        Tcp::AsyncSocket client;
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-
-        ASSERT_EQ (client.asyncConnect (
-                       [] (const std::error_code& ec) {
-                           ScopedLock<Mutex> lock (_mut);
-                           _code = ec;
-                           ++_completions;
-                           _cond.signal ();
-                       },
-                       {_host, _port}),
-                   0)
-            << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 1;
-            }));
-            ASSERT_FALSE (_code) << _code.message ();
-        }
-
-        ssize_t index = client.asyncWait (onReportWait, true, false);
-        ASSERT_NE (index, -1) << join::lastError.message ();
-
-        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 2;
-            }));
-            ASSERT_EQ (_code, std::errc::operation_canceled);
-            ASSERT_FALSE (_more);
-        }
-
-        client.close ();
-    }
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        _code = {};
-        _completions = 0;
-        _more = false;
-        _transferred = 0;
-    }
-
-    {
-        Tcp::AsyncSocket client;
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-
-        ASSERT_EQ (client.asyncConnect (
-                       [] (const std::error_code& ec) {
-                           ScopedLock<Mutex> lock (_mut);
-                           _code = ec;
-                           ++_completions;
-                           _cond.signal ();
-                       },
-                       {_host, _port}),
-                   0)
-            << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 1;
-            }));
-            ASSERT_FALSE (_code) << _code.message ();
-        }
-
-        ASSERT_NE (client.asyncRead (
-                       [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                           [[maybe_unused]] bool more) {
-                           ScopedLock<Mutex> lock (_mut);
-                           _code = ec;
-                           _transferred = size;
-                           ++_completions;
-                           _cond.signal ();
-                       },
-                       _buf, sizeof (_buf)),
-                   -1)
-            << join::lastError.message ();
-
-        for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
-        {
-            ASSERT_NE (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-        }
-
-        ASSERT_EQ (client.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
-        ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 2;
-            }));
-            ASSERT_EQ (_code, std::errc::operation_canceled);
-        }
-
-        client.close ();
-    }
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        _code = {};
-        _completions = 0;
-        _more = false;
-        _transferred = 0;
-    }
-
-    {
-        Tcp::AsyncSocket client;
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-        ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        client.close ();
-
-        Tcp::Acceptor stall;
-        Tcp::AsyncSocket sender;
-
-        ASSERT_EQ (stall.create ({IpAddress::ipv6Wildcard, _stallport}), 0) << join::lastError.message ();
-
-        ASSERT_EQ (sender.asyncConnect (
-                       [] (const std::error_code& ec) {
-                           ScopedLock<Mutex> lock (_mut);
-                           _code = ec;
-                           ++_completions;
-                           _cond.signal ();
-                       },
-                       {_host, _stallport}),
-                   0)
-            << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 1;
-            }));
-            ASSERT_FALSE (_code) << _code.message ();
-        }
-
-        Tcp::Socket peer = stall.accept ();
-        ASSERT_TRUE (peer.connected ());
-
-        ASSERT_EQ (sender.setOption (Tcp::Socket::SndBuffer, 4096), 0) << join::lastError.message ();
-        ASSERT_EQ (peer.setOption (Tcp::Socket::RcvBuffer, 4096), 0) << join::lastError.message ();
-
-        int filled = 0;
-        while ((filled < 4096) && (::write (sender.handle (), _buf, sizeof (_buf)) != -1))
-        {
-            ++filled;
-        }
-
-        ASSERT_LT (filled, 4096);
-
-        ASSERT_NE (sender.asyncWrite (onWrite, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-
-        for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
-        {
-            ASSERT_NE (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-        }
-
-        ASSERT_EQ (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1);
-        ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-
-
-        ASSERT_EQ (sender.asyncConnect (nullptr, {_host, _stallport}), -1);
-        ASSERT_EQ (join::lastError, Errc::InUse);
-
-        ASSERT_EQ (sender.cancel (0), 0) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 2;
-            }));
-            ASSERT_EQ (_code, std::errc::operation_canceled);
-        }
-
-        ASSERT_NE (sender.asyncWrite (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-
-        sender.close ();
-        peer.close ();
-        stall.close ();
-    }
-}
-
-/**
- * @brief Test cancelConnect method.
- */
-TEST_F (TcpAsyncSocket, cancelConnect)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
-    client.close ();
-
-    ASSERT_EQ (client.asyncConnect (
-                   [] (const std::error_code& ec) {
-                       ScopedLock<Mutex> lock (_mut);
-                       _code = ec;
-                       ++_completions;
-                       _cond.signal ();
-                   },
-                   {_blackhole, _port}),
-               0)
-        << join::lastError.message ();
-
-    ASSERT_TRUE (client.connecting ());
-
-    ASSERT_EQ (client.asyncConnect (nullptr, {_blackhole, _port}), -1);
-    ASSERT_EQ (join::lastError, Errc::InUse);
-
-    ASSERT_EQ (client.cancelConnect (), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_EQ (_code, std::errc::operation_canceled);
-    }
-
-    client.close ();
-
-    Tcp::AsyncSocket closing;
-
-    ASSERT_EQ (closing.asyncConnect (onConnect, {_blackhole, _port}), 0) << join::lastError.message ();
-    ASSERT_TRUE (closing.connecting ());
-
-    closing.close ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 2;
-        }));
-        ASSERT_EQ (_code, std::errc::operation_canceled);
-    }
-
-    Tcp::AsyncSocket reading;
-
-    ASSERT_EQ (reading.asyncConnect (nullptr, {_blackhole, _port}), 0) << join::lastError.message ();
-    ASSERT_NE (reading.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-    ASSERT_EQ (reading.cancelConnect (), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 3;
-        }));
-        ASSERT_EQ (_code, std::errc::operation_canceled);
-    }
-
-    reading.close ();
-}
-
-/**
- * @brief Test setOption method.
- */
-TEST_F (TcpAsyncSocket, setOption)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.setOption (Tcp::Socket::RcvBuffer, 1500), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setOption (Tcp::Socket::NoDelay, 1), 0) << join::lastError.message ();
-    client.close ();
-}
-
-/**
- * @brief Test localEndpoint method.
- */
-TEST_F (TcpAsyncSocket, localEndpoint)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.localEndpoint (), Tcp::Endpoint{});
-    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (client.bind (IpAddress (AF_INET6)), 0) << join::lastError.message ();
-    ASSERT_EQ (client.localEndpoint ().ip (), IpAddress (AF_INET6));
-    client.close ();
-}
-
-/**
- * @brief Test remoteEndpoint method.
- */
-TEST_F (TcpAsyncSocket, remoteEndpoint)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.remoteEndpoint (), Tcp::Endpoint{});
-
-    ASSERT_EQ (client.asyncConnect (
-                   [] (const std::error_code& ec) {
-                       ScopedLock<Mutex> lock (_mut);
-                       _code = ec;
-                       ++_completions;
-                       _cond.signal ();
-                   },
-                   {_host, _port}),
-               0)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-    }
-
-    ASSERT_EQ (client.remoteEndpoint (), Tcp::Endpoint (_host, _port));
-    client.close ();
-}
-
-/**
- * @brief Test opened method.
- */
-TEST_F (TcpAsyncSocket, opened)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_FALSE (client.opened ());
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.opened ());
-    client.close ();
-    ASSERT_FALSE (client.opened ());
-}
-
-/**
- * @brief Test connected method.
- */
-TEST_F (TcpAsyncSocket, connected)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_FALSE (client.connected ());
-
-    ASSERT_EQ (client.asyncConnect (
-                   [] (const std::error_code& ec) {
-                       ScopedLock<Mutex> lock (_mut);
-                       _code = ec;
-                       ++_completions;
-                       _cond.signal ();
-                   },
-                   {_host, _port}),
-               0)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-    }
-
-    ASSERT_TRUE (client.connected ());
-    client.close ();
-    ASSERT_FALSE (client.connected ());
-}
-
-/**
- * @brief Test connecting method.
- */
-TEST_F (TcpAsyncSocket, connecting)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_FALSE (client.connecting ());
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_FALSE (client.connecting ());
-    client.close ();
-}
-
-/**
- * @brief Test canRead method.
- */
-TEST_F (TcpAsyncSocket, canRead)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.canRead (), -1);
-
-    ASSERT_EQ (client.asyncConnect (
-                   [] (const std::error_code& ec) {
-                       ScopedLock<Mutex> lock (_mut);
-                       _code = ec;
-                       ++_completions;
-                       _cond.signal ();
-                   },
-                   {_host, _port}),
-               0)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-    }
-
-    ASSERT_EQ (client.canRead (), 0);
-    client.close ();
-}
-
-/**
- * @brief Test mtu method.
- */
-TEST_F (TcpAsyncSocket, mtu)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.mtu (), -1);
-
-    ASSERT_EQ (client.asyncConnect (
-                   [] (const std::error_code& ec) {
-                       ScopedLock<Mutex> lock (_mut);
-                       _code = ec;
-                       ++_completions;
-                       _cond.signal ();
-                   },
-                   {_host, _port}),
-               0)
-        << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-    }
-
-    ASSERT_NE (client.mtu (), -1) << join::lastError.message ();
-    client.close ();
-    ASSERT_EQ (client.mtu (), -1);
-}
-
-/**
- * @brief Test family method.
- */
-TEST_F (TcpAsyncSocket, family)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.open (Tcp::v6 ()), 0) << join::lastError.message ();
-    ASSERT_EQ (client.family (), AF_INET6);
-    client.close ();
-}
-
-/**
- * @brief Test type method.
- */
-TEST_F (TcpAsyncSocket, type)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.type (), SOCK_STREAM);
-    client.close ();
-}
-
-/**
- * @brief Test protocol method.
- */
-TEST_F (TcpAsyncSocket, protocol)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.protocol (), IPPROTO_TCP);
-    client.close ();
-}
-
-/**
- * @brief Test handle method.
- */
-TEST_F (TcpAsyncSocket, handle)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.handle (), -1);
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_GT (client.handle (), -1);
-    client.close ();
-    ASSERT_EQ (client.handle (), -1);
-}
-
-/**
  * @brief Test has_zero_copy_v trait.
  */
 TEST_F (TcpAsyncSocket, has_zero_copy_v)
@@ -2328,32 +2529,6 @@ TEST_F (TcpAsyncSocket, has_zero_copy_v)
     ASSERT_FALSE (join::has_zero_copy_v<join::Icmp>);
     ASSERT_TRUE (join::has_zero_copy_v<Tcp>);
 }
-
-#ifdef JOIN_HAS_IO_URING
-/**
- * @brief Test flush method.
- */
-TEST_F (TcpAsyncSocket, flush)
-{
-    Tcp::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-
-    ASSERT_NE (client.asyncWait (onReportWait, true, false, false), -1) << join::lastError.message ();
-    ASSERT_EQ (client.flush (), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_EQ (_code, Errc::ConnectionClosed);
-    }
-
-    client.close ();
-}
-
-#endif
 
 /**
  * @brief main function.

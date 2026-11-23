@@ -519,8 +519,31 @@ namespace join
             {
                 case IoOperation::Opcode::Recv:
                     data = static_cast<const char*> (read->op.data.stream.buf);
-                    if (JOIN_UNLIKELY ((this->_socket.type () != SOCK_STREAM) && !read->op.multishot &&
-                                       (size > read->op.data.stream.len)))
+                    if (JOIN_UNLIKELY (read->op.data.stream.flags & MSG_WAITALL))
+                    {
+                        if (!result && (size > 0) && (size < read->op.data.stream.len))
+                        {
+                            read->op.data.stream.buf = static_cast<char*> (read->op.data.stream.buf) + size;
+                            read->op.data.stream.len -= size;
+
+                            if (JOIN_LIKELY (this->_proactor->submit (read->op, read->deadline, true, false) == 0))
+                            {
+                                return;
+                            }
+
+                            result = lastError;  // LCOV_EXCL_LINE
+                        }
+
+                        if (JOIN_UNLIKELY (!result && (size == 0)))
+                        {
+                            result = make_error_code (Errc::ConnectionClosed);
+                        }
+
+                        data = static_cast<const char*> (read->iov.iov_base);
+                        size += static_cast<size_t> (static_cast<const char*> (read->op.data.stream.buf) - data);
+                    }
+                    else if (JOIN_UNLIKELY ((this->_socket.type () != SOCK_STREAM) && !read->op.multishot &&
+                                            (size > read->op.data.stream.len)))
                     {
                         truncated = true;
                         size = read->op.data.stream.len;
@@ -597,6 +620,27 @@ namespace join
          */
         void completeWrite (AsyncWrite* write, const std::error_code& code, size_t size) noexcept
         {
+            std::error_code result = code;
+
+            if (JOIN_UNLIKELY (write->op.data.stream.flags & MSG_WAITALL))
+            {
+                if (!result && (size > 0) && (size < write->op.data.stream.len))
+                {
+                    write->op.data.stream.buf = static_cast<char*> (write->op.data.stream.buf) + size;
+                    write->op.data.stream.len -= size;
+
+                    if (JOIN_LIKELY (this->_proactor->submit (write->op, write->deadline, true, false) == 0))
+                    {
+                        return;
+                    }
+
+                    result = lastError;  // LCOV_EXCL_LINE
+                }
+
+                size += static_cast<size_t> (static_cast<const char*> (write->op.data.stream.buf) -
+                                             static_cast<const char*> (write->iov.iov_base));
+            }
+
             WriteHandler handler = std::move (write->writeHandler);
 
             if (JOIN_LIKELY (!write->op.multishot))
@@ -606,7 +650,7 @@ namespace join
 
             if (JOIN_LIKELY (handler))
             {
-                handler (code, size);
+                handler (result, size);
             }
         }
 

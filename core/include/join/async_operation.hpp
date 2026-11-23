@@ -149,6 +149,9 @@ namespace join
 
         /// read scatter gather entry.
         iovec iov = {};
+
+        /// deadline.
+        typename ProactorType::TimePoint deadline;
     };
 
     /**
@@ -171,6 +174,9 @@ namespace join
 
         /// write scatter gather entry.
         iovec iov = {};
+
+        /// deadline.
+        typename ProactorType::TimePoint deadline;
     };
 
     /**
