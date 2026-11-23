@@ -117,6 +117,30 @@ namespace join
          */
         int asyncConnect (ConnectHandler handler, const Endpoint& endpoint) noexcept
         {
+            return asyncConnect (std::move (handler), endpoint, TimePoint::max ());
+        }
+
+        /**
+         * @brief start an asynchronous connection to the given endpoint, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param endpoint endpoint to connect to.
+         * @param timeout maximum time granted to the operation.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncConnect (ConnectHandler handler, const Endpoint& endpoint, std::chrono::nanoseconds timeout) noexcept
+        {
+            return asyncConnect (std::move (handler), endpoint, std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief start an asynchronous connection to the given endpoint, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param endpoint endpoint to connect to.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncConnect (ConnectHandler handler, const Endpoint& endpoint, TimePoint deadline) noexcept
+        {
             if (JOIN_UNLIKELY (!this->_allocator.hasBackend ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -150,7 +174,7 @@ namespace join
                                                     this->_socket._remote.length (), this);
             connect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            if (this->_proactor->submit (connect->op, true, false) == -1)
+            if (this->_proactor->submit (connect->op, deadline, true, false) == -1)
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (connect);

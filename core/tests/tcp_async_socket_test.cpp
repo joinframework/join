@@ -879,6 +879,87 @@ TEST_F (TcpAsyncSocket, asyncConnect)
 
     ASSERT_FALSE (refused.opened ());
     refused.close ();
+
+    Tcp::AsyncSocket timed;
+
+    ASSERT_EQ (timed.asyncConnect (onConnect, {_blackhole, _port}, 50ms), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        _code = {};
+    }
+
+    ASSERT_FALSE (timed.connecting ());
+    ASSERT_FALSE (timed.opened ());
+
+    ASSERT_EQ (timed.asyncConnect (onConnect, {_blackhole, _port}, std::chrono::steady_clock::now () - 1s), 0)
+        << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        _code = {};
+    }
+
+    std::error_code readCode;
+
+    Proactor::InvokeHandler timedRead = [&timed, &readCode] () {
+        ASSERT_EQ (timed.asyncConnect (onConnect, {_blackhole, _port}, 50ms), 0) << join::lastError.message ();
+        ASSERT_NE (timed.asyncRead (
+                       [&readCode] (const std::error_code& ec, [[maybe_unused]] const char* data,
+                                    [[maybe_unused]] size_t size, [[maybe_unused]] bool more) {
+                           ScopedLock<Mutex> lock (_mut);
+                           readCode = ec;
+                           _cond.signal ();
+                       },
+                       _buf, sizeof (_buf)),
+                   -1)
+            << join::lastError.message ();
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&timedRead), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&readCode] () {
+            return (_code == std::errc::timed_out) && (readCode == std::errc::operation_canceled);
+        }));
+        _completions = 0;
+    }
+
+    _current = &timed;
+    _rearms = 1;
+
+    ASSERT_EQ (timed.asyncConnect (onConnect, {_blackhole, _port}, 50ms), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (timed.connected ());
+    timed.close ();
+    _current = nullptr;
+
+    ASSERT_EQ (timed.asyncConnect (onConnect, {_host, _port}, 10s), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (timed.connected ());
+    timed.close ();
 }
 
 /**
