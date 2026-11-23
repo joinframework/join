@@ -375,6 +375,109 @@ const std::string UnixAsyncDatagramSocket::_senderpath = "/tmp/unixasyncdgramsen
 const std::chrono::milliseconds UnixAsyncDatagramSocket::_timeout{1000};
 
 /**
+ * @brief Test move.
+ */
+TEST_F (UnixAsyncDatagramSocket, move)
+{
+    UnixDgram::AsyncSocket client1, client3;
+
+    ASSERT_EQ (client1.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (client1.opened ());
+
+    UnixDgram::AsyncSocket client2 (std::move (client1));
+    ASSERT_TRUE (client2.opened ());
+    ASSERT_FALSE (client1.opened ());
+
+    ASSERT_EQ (client1.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.asyncWriteTo (nullptr, "one", 3, _dest), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
+    client1.close ();
+
+    ASSERT_NE (client2.asyncReadFrom (onRead, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
+
+    client3 = std::move (client2);
+
+    ASSERT_TRUE (client3.opened ());
+    ASSERT_FALSE (client2.opened ());
+
+    ASSERT_NE (client3.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
+    }
+
+    client3.close ();
+
+    UnixDgram::AsyncSocket client4;
+
+    ASSERT_EQ (client4.bind (_senderpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client4.connect (_serverpath), 0) << join::lastError.message ();
+
+    _current = &client4;
+
+    ASSERT_NE (client4.asyncReadFrom (onReadAndMove, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
+    ASSERT_NE (client4.asyncWrite (nullptr, "moved", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "moved");
+    }
+
+    ASSERT_TRUE (moved ().opened ());
+    ASSERT_FALSE (client4.opened ());
+
+    moved ().close ();
+    _current = nullptr;
+
+    UnixDgram::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_serverpath), 0) << join::lastError.message ();
+
+    ASSERT_NE (timed.asyncRead (onReportRead, _buf, sizeof (_buf), 50ms), -1) << join::lastError.message ();
+
+    UnixDgram::AsyncSocket target (std::move (timed));
+    ASSERT_FALSE (timed.opened ());
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    target.close ();
+}
+
+/**
+ * @brief Test destruction without closing the socket.
+ */
+TEST_F (UnixAsyncDatagramSocket, destroy)
+{
+    for (int i = 0; i < 100; ++i)
+    {
+        UnixDgram::AsyncSocket client;
+
+        ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
+    }
+}
+
+/**
  * @brief Test open method.
  */
 TEST_F (UnixAsyncDatagramSocket, open)
@@ -398,43 +501,6 @@ TEST_F (UnixAsyncDatagramSocket, close)
     ASSERT_TRUE (client.opened ());
     client.close ();
     ASSERT_FALSE (client.opened ());
-}
-
-/**
- * @brief Test destruction without closing the socket.
- */
-TEST_F (UnixAsyncDatagramSocket, destroy)
-{
-    for (int i = 0; i < 100; ++i)
-    {
-        UnixDgram::AsyncSocket client;
-
-        ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-        ASSERT_NE (client.asyncWait (nullptr, false, true), -1) << join::lastError.message ();
-    }
-}
-
-/**
- * @brief Test bind method.
- */
-TEST_F (UnixAsyncDatagramSocket, bind)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.bind (_clientpath), -1);
-    client.close ();
-}
-
-/**
- * @brief Test bindToDevice method.
- */
-TEST_F (UnixAsyncDatagramSocket, bindToDevice)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.bindToDevice (_clientpath), -1);
-    client.close ();
 }
 
 /**
@@ -575,6 +641,209 @@ TEST_F (UnixAsyncDatagramSocket, asyncWaitMulti)
 }
 
 /**
+ * @brief Test cancel method.
+ */
+TEST_F (UnixAsyncDatagramSocket, cancel)
+{
+    {
+        UnixDgram::AsyncSocket client;
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (UnixDgram::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+
+        ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+        ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+
+        ssize_t index = client.asyncWait (onReportWait, true, false);
+        ASSERT_NE (index, -1) << join::lastError.message ();
+
+        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_EQ (_code, std::errc::operation_canceled);
+            ASSERT_FALSE (_more);
+        }
+
+        client.close ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _completions = 0;
+        _more = false;
+        _transferred = 0;
+    }
+
+    {
+        UnixDgram::AsyncSocket client;
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+        ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_EQ (_code, std::errc::operation_canceled);
+        }
+
+        client.close ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _completions = 0;
+        _more = false;
+        _transferred = 0;
+    }
+
+    {
+        UnixDgram::AsyncSocket client;
+
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        client.close ();
+    }
+}
+
+/**
+ * @brief Test localEndpoint method.
+ */
+TEST_F (UnixAsyncDatagramSocket, localEndpoint)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.localEndpoint (), UnixDgram::Endpoint (_clientpath));
+    client.close ();
+}
+
+/**
+ * @brief Test opened method.
+ */
+TEST_F (UnixAsyncDatagramSocket, opened)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_FALSE (client.opened ());
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.opened ());
+    client.close ();
+    ASSERT_FALSE (client.opened ());
+}
+
+/**
+ * @brief Test family method.
+ */
+TEST_F (UnixAsyncDatagramSocket, family)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.family (), AF_UNIX);
+    client.close ();
+}
+
+/**
+ * @brief Test type method.
+ */
+TEST_F (UnixAsyncDatagramSocket, type)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.type (), SOCK_DGRAM);
+    client.close ();
+}
+
+/**
+ * @brief Test protocol method.
+ */
+TEST_F (UnixAsyncDatagramSocket, protocol)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.protocol (), 0);
+    client.close ();
+}
+
+/**
+ * @brief Test handle method.
+ */
+TEST_F (UnixAsyncDatagramSocket, handle)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.handle (), -1);
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_GT (client.handle (), -1);
+    client.close ();
+}
+
+/**
+ * @brief Test bind method.
+ */
+TEST_F (UnixAsyncDatagramSocket, bind)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.bind (_clientpath), -1);
+    client.close ();
+}
+
+/**
+ * @brief Test bindToDevice method.
+ */
+TEST_F (UnixAsyncDatagramSocket, bindToDevice)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.bindToDevice (_clientpath), -1);
+    client.close ();
+}
+
+/**
+ * @brief Test canRead method.
+ */
+TEST_F (UnixAsyncDatagramSocket, canRead)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.canRead (), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.canRead (), 0) << join::lastError.message ();
+    client.close ();
+}
+
+/**
+ * @brief Test setOption method.
+ */
+TEST_F (UnixAsyncDatagramSocket, setOption)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.setOption (UnixDgram::Socket::RcvBuffer, 1500), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
+    ASSERT_EQ (client.setOption (UnixDgram::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
+    client.close ();
+}
+
+/**
  * @brief Test connect method.
  */
 TEST_F (UnixAsyncDatagramSocket, connect)
@@ -603,381 +872,6 @@ TEST_F (UnixAsyncDatagramSocket, disconnect)
     ASSERT_EQ (client.disconnect (), 0) << join::lastError.message ();
     ASSERT_FALSE (client.connected ());
     client.close ();
-}
-
-/**
- * @brief Test asyncWriteTo method.
- */
-TEST_F (UnixAsyncDatagramSocket, asyncWriteTo)
-{
-    Proactor proactor;
-    UnixDgram::AsyncSocket client (proactor);
-    UnixDgram::Endpoint dest (_serverpath);
-
-    ASSERT_FALSE (client.opened ());
-    ASSERT_NE (client.asyncWriteTo (onReport, "hello", 5, dest), -1) << join::lastError.message ();
-    ASSERT_TRUE (client.opened ());
-
-    Thread th ([&proactor] () {
-        proactor.run ();
-    });
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 5u);
-    }
-
-    client.close ();
-
-    proactor.stop ();
-    th.join ();
-
-    UnixDgram::AsyncSocket timed;
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        _code = {};
-        _transferred = 0;
-    }
-
-    ASSERT_NE (timed.asyncWriteTo (onReport, "hello", 5, dest, 10s), -1) << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _transferred == 5u;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        _transferred = 0;
-    }
-
-    ASSERT_NE (timed.asyncWriteTo (onReport, "hello", 5, dest, std::chrono::steady_clock::now () + 10s), -1)
-        << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _transferred == 5u;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        _transferred = 0;
-    }
-
-    Proactor::InvokeHandler linkTimed = [&timed, &dest] () {
-        ASSERT_EQ (timed.asyncWriteTo (nullptr, "hello", 5, dest, std::chrono::steady_clock::now () + 10s, nullptr, 0,
-                                       true, true),
-                   -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    };
-    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
-
-    timed.close ();
-}
-
-/**
- * @brief Test asyncReadFrom method.
- */
-TEST_F (UnixAsyncDatagramSocket, asyncReadFrom)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-
-    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
-
-    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 5u);
-        ASSERT_EQ (std::string (_buf, 5), "hello");
-    }
-
-    client.close ();
-
-    ASSERT_EQ (_from, UnixDgram::Endpoint (_serverpath));
-
-    UnixDgram::AsyncSocket timed;
-
-    ASSERT_EQ (timed.connect (_serverpath), 0) << join::lastError.message ();
-
-    ASSERT_NE (timed.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from, 10ms), -1) << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _code == std::errc::timed_out;
-        }));
-        _code = {};
-    }
-
-    ASSERT_NE (timed.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from, std::chrono::steady_clock::now () - 1s),
-               -1)
-        << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _code == std::errc::timed_out;
-        }));
-    }
-
-    Proactor::InvokeHandler linkTimed = [&timed] () {
-        ASSERT_EQ (timed.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from, std::chrono::steady_clock::now () + 10s,
-                                        nullptr, 0, true, true),
-                   -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    };
-    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
-
-    timed.close ();
-}
-
-/**
- * @brief Test asyncWrite method.
- */
-TEST_F (UnixAsyncDatagramSocket, asyncWrite)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.asyncWrite (nullptr, "hello", 5), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-
-    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_NE (client.asyncWrite (onReport, "hello", 5), -1) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 5u);
-    }
-
-    ASSERT_EQ (::close (client.handle ()), 0);
-
-    ASSERT_NE (client.asyncWrite (onReport, "hello", 5), -1) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 2;
-        }));
-        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
-    }
-
-    client.close ();
-
-    UnixDgram::AsyncSocket full;
-
-    ASSERT_EQ (full.connect (_serverpath), 0) << join::lastError.message ();
-
-    for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
-    {
-        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-    }
-
-    ASSERT_EQ (full.asyncWrite (nullptr, "hello", 5), -1);
-    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-
-    full.close ();
-
-    UnixDgram::AsyncSocket timed;
-
-    ASSERT_EQ (timed.connect (_serverpath), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        _code = {};
-        _transferred = 0;
-    }
-
-    ASSERT_NE (timed.asyncWrite (onReport, "hello", 5, 10s), -1) << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _transferred == 5u;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        _transferred = 0;
-    }
-
-    ASSERT_NE (timed.asyncWrite (onReport, "hello", 5, std::chrono::steady_clock::now () + 10s), -1)
-        << join::lastError.message ();
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _transferred == 5u;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        _transferred = 0;
-    }
-
-    Proactor::InvokeHandler linkTimed = [&timed] () {
-        ASSERT_EQ (timed.asyncWrite (nullptr, "hello", 5, std::chrono::steady_clock::now () + 10s, true, true), -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-    };
-    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
-
-    timed.close ();
-}
-
-/**
- * @brief Test move.
- */
-TEST_F (UnixAsyncDatagramSocket, move)
-{
-    UnixDgram::AsyncSocket client1, client3;
-
-    ASSERT_EQ (client1.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_TRUE (client1.opened ());
-
-    UnixDgram::AsyncSocket client2 (std::move (client1));
-    ASSERT_TRUE (client2.opened ());
-    ASSERT_FALSE (client1.opened ());
-
-    ASSERT_EQ (client1.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncWriteTo (nullptr, "one", 3, _dest), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
-    client1.close ();
-
-    ASSERT_NE (client2.asyncReadFrom (onRead, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
-
-    client3 = std::move (client2);
-
-    ASSERT_TRUE (client3.opened ());
-    ASSERT_FALSE (client2.opened ());
-
-    ASSERT_NE (client3.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 1;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 5u);
-        ASSERT_EQ (std::string (_buf, 5), "hello");
-    }
-
-    client3.close ();
-
-    UnixDgram::AsyncSocket client4;
-
-    ASSERT_EQ (client4.bind (_senderpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client4.connect (_serverpath), 0) << join::lastError.message ();
-
-    _current = &client4;
-
-    ASSERT_NE (client4.asyncReadFrom (onReadAndMove, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
-    ASSERT_NE (client4.asyncWrite (nullptr, "moved", 5), -1) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 2;
-        }));
-        ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_EQ (_transferred, 5u);
-        ASSERT_EQ (std::string (_buf, 5), "moved");
-    }
-
-    ASSERT_TRUE (moved ().opened ());
-    ASSERT_FALSE (client4.opened ());
-
-    moved ().close ();
-    _current = nullptr;
-
-    UnixDgram::AsyncSocket timed;
-
-    ASSERT_EQ (timed.connect (_serverpath), 0) << join::lastError.message ();
-
-    ASSERT_NE (timed.asyncRead (onReportRead, _buf, sizeof (_buf), 50ms), -1) << join::lastError.message ();
-
-    UnixDgram::AsyncSocket target (std::move (timed));
-    ASSERT_FALSE (timed.opened ());
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _code == std::errc::timed_out;
-        }));
-    }
-
-    target.close ();
-}
-
-/**
- * @brief Test asyncReadFromMulti method.
- */
-TEST_F (UnixAsyncDatagramSocket, asyncReadFromMulti)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-
-    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-
-    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
-    ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
-
-    ssize_t index = client.asyncReadFromMulti (onReportMulti, 0);
-    ASSERT_NE (index, -1) << join::lastError.message ();
-
-    for (int i = 1; i <= 2; ++i)
-    {
-        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
-                return _completions >= i;
-            }));
-            ASSERT_FALSE (_code) << _code.message ();
-            ASSERT_EQ (_transferred, 5u);
-            ASSERT_EQ (std::string (_buf, 5), "hello");
-            ASSERT_EQ (_from, UnixDgram::Endpoint (_serverpath));
-            ASSERT_TRUE (_more);
-        }
-    }
-
-    ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-            return _completions >= 3;
-        }));
-        ASSERT_EQ (_code, std::errc::operation_canceled);
-        ASSERT_FALSE (_more);
-    }
-
-    for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
-    {
-        ASSERT_NE (client.asyncReadFromMulti (nullptr, 0), -1) << join::lastError.message ();
-    }
-
-    ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0), -1);
-    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
-
-    client.close ();
-
-    ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
 }
 
 /**
@@ -1089,6 +983,345 @@ TEST_F (UnixAsyncDatagramSocket, asyncRead)
     }
 
     small.close ();
+}
+
+/**
+ * @brief Test asyncReadFrom method.
+ */
+TEST_F (UnixAsyncDatagramSocket, asyncReadFrom)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
+    }
+
+    client.close ();
+
+    ASSERT_EQ (_from, UnixDgram::Endpoint (_serverpath));
+
+    UnixDgram::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_serverpath), 0) << join::lastError.message ();
+
+    ASSERT_NE (timed.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from, 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from, std::chrono::steady_clock::now () - 1s),
+               -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from, std::chrono::steady_clock::now () + 10s,
+                                        nullptr, 0, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
+}
+
+/**
+ * @brief Test asyncReadFromMulti method.
+ */
+TEST_F (UnixAsyncDatagramSocket, asyncReadFromMulti)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+
+    LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
+    ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
+
+    ssize_t index = client.asyncReadFromMulti (onReportMulti, 0);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+
+    for (int i = 1; i <= 2; ++i)
+    {
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [i] () {
+                return _completions >= i;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+            ASSERT_EQ (_from, UnixDgram::Endpoint (_serverpath));
+            ASSERT_TRUE (_more);
+        }
+    }
+
+    ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_EQ (_code, std::errc::operation_canceled);
+        ASSERT_FALSE (_more);
+    }
+
+    for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (client.asyncReadFromMulti (nullptr, 0), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    client.close ();
+
+    ASSERT_EQ (client.unregisterBufferRing (0), 0) << join::lastError.message ();
+}
+
+/**
+ * @brief Test asyncWrite method.
+ */
+TEST_F (UnixAsyncDatagramSocket, asyncWrite)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.asyncWrite (nullptr, "hello", 5), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_NE (client.asyncWrite (onReport, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+    }
+
+    ASSERT_EQ (::close (client.handle ()), 0);
+
+    ASSERT_NE (client.asyncWrite (onReport, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_EQ (_code, std::errc::bad_file_descriptor) << _code.message ();
+    }
+
+    client.close ();
+
+    UnixDgram::AsyncSocket full;
+
+    ASSERT_EQ (full.connect (_serverpath), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < UnixDgram::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncWrite (nullptr, "hello", 5), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
+
+    UnixDgram::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_serverpath), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onReport, "hello", 5, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onReport, "hello", 5, std::chrono::steady_clock::now () + 10s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncWrite (nullptr, "hello", 5, std::chrono::steady_clock::now () + 10s, true, true), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
+}
+
+/**
+ * @brief Test asyncWriteTo method.
+ */
+TEST_F (UnixAsyncDatagramSocket, asyncWriteTo)
+{
+    Proactor proactor;
+    UnixDgram::AsyncSocket client (proactor);
+    UnixDgram::Endpoint dest (_serverpath);
+
+    ASSERT_FALSE (client.opened ());
+    ASSERT_NE (client.asyncWriteTo (onReport, "hello", 5, dest), -1) << join::lastError.message ();
+    ASSERT_TRUE (client.opened ());
+
+    Thread th ([&proactor] () {
+        proactor.run ();
+    });
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+    }
+
+    client.close ();
+
+    proactor.stop ();
+    th.join ();
+
+    UnixDgram::AsyncSocket timed;
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWriteTo (onReport, "hello", 5, dest, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWriteTo (onReport, "hello", 5, dest, std::chrono::steady_clock::now () + 10s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed, &dest] () {
+        ASSERT_EQ (timed.asyncWriteTo (nullptr, "hello", 5, dest, std::chrono::steady_clock::now () + 10s, nullptr, 0,
+                                       true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
+}
+
+/**
+ * @brief Test remoteEndpoint method.
+ */
+TEST_F (UnixAsyncDatagramSocket, remoteEndpoint)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.remoteEndpoint (), UnixDgram::Endpoint (_serverpath));
+    client.close ();
+}
+
+/**
+ * @brief Test connected method.
+ */
+TEST_F (UnixAsyncDatagramSocket, connected)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_FALSE (client.connected ());
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_TRUE (client.connected ());
+    client.close ();
+    ASSERT_FALSE (client.connected ());
+}
+
+/**
+ * @brief Test mtu method.
+ */
+TEST_F (UnixAsyncDatagramSocket, mtu)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.mtu (), -1);
+    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
+    ASSERT_EQ (client.mtu (), -1);
+    client.close ();
+}
+
+/**
+ * @brief Test ttl method.
+ */
+TEST_F (UnixAsyncDatagramSocket, ttl)
+{
+    UnixDgram::AsyncSocket client;
+
+    ASSERT_EQ (client.ttl (), 60);
+
+    UnixDgram::AsyncSocket other (32);
+
+    ASSERT_EQ (other.ttl (), 32);
 }
 
 /**
@@ -1289,239 +1522,6 @@ TEST_F (UnixAsyncDatagramSocket, empty)
     }
 
     sender.close ();
-    client.close ();
-}
-
-/**
- * @brief Test cancel method.
- */
-TEST_F (UnixAsyncDatagramSocket, cancel)
-{
-    {
-        UnixDgram::AsyncSocket client;
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (UnixDgram::AsyncSocket::_opCount), -1);
-        ASSERT_EQ (join::lastError, Errc::InvalidParam);
-
-        ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-        ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-
-        ssize_t index = client.asyncWait (onReportWait, true, false);
-        ASSERT_NE (index, -1) << join::lastError.message ();
-
-        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 1;
-            }));
-            ASSERT_EQ (_code, std::errc::operation_canceled);
-            ASSERT_FALSE (_more);
-        }
-
-        client.close ();
-    }
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        _code = {};
-        _completions = 0;
-        _more = false;
-        _transferred = 0;
-    }
-
-    {
-        UnixDgram::AsyncSocket client;
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-        ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-
-        {
-            ScopedLock<Mutex> lock (_mut);
-            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
-                return _completions >= 1;
-            }));
-            ASSERT_EQ (_code, std::errc::operation_canceled);
-        }
-
-        client.close ();
-    }
-
-    {
-        ScopedLock<Mutex> lock (_mut);
-        _code = {};
-        _completions = 0;
-        _more = false;
-        _transferred = 0;
-    }
-
-    {
-        UnixDgram::AsyncSocket client;
-
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        client.close ();
-    }
-}
-
-/**
- * @brief Test setOption method.
- */
-TEST_F (UnixAsyncDatagramSocket, setOption)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.setOption (UnixDgram::Socket::RcvBuffer, 1500), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.setOption (UnixDgram::Socket::RcvBuffer, 1500), 0) << join::lastError.message ();
-    client.close ();
-}
-
-/**
- * @brief Test localEndpoint method.
- */
-TEST_F (UnixAsyncDatagramSocket, localEndpoint)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.bind (_clientpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.localEndpoint (), UnixDgram::Endpoint (_clientpath));
-    client.close ();
-}
-
-/**
- * @brief Test remoteEndpoint method.
- */
-TEST_F (UnixAsyncDatagramSocket, remoteEndpoint)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.remoteEndpoint (), UnixDgram::Endpoint (_serverpath));
-    client.close ();
-}
-
-/**
- * @brief Test opened method.
- */
-TEST_F (UnixAsyncDatagramSocket, opened)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_FALSE (client.opened ());
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.opened ());
-    client.close ();
-    ASSERT_FALSE (client.opened ());
-}
-
-/**
- * @brief Test connected method.
- */
-TEST_F (UnixAsyncDatagramSocket, connected)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_FALSE (client.connected ());
-    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_TRUE (client.connected ());
-    client.close ();
-    ASSERT_FALSE (client.connected ());
-}
-
-/**
- * @brief Test canRead method.
- */
-TEST_F (UnixAsyncDatagramSocket, canRead)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.canRead (), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.canRead (), 0) << join::lastError.message ();
-    client.close ();
-}
-
-/**
- * @brief Test mtu method.
- */
-TEST_F (UnixAsyncDatagramSocket, mtu)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.mtu (), -1);
-    ASSERT_EQ (client.connect (_serverpath), 0) << join::lastError.message ();
-    ASSERT_EQ (client.mtu (), -1);
-    client.close ();
-}
-
-/**
- * @brief Test ttl method.
- */
-TEST_F (UnixAsyncDatagramSocket, ttl)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.ttl (), 60);
-
-    UnixDgram::AsyncSocket other (32);
-
-    ASSERT_EQ (other.ttl (), 32);
-}
-
-/**
- * @brief Test family method.
- */
-TEST_F (UnixAsyncDatagramSocket, family)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.family (), AF_UNIX);
-    client.close ();
-}
-
-/**
- * @brief Test type method.
- */
-TEST_F (UnixAsyncDatagramSocket, type)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.type (), SOCK_DGRAM);
-    client.close ();
-}
-
-/**
- * @brief Test protocol method.
- */
-TEST_F (UnixAsyncDatagramSocket, protocol)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_EQ (client.protocol (), 0);
-    client.close ();
-}
-
-/**
- * @brief Test handle method.
- */
-TEST_F (UnixAsyncDatagramSocket, handle)
-{
-    UnixDgram::AsyncSocket client;
-
-    ASSERT_EQ (client.handle (), -1);
-    ASSERT_EQ (client.open (), 0) << join::lastError.message ();
-    ASSERT_GT (client.handle (), -1);
     client.close ();
 }
 
