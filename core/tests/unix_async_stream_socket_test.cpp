@@ -693,6 +693,26 @@ TEST_F (UnixAsyncStreamSocket, asyncConnect)
 
     retry.close ();
     _current = nullptr;
+
+    UnixStream::AsyncSocket timed;
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _completions = 0;
+    }
+
+    ASSERT_EQ (timed.asyncConnect (onConnect, _serverpath, 10s), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_TRUE (timed.connected ());
+    timed.close ();
 }
 
 /**
