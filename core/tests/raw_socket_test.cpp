@@ -244,6 +244,11 @@ TEST_F (RawSocket, read)
         << join::lastError.message ();
     ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
     ASSERT_GT (rawSocket.read (data, sizeof (data)), 0) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.write (reinterpret_cast<char*> (&_packet), sizeof (_packet)), sizeof (_packet))
+        << join::lastError.message ();
+    ASSERT_TRUE (rawSocket.waitReadyRead (_timeout)) << join::lastError.message ();
+    ASSERT_EQ (rawSocket.read (data, 1), -1);
+    ASSERT_EQ (join::lastError, Errc::MessageTooLong);
     rawSocket.close ();
 }
 

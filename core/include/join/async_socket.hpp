@@ -75,9 +75,9 @@ namespace join
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
+        using TimePoint = typename ProactorType::TimePoint;
         using AsyncWait = BasicAsyncWait<Protocol, ProactorType>;
         using WaitHandler = typename AsyncWait::Wait;
-        using TimePoint = typename ProactorType::TimePoint;
 
         /// number of operations in flight.
         static constexpr size_t _opCount = OpCount;
@@ -451,7 +451,7 @@ namespace join
          * @param op completed operation.
          * @param result number of bytes transferred, or negative errno.
          */
-        void onComplete (IoOperation& op, int result) override
+        void onComplete (IoOperation& op, int result) noexcept override
         {
             std::error_code code =
                 (result < 0) ? std::error_code (-result, std::generic_category ()) : std::error_code ();
@@ -464,7 +464,7 @@ namespace join
          * @param op cancelled operation.
          * @param result negative errno.
          */
-        void onCancel (IoOperation& op, int result) override
+        void onCancel (IoOperation& op, int result) noexcept override
         {
             dispatch (op, std::error_code (-result, std::generic_category ()), 0);
         }

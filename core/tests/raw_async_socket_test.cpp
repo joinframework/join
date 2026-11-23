@@ -614,6 +614,20 @@ TEST_F (RawAsyncSocket, asyncWrite)
     ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
 
     timed.close ();
+
+    Raw::AsyncSocket full;
+
+    ASSERT_EQ (full.bind (_interface), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet)), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**
@@ -681,6 +695,20 @@ TEST_F (RawAsyncSocket, asyncRead)
     ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
 
     timed.close ();
+
+    Raw::AsyncSocket full;
+
+    ASSERT_EQ (full.bind (_interface), 0) << join::lastError.message ();
+
+    for (size_t i = 0; i < Raw::AsyncSocket::_opCount; ++i)
+    {
+        ASSERT_NE (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    }
+
+    ASSERT_EQ (full.asyncRead (nullptr, _buf, sizeof (_buf)), -1);
+    ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+    full.close ();
 }
 
 /**
