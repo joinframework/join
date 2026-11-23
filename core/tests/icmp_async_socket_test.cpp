@@ -29,8 +29,13 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <chrono>
+
 // C.
 #include <unistd.h>
+
+using namespace std::chrono_literals;
 
 using join::Errc;
 using join::Mutex;
@@ -40,6 +45,7 @@ using join::IpAddress;
 using join::Icmp;
 using join::Thread;
 using join::Proactor;
+using join::ProactorThread;
 using join::LocalMem;
 
 /**
@@ -323,6 +329,24 @@ TEST_F (IcmpAsyncSocket, move)
     ASSERT_GT (_transferred, 0u);
 
     client3.close ();
+
+    Icmp::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_host), 0) << join::lastError.message ();
+
+    ASSERT_NE (timed.asyncRead (onReportRead, _buf, sizeof (_buf), 50ms), -1) << join::lastError.message ();
+
+    Icmp::AsyncSocket target (std::move (timed));
+    ASSERT_FALSE (timed.opened ());
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    target.close ();
 }
 
 /**
@@ -452,6 +476,39 @@ TEST_F (IcmpAsyncSocket, asyncWait)
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
     client.close ();
+
+    Icmp::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_host), 0) << join::lastError.message ();
+
+    ASSERT_NE (timed.asyncWait (onReportWait, true, false, 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        ASSERT_FALSE (_more);
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncWait (onReportWait, true, false, std::chrono::steady_clock::now () - 1s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    ASSERT_NE (timed.asyncWait (onReportWait, false, true, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return !_code;
+        }));
+    }
+
+    timed.close ();
 }
 
 /**
@@ -566,6 +623,45 @@ TEST_F (IcmpAsyncSocket, asyncWriteTo)
 
     proactor.stop ();
     th.join ();
+
+    Icmp::AsyncSocket timed;
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWriteTo (onReport, _data, sizeof (_data), dest, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == sizeof (_data);
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWriteTo (onReport, _data, sizeof (_data), dest, std::chrono::steady_clock::now () + 10s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == sizeof (_data);
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed, &dest] () {
+        ASSERT_EQ (timed.asyncWriteTo (nullptr, _data, sizeof (_data), dest, std::chrono::steady_clock::now () + 10s,
+                                       nullptr, 0, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**
@@ -597,6 +693,39 @@ TEST_F (IcmpAsyncSocket, asyncReadFrom)
     server.close ();
 
     ASSERT_EQ (_from, Icmp::Endpoint (_host));
+
+    Icmp::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_host), 0) << join::lastError.message ();
+
+    ASSERT_NE (timed.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from, 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from, std::chrono::steady_clock::now () - 1s),
+               -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from, std::chrono::steady_clock::now () + 10s,
+                                        nullptr, 0, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**
@@ -708,6 +837,46 @@ TEST_F (IcmpAsyncSocket, asyncWrite)
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
     full.close ();
+
+    Icmp::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_host), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onReport, _data, sizeof (_data), 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == sizeof (_data);
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onReport, _data, sizeof (_data), std::chrono::steady_clock::now () + 10s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == sizeof (_data);
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        _transferred = 0;
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (
+            timed.asyncWrite (nullptr, _data, sizeof (_data), std::chrono::steady_clock::now () + 10s, true, true), -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**
@@ -760,6 +929,38 @@ TEST_F (IcmpAsyncSocket, asyncRead)
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
     full.close ();
+
+    Icmp::AsyncSocket timed;
+
+    ASSERT_EQ (timed.connect (_host), 0) << join::lastError.message ();
+
+    ASSERT_NE (timed.asyncRead (onReportRead, _buf, sizeof (_buf), 10ms), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+        ASSERT_EQ (_transferred, 0u);
+        _code = {};
+    }
+
+    ASSERT_NE (timed.asyncRead (onReportRead, _buf, sizeof (_buf), std::chrono::steady_clock::now () - 1s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == std::errc::timed_out;
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncRead (nullptr, _buf, sizeof (_buf), std::chrono::steady_clock::now () + 10s, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**

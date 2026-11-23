@@ -31,11 +31,16 @@
 // Libraries.
 #include <gtest/gtest.h>
 
+// C++.
+#include <chrono>
+
 // C.
 #include <net/ethernet.h>
 #include <netinet/udp.h>
 #include <netinet/ip.h>
 #include <unistd.h>
+
+using namespace std::chrono_literals;
 
 using join::Errc;
 using join::Mutex;
@@ -46,6 +51,7 @@ using join::MacAddress;
 using join::Raw;
 using join::Thread;
 using join::Proactor;
+using join::ProactorThread;
 using join::LocalMem;
 
 /**
@@ -437,6 +443,25 @@ TEST_F (RawAsyncSocket, asyncWait)
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
     rawSocket.close ();
+
+    Raw::AsyncSocket timed;
+
+    ASSERT_EQ (timed.bind (_interface), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = std::make_error_code (std::errc::timed_out);
+    }
+
+    ASSERT_NE (timed.asyncWait (onReportWait, false, true, 10s), -1) << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return !_code;
+        }));
+    }
+
+    timed.close ();
 }
 
 /**
@@ -558,6 +583,37 @@ TEST_F (RawAsyncSocket, asyncWrite)
     ASSERT_EQ (_transferred, sizeof (_packet));
 
     rawSocket.close ();
+
+    Raw::AsyncSocket timed;
+
+    ASSERT_EQ (timed.bind (_interface), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _transferred = 0;
+    }
+
+    ASSERT_NE (timed.asyncWrite (onCompletion, reinterpret_cast<char*> (&_packet), sizeof (_packet),
+                                 std::chrono::steady_clock::now () + 10s),
+               -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == sizeof (_packet);
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet),
+                                     std::chrono::steady_clock::now () + 10s, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**
@@ -597,6 +653,34 @@ TEST_F (RawAsyncSocket, asyncRead)
     ASSERT_EQ (code (), std::errc::bad_file_descriptor) << code ().message ();
 
     rawSocket.close ();
+
+    Raw::AsyncSocket timed;
+
+    ASSERT_EQ (timed.bind (_interface), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = std::make_error_code (std::errc::timed_out);
+    }
+
+    ASSERT_NE (timed.asyncRead (onReadCompletion, _buf, sizeof (_buf), 10s), -1) << join::lastError.message ();
+    ASSERT_NE (timed.asyncWrite (nullptr, reinterpret_cast<char*> (&_packet), sizeof (_packet), 10s), -1)
+        << join::lastError.message ();
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return !_code;
+        }));
+    }
+
+    Proactor::InvokeHandler linkTimed = [&timed] () {
+        ASSERT_EQ (timed.asyncRead (nullptr, _buf, sizeof (_buf), std::chrono::steady_clock::now () + 10s, true, true),
+                   -1);
+        ASSERT_EQ (join::lastError, Errc::InvalidParam);
+    };
+    ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
+
+    timed.close ();
 }
 
 /**

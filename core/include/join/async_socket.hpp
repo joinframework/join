@@ -38,6 +38,7 @@
 #include <system_error>
 #include <utility>
 #include <atomic>
+#include <chrono>
 #include <array>
 #include <new>
 
@@ -76,6 +77,7 @@ namespace join
         using Endpoint = typename Protocol::Endpoint;
         using AsyncWait = BasicAsyncWait<Protocol, ProactorType>;
         using WaitHandler = typename AsyncWait::Wait;
+        using TimePoint = typename ProactorType::TimePoint;
 
         /// number of operations in flight.
         static constexpr size_t _opCount = OpCount;
@@ -247,6 +249,37 @@ namespace join
          */
         ssize_t asyncWait (WaitHandler handler, bool wantRead, bool wantWrite, bool flush = true) noexcept
         {
+            return asyncWait (std::move (handler), wantRead, wantWrite, TimePoint::max (), flush);
+        }
+
+        /**
+         * @brief start an asynchronous wait in one direction, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param wantRead wait until the socket is readable.
+         * @param wantWrite wait until the socket is writable.
+         * @param timeout maximum time granted to the operation.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWait (WaitHandler handler, bool wantRead, bool wantWrite, std::chrono::nanoseconds timeout,
+                           bool flush = true) noexcept
+        {
+            return asyncWait (std::move (handler), wantRead, wantWrite, std::chrono::steady_clock::now () + timeout,
+                              flush);
+        }
+
+        /**
+         * @brief start an asynchronous wait in one direction, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param wantRead wait until the socket is readable.
+         * @param wantWrite wait until the socket is writable.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWait (WaitHandler handler, bool wantRead, bool wantWrite, TimePoint deadline,
+                           bool flush = true) noexcept
+        {
             if (JOIN_UNLIKELY (!_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
@@ -272,7 +305,7 @@ namespace join
 
             size_t index = _allocator.getIndex (wait);
 
-            if (_proactor->submit (wait->op, flush, false) == -1)
+            if (_proactor->submit (wait->op, deadline, flush, false) == -1)
             {
                 // LCOV_EXCL_START
                 releaseOperation (wait);
