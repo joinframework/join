@@ -90,7 +90,11 @@ namespace join
          * @brief move constructor.
          * @param other other object to move.
          */
-        BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) noexcept = default;
+        BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) noexcept
+        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (std::move (other), false)
+        {
+            this->resumeAll ();
+        }
 
         /**
          * @brief move assignment operator.
