@@ -941,6 +941,118 @@ TEST_F (UnixAsyncStreamSocket, cancelConnect)
 }
 
 /**
+ * @brief Test asyncDisconnect method.
+ */
+TEST_F (UnixAsyncStreamSocket, asyncDisconnect)
+{
+    UnixStream::AsyncSocket client;
+    UnixStream::Acceptor acceptor;
+    char tmp[16] = {};
+
+    ASSERT_EQ (client.asyncDisconnect (onConnect), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    ASSERT_EQ (acceptor.create (_stallpath), 0) << join::lastError.message ();
+
+    {
+        UnixStream::Socket sock;
+
+        if (sock.connect (_stallpath) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        client = UnixStream::AsyncSocket (std::move (sock));
+    }
+
+    UnixStream::Socket remote = acceptor.accept ();
+    ASSERT_TRUE (remote.connected ()) << join::lastError.message ();
+
+    ASSERT_NE (client.asyncRead (onRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_EQ (client.asyncDisconnect (onConnect), -1);
+    ASSERT_EQ (join::lastError, Errc::InUse);
+    ASSERT_EQ (remote.writeExactly ("first", 5), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 1;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_NE (client.asyncWrite (onWrite, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 2;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_EQ (remote.writeExactly ("ignored", 7), 0) << join::lastError.message ();
+    ASSERT_EQ (client.asyncDisconnect (onConnect, 10s), 0) << join::lastError.message ();
+    ASSERT_EQ (remote.readExactly (tmp, 5, _timeout), 0) << join::lastError.message ();
+    ASSERT_EQ (std::string (tmp, 5), "hello");
+    ASSERT_EQ (remote.readExactly (tmp, 1, _timeout), -1);
+    ASSERT_EQ (join::lastError, Errc::ConnectionClosed);
+    remote.close ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 3;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    ASSERT_FALSE (client.connected ());
+    ASSERT_EQ (client.asyncDisconnect (onConnect), -1);
+    ASSERT_EQ (join::lastError, Errc::OperationFailed);
+
+    {
+        UnixStream::Socket sock;
+
+        if (sock.connect (_stallpath) == -1)
+        {
+            ASSERT_EQ (join::lastError, Errc::TemporaryError) << join::lastError.message ();
+        }
+        ASSERT_TRUE (sock.waitConnected (_timeout)) << join::lastError.message ();
+
+        client = UnixStream::AsyncSocket (std::move (sock));
+    }
+
+    UnixStream::Socket remote2 = acceptor.accept ();
+    ASSERT_TRUE (remote2.connected ()) << join::lastError.message ();
+
+    ASSERT_EQ (client.asyncDisconnect (onConnect, 50ms), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_EQ (_code, std::errc::timed_out);
+    }
+
+    remote2.close ();
+    ASSERT_EQ (client.asyncDisconnect (onConnect, 10s), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 5;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+
+    client.close ();
+}
+
+/**
  * @brief Test asyncReadMulti method.
  */
 TEST_F (UnixAsyncStreamSocket, asyncReadMulti)

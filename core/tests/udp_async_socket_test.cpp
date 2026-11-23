@@ -25,6 +25,9 @@
 // libjoin.
 #include <join/async_datagram_socket.hpp>
 #include <join/condition.hpp>
+#ifdef JOIN_HAS_IO_URING
+#include <join/io_policy.hpp>
+#endif
 
 // Libraries.
 #include <gtest/gtest.h>
@@ -34,6 +37,7 @@
 
 // C.
 #include <unistd.h>
+#include <cstring>
 
 using namespace std::chrono_literals;
 
@@ -47,6 +51,20 @@ using join::Thread;
 using join::Proactor;
 using join::ProactorThread;
 using join::LocalMem;
+
+#ifdef JOIN_HAS_IO_URING
+/**
+ * @brief policy declaring fixed buffers.
+ */
+struct FixedPolicy : join::IoDefaultPolicy
+{
+    static constexpr uint32_t fixedBufferCount = 4;
+    static constexpr uint32_t fixedBufferSize = 4096;
+};
+
+using FixedProactorThread = join::BasicProactorThread<FixedPolicy>;
+using FixedAsyncSocket = join::BasicAsyncDatagramSocket<Udp, join::BasicProactor<FixedPolicy>>;
+#endif
 
 /**
  * @brief Class used to test the udp asynchronous datagram socket API.
@@ -1186,6 +1204,49 @@ TEST_F (UdpAsyncSocket, asyncWrite)
     ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
 
     timed.close ();
+
+#ifdef JOIN_HAS_IO_URING
+    FixedAsyncSocket fixed (FixedProactorThread::proactor ());
+    char* arena = FixedProactorThread::proactor ().fixedBuffer ().acquire (4096);
+    ASSERT_NE (arena, nullptr) << join::lastError.message ();
+    ::memcpy (arena, "fixed", 5);
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_EQ (fixed.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_NE (fixed.asyncWrite (onReport, arena, 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (fixed.asyncWrite (onReport, "plain", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _transferred == 5u;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+    }
+
+    fixed.close ();
+    FixedProactorThread::proactor ().fixedBuffer ().release (arena);
+#endif
 }
 
 /**
@@ -1240,15 +1301,25 @@ TEST_F (UdpAsyncSocket, asyncRead)
         ASSERT_EQ (_code, Errc::ConnectionRefused) << _code.message ();
     }
 
+    ASSERT_EQ (::recv (client.handle (), _buf, sizeof (_buf), MSG_ERRQUEUE), 5) << strerror (errno);
+
+    Udp::Socket refuser;
+
+    ASSERT_EQ (refuser.bind ({_host, static_cast<uint16_t> (_port + 1)}), 0) << join::lastError.message ();
     ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_EQ (refuser.writeTo ("world", 5, client.localEndpoint ()), 5) << join::lastError.message ();
 
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
             return _completions >= 4;
         }));
-        ASSERT_EQ (_code, Errc::TemporaryError) << _code.message ();
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "world");
     }
+
+    refuser.close ();
 
     client.close ();
 
@@ -1306,6 +1377,29 @@ TEST_F (UdpAsyncSocket, asyncRead)
     ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
 
     timed.close ();
+
+    Udp::AsyncSocket small;
+
+    ASSERT_EQ (small.connect ({_host, _port}), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (small.asyncRead (onReportRead, _buf, 2), -1) << join::lastError.message ();
+    ASSERT_NE (small.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == Errc::MessageTooLong;
+        }));
+        ASSERT_EQ (_transferred, 2u);
+    }
+
+    small.close ();
 }
 
 /**

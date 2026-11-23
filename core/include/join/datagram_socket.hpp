@@ -29,6 +29,7 @@
 #include <join/raw_socket.hpp>
 
 // C.
+#include <sys/socket.h>
 #include <cstring>
 
 namespace join
@@ -244,6 +245,30 @@ namespace join
         }
 
         /**
+         * @brief read data.
+         * @param data buffer used to store the data received.
+         * @param maxSize maximum number of bytes to read.
+         * @return the number of bytes received, -1 on failure.
+         */
+        ssize_t read (char* data, size_t maxSize) noexcept
+        {
+            ssize_t size = ::recv (this->_handle, data, maxSize, MSG_TRUNC);
+            if (size == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+            }
+
+            if (static_cast<size_t> (size) > maxSize)
+            {
+                lastError = make_error_code (Errc::MessageTooLong);
+                return -1;
+            }
+
+            return size;
+        }
+
+        /**
          * @brief read data on the socket.
          * @param data buffer used to store the data received.
          * @param maxSize maximum number of bytes to read.
@@ -293,6 +318,24 @@ namespace join
             }
 
             return size;
+        }
+
+        /**
+         * @brief write data.
+         * @param data data buffer to send.
+         * @param maxSize maximum number of bytes to write.
+         * @return the number of bytes written, -1 on failure.
+         */
+        ssize_t write (const char* data, size_t maxSize) noexcept
+        {
+            ssize_t result = ::send (this->_handle, data, maxSize, MSG_NOSIGNAL);
+            if (result == -1)
+            {
+                lastError = std::error_code (errno, std::generic_category ());
+                return -1;
+            }
+
+            return result;
         }
 
         /**

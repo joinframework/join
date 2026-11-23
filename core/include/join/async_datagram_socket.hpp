@@ -40,16 +40,17 @@ namespace join
      * @brief asynchronous datagram socket class.
      */
     template <class Protocol, class ProactorType, size_t OpCount>
-    class BasicAsyncDatagramSocket : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
+    class BasicAsyncDatagramSocket final : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
-        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
-        using ReadFromHandler = typename AsyncRead::ReadFrom;
-        using WriteHandler = typename AsyncWrite::Write;
         using TimePoint = typename ProactorType::TimePoint;
+        using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
+        using ReadHandler = typename AsyncRead::Read;
+        using ReadFromHandler = typename AsyncRead::ReadFrom;
+        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
+        using WriteHandler = typename AsyncWrite::Write;
 
         /**
          * @brief create the socket instance.
@@ -135,6 +136,79 @@ namespace join
         int disconnect () noexcept
         {
             return this->_socket.disconnect ();
+        }
+
+        /**
+         * @brief start an asynchronous read.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, bool flush = true,
+                           bool link = false) noexcept
+        {
+            return asyncRead (std::move (handler), data, maxSize, TimePoint::max (), flush, link);
+        }
+
+        /**
+         * @brief start an asynchronous read, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param timeout maximum time granted to the operation.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, std::chrono::nanoseconds timeout,
+                           bool flush = true) noexcept
+        {
+            return asyncRead (std::move (handler), data, maxSize, std::chrono::steady_clock::now () + timeout, flush);
+        }
+
+        /**
+         * @brief start an asynchronous read, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param data buffer used to store the data received, valid until the handler is invoked.
+         * @param maxSize maximum number of bytes to read.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncRead (ReadHandler handler, char* data, size_t maxSize, TimePoint deadline, bool flush = true,
+                           bool link = false) noexcept
+        {
+            if (JOIN_UNLIKELY (!this->_socket.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            AsyncRead* read = this->allocateRead ();
+            if (JOIN_UNLIKELY (read == nullptr))
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                return -1;
+            }
+
+            read->readHandler = std::move (handler);
+            read->op = IoOperation::makeRecv (this->_socket.handle (), data, maxSize, MSG_TRUNC, this, link);
+            read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            size_t index = this->_allocator.getIndex (read);
+
+            if (this->_proactor->submit (read->op, deadline, flush, false) == -1)
+            {
+                // LCOV_EXCL_START
+                this->releaseOperation (read);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return static_cast<ssize_t> (index);
         }
 
         /**
@@ -274,6 +348,95 @@ namespace join
             {
                 // LCOV_EXCL_START
                 this->releaseOperation (read);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return static_cast<ssize_t> (index);
+        }
+
+        /**
+         * @brief start an asynchronous write, without copy if the data belong to the proactor fixed buffers.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, bool flush = true,
+                            bool link = false) noexcept
+        {
+            return asyncWrite (std::move (handler), data, size, TimePoint::max (), flush, link);
+        }
+
+        /**
+         * @brief start an asynchronous write, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param timeout maximum time granted to the operation.
+         * @param flush flush the submission queue.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, std::chrono::nanoseconds timeout,
+                            bool flush = true) noexcept
+        {
+            return asyncWrite (std::move (handler), data, size, std::chrono::steady_clock::now () + timeout, flush);
+        }
+
+        /**
+         * @brief start an asynchronous write, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param data data buffer to send, valid until the handler is invoked.
+         * @param size number of bytes to write.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @param flush flush the submission queue.
+         * @param link link this operation to the next one submitted.
+         * @return index of the operation on success, -1 on failure.
+         */
+        ssize_t asyncWrite (WriteHandler handler, const char* data, size_t size, TimePoint deadline, bool flush = true,
+                            bool link = false) noexcept
+        {
+            if (JOIN_UNLIKELY (!this->_socket.opened ()))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            AsyncWrite* write = this->allocateWrite ();
+            if (JOIN_UNLIKELY (write == nullptr))
+            {
+                lastError = make_error_code (Errc::OutOfMemory);
+                return -1;
+            }
+
+            write->writeHandler = std::move (handler);
+
+            if constexpr (has_zero_copy_v<Protocol> && has_fixed_buffer_v<ProactorType>)
+            {
+                if (this->_proactor->fixedBuffer ().owns (data, size))
+                {
+                    write->op = IoOperation::makeSendZc (this->_socket.handle (), data, size, MSG_NOSIGNAL, this, link);
+                }
+                else
+                {
+                    write->op = IoOperation::makeSend (this->_socket.handle (), data, size, MSG_NOSIGNAL, this, link);
+                }
+            }
+            else
+            {
+                write->op = IoOperation::makeSend (this->_socket.handle (), data, size, MSG_NOSIGNAL, this, link);
+            }
+
+            write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            size_t index = this->_allocator.getIndex (write);
+
+            if (this->_proactor->submit (write->op, deadline, flush, false) == -1)
+            {
+                // LCOV_EXCL_START
+                this->releaseOperation (write);
                 return -1;
                 // LCOV_EXCL_STOP
             }

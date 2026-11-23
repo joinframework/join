@@ -41,22 +41,6 @@
 namespace join
 {
     /**
-     * @brief asynchronous wait operation.
-     */
-    template <class Protocol, class ProactorType>
-    struct BasicAsyncWait
-    {
-        /// handler invoked on completion.
-        using Wait = Function<void (const std::error_code&, bool), 16>;
-
-        /// operation submitted to the proactor.
-        IoOperation op = {};
-
-        /// handler invoked on completion.
-        Wait waitHandler;
-    };
-
-    /**
      * @brief asynchronous accept operation.
      */
     template <class Protocol, class ProactorType>
@@ -79,6 +63,60 @@ namespace join
 
         /// remote address length.
         socklen_t remoteLen = sizeof (struct sockaddr_storage);
+    };
+
+    /**
+     * @brief asynchronous connect operation.
+     */
+    template <class Protocol, class ProactorType>
+    struct BasicAsyncConnect
+    {
+        /// handler invoked on completion.
+        using Connect = Function<void (const std::error_code&), 16>;
+
+        /// operation submitted to the proactor.
+        IoOperation op = {};
+
+        /// handler invoked on completion.
+        Connect connectHandler;
+    };
+
+    /**
+     * @brief asynchronous disconnect operation.
+     */
+    template <class Protocol, class ProactorType>
+    struct BasicAsyncDisconnect
+    {
+        /// handler invoked on completion.
+        using Disconnect = Function<void (const std::error_code&), 16>;
+
+        /// operation submitted to the proactor.
+        IoOperation op = {};
+
+        /// handler invoked on completion.
+        Disconnect disconnectHandler;
+
+        /// time point at which to give up.
+        typename ProactorType::TimePoint deadline;
+
+        /// buffer receiving the data discarded.
+        char buffer[128];
+    };
+
+    /**
+     * @brief asynchronous wait operation.
+     */
+    template <class Protocol, class ProactorType>
+    struct BasicAsyncWait
+    {
+        /// handler invoked on completion.
+        using Wait = Function<void (const std::error_code&, bool), 16>;
+
+        /// operation submitted to the proactor.
+        IoOperation op = {};
+
+        /// handler invoked on completion.
+        Wait waitHandler;
     };
 
     /**
@@ -119,17 +157,11 @@ namespace join
     template <class Protocol, class ProactorType>
     struct BasicAsyncWrite
     {
-        /// handler invoked on connection completion.
-        using Connect = Function<void (const std::error_code&), 16>;
-
         /// handler invoked on completion.
         using Write = Function<void (const std::error_code&, size_t), 16>;
 
         /// operation submitted to the proactor.
         IoOperation op = {};
-
-        /// handler invoked on connection completion.
-        Connect connectHandler;
 
         /// handler invoked on completion.
         Write writeHandler;
@@ -157,8 +189,10 @@ namespace join
      * @brief asynchronous socket operation traits.
      */
     template <class Protocol, class ProactorType>
-    using AsyncOp = BasicAsyncOpTraits<BasicAsyncWait<Protocol, ProactorType>, BasicAsyncRead<Protocol, ProactorType>,
-                                       BasicAsyncWrite<Protocol, ProactorType>>;
+    using AsyncOp =
+        BasicAsyncOpTraits<BasicAsyncConnect<Protocol, ProactorType>, BasicAsyncDisconnect<Protocol, ProactorType>,
+                           BasicAsyncWait<Protocol, ProactorType>, BasicAsyncRead<Protocol, ProactorType>,
+                           BasicAsyncWrite<Protocol, ProactorType>>;
 }
 
 #endif

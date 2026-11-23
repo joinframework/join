@@ -39,6 +39,7 @@
 #include <string>
 
 // C.
+#include <sys/socket.h>
 #include <cstddef>
 #include <cstring>
 
@@ -54,13 +55,16 @@ namespace join
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
         using Option = typename Socket::Option;
+        using TimePoint = typename ProactorType::TimePoint;
+        using AsyncConnect = BasicAsyncConnect<Protocol, ProactorType>;
+        using ConnectHandler = typename AsyncConnect::Connect;
+        using AsyncDisconnect = BasicAsyncDisconnect<Protocol, ProactorType>;
+        using DisconnectHandler = typename AsyncDisconnect::Disconnect;
         using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
-        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
         using ReadHandler = typename AsyncRead::Read;
         using ReadFromHandler = typename AsyncRead::ReadFrom;
-        using ConnectHandler = typename AsyncWrite::Connect;
+        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
         using WriteHandler = typename AsyncWrite::Write;
-        using TimePoint = typename ProactorType::TimePoint;
 
         /**
          * @brief create the socket instance.
@@ -168,6 +172,25 @@ namespace join
         int canRead () const noexcept
         {
             return this->_socket.canRead ();
+        }
+
+        /**
+         * @brief cancel the connect operation in flight, if any.
+         * @return 0 on success, -1 on failure.
+         */
+        int cancelConnect () noexcept
+        {
+            for (auto& slot : this->_ops)
+            {
+                IoOperation* op = slot.load (std::memory_order_acquire);
+
+                if ((op != nullptr) && (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
+                {
+                    return this->cancelOperation (*op);
+                }
+            }
+
+            return 0;
         }
 
         /**
@@ -374,25 +397,6 @@ namespace join
         }
 
         /**
-         * @brief cancel the connect operation in flight, if any.
-         * @return 0 on success, -1 on failure.
-         */
-        int cancelConnect () noexcept
-        {
-            for (auto& slot : this->_ops)
-            {
-                IoOperation* op = slot.load (std::memory_order_acquire);
-
-                if ((op != nullptr) && (static_cast<IoOperation::Opcode> (op->code) == IoOperation::Opcode::Connect))
-                {
-                    return this->cancelOperation (*op);
-                }
-            }
-
-            return 0;
-        }
-
-        /**
          * @brief set the given option to the given value.
          * @param option socket option.
          * @param value option value.
@@ -425,7 +429,11 @@ namespace join
             }
             else if (opcode == IoOperation::Opcode::Connect)
             {
-                completeConnect (reinterpret_cast<AsyncWrite*> (&op), code);
+                completeConnect (reinterpret_cast<AsyncConnect*> (&op), code);
+            }
+            else if (opcode == IoOperation::Opcode::Read)
+            {
+                completeDisconnect (reinterpret_cast<AsyncDisconnect*> (&op), code, size);
             }
             else
             {
@@ -437,7 +445,7 @@ namespace join
          * @brief invoke the connect completion handler.
          * @param code error code reported by the kernel.
          */
-        void completeConnect (AsyncWrite* connect, const std::error_code& code) noexcept
+        void completeConnect (AsyncConnect* connect, const std::error_code& code) noexcept
         {
             ConnectHandler handler = std::move (connect->connectHandler);
 
@@ -460,6 +468,42 @@ namespace join
         }
 
         /**
+         * @brief discard the data received until the end of stream, then invoke the disconnect handler.
+         * @param disconnect completed disconnect operation.
+         * @param code error code reported by the kernel.
+         * @param size number of bytes discarded.
+         */
+        void completeDisconnect (AsyncDisconnect* disconnect, const std::error_code& code, size_t size) noexcept
+        {
+            std::error_code result = code;
+
+            if (!result && (size > 0))
+            {
+                if (JOIN_LIKELY (this->_proactor->submit (disconnect->op, disconnect->deadline, true, false) == 0))
+                {
+                    return;
+                }
+
+                result = lastError;  // LCOV_EXCL_LINE
+            }
+
+            if (result != std::errc::timed_out)
+            {
+                ::shutdown (this->_socket.handle (), SHUT_RD);
+                this->_socket._state = Socket::Disconnected;
+            }
+
+            DisconnectHandler handler = std::move (disconnect->disconnectHandler);
+
+            this->releaseOperation (disconnect);
+
+            if (JOIN_LIKELY (handler))
+            {
+                handler (result);
+            }
+        }
+
+        /**
          * @brief invoke the read completion handler.
          * @param read completed read operation.
          * @param code error code reported by the kernel.
@@ -469,15 +513,23 @@ namespace join
         {
             std::error_code result = code;
             const char* data = nullptr;
+            bool truncated = false;
 
             switch (static_cast<IoOperation::Opcode> (read->op.code))
             {
                 case IoOperation::Opcode::Recv:
                     data = static_cast<const char*> (read->op.data.stream.buf);
+                    if (JOIN_UNLIKELY ((this->_socket.type () != SOCK_STREAM) && !read->op.multishot &&
+                                       (size > read->op.data.stream.len)))
+                    {
+                        truncated = true;
+                        size = read->op.data.stream.len;
+                    }
                     break;
 
                 default:
                     data = static_cast<const char*> (read->msg.msg_iov->iov_base);
+                    truncated = (read->msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) != 0;
                     break;
             }
 
@@ -488,7 +540,7 @@ namespace join
                     result = make_error_code (Errc::ConnectionClosed);
                 }
             }
-            else if (JOIN_UNLIKELY (!result && (read->msg.msg_flags & (MSG_TRUNC | MSG_CTRUNC))))
+            else if (JOIN_UNLIKELY (!result && truncated))
             {
                 result = make_error_code (Errc::MessageTooLong);
             }

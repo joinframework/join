@@ -44,17 +44,20 @@ namespace join
      * @brief asynchronous stream socket class.
      */
     template <class Protocol, class ProactorType, size_t OpCount>
-    class BasicAsyncStreamSocket : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
+    class BasicAsyncStreamSocket final : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
     {
     public:
         using Socket = typename Protocol::Socket;
         using Endpoint = typename Protocol::Endpoint;
-        using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
-        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
-        using ConnectHandler = typename AsyncWrite::Connect;
-        using ReadHandler = typename AsyncRead::Read;
-        using WriteHandler = typename AsyncWrite::Write;
         using TimePoint = typename ProactorType::TimePoint;
+        using AsyncConnect = BasicAsyncConnect<Protocol, ProactorType>;
+        using ConnectHandler = typename AsyncConnect::Connect;
+        using AsyncDisconnect = BasicAsyncDisconnect<Protocol, ProactorType>;
+        using DisconnectHandler = typename AsyncDisconnect::Disconnect;
+        using AsyncRead = BasicAsyncRead<Protocol, ProactorType>;
+        using ReadHandler = typename AsyncRead::Read;
+        using AsyncWrite = BasicAsyncWrite<Protocol, ProactorType>;
+        using WriteHandler = typename AsyncWrite::Write;
 
         /**
          * @brief create the socket instance.
@@ -162,7 +165,7 @@ namespace join
                 return -1;  // LCOV_EXCL_LINE
             }
 
-            AsyncWrite* connect = this->allocateWrite ();
+            AsyncConnect* connect = this->template allocateOperation<AsyncConnect> ();
             if (JOIN_UNLIKELY (connect == nullptr))
             {
                 // LCOV_EXCL_START
@@ -184,6 +187,80 @@ namespace join
                 this->releaseOperation (connect);
                 this->cancelAll ();
                 this->_socket.close ();
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            return 0;
+        }
+
+        /**
+         * @brief start an asynchronous lingering close, discarding the data received until the end of stream.
+         * @param handler handler invoked on completion.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncDisconnect (DisconnectHandler handler) noexcept
+        {
+            return asyncDisconnect (std::move (handler), TimePoint::max ());
+        }
+
+        /**
+         * @brief start an asynchronous lingering close, giving up after the given duration.
+         * @param handler handler invoked on completion.
+         * @param timeout maximum time granted to the operation.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncDisconnect (DisconnectHandler handler, std::chrono::nanoseconds timeout) noexcept
+        {
+            return asyncDisconnect (std::move (handler), std::chrono::steady_clock::now () + timeout);
+        }
+
+        /**
+         * @brief start an asynchronous lingering close, giving up at the given time point.
+         * @param handler handler invoked on completion.
+         * @param deadline time point at which to give up, max to wait indefinitely.
+         * @return 0 on success, -1 on failure.
+         */
+        int asyncDisconnect (DisconnectHandler handler, TimePoint deadline) noexcept
+        {
+            if (JOIN_UNLIKELY ((this->_socket._state != Socket::Connected) &&
+                               (this->_socket._state != Socket::Disconnecting)))
+            {
+                lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (this->pendingAny ()))
+            {
+                lastError = make_error_code (Errc::InUse);
+                return -1;
+            }
+
+            AsyncDisconnect* disconnect = this->template allocateOperation<AsyncDisconnect> ();
+            if (JOIN_UNLIKELY (disconnect == nullptr))
+            {
+                // LCOV_EXCL_START
+                lastError = make_error_code (Errc::OutOfMemory);
+                return -1;
+                // LCOV_EXCL_STOP
+            }
+
+            if (this->_socket._state == Socket::Connected)
+            {
+                ::shutdown (this->_socket.handle (), SHUT_WR);
+                this->_socket._state = Socket::Disconnecting;
+            }
+
+            disconnect->disconnectHandler = std::move (handler);
+            disconnect->deadline = deadline;
+            disconnect->op =
+                IoOperation::makeRead (this->_socket.handle (), disconnect->buffer, sizeof (disconnect->buffer), this);
+            disconnect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
+
+            if (this->_proactor->submit (disconnect->op, deadline, true, false) == -1)
+            {
+                // LCOV_EXCL_START
+                this->releaseOperation (disconnect);
                 return -1;
                 // LCOV_EXCL_STOP
             }

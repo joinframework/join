@@ -1064,6 +1064,31 @@ TEST_F (UnixAsyncDatagramSocket, asyncRead)
     ASSERT_EQ (ProactorThread::proactor ().invoke (&linkTimed), 0) << join::lastError.message ();
 
     timed.close ();
+
+    UnixDgram::AsyncSocket small;
+
+    ::unlink (_clientpath.c_str ());
+    ASSERT_EQ (small.bind (_clientpath), 0) << join::lastError.message ();
+    ASSERT_EQ (small.connect (_serverpath), 0) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        _code = {};
+        _transferred = 0;
+    }
+
+    ASSERT_NE (small.asyncRead (onReportRead, _buf, 2), -1) << join::lastError.message ();
+    ASSERT_NE (small.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _code == Errc::MessageTooLong;
+        }));
+        ASSERT_EQ (_transferred, 2u);
+    }
+
+    small.close ();
 }
 
 /**
