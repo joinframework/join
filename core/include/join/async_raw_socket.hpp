@@ -97,11 +97,26 @@ namespace join
          * @param other other object to move.
          */
         BasicAsyncRawSocket (BasicAsyncRawSocket&& other) noexcept
-        : BasicAsyncSocket<Protocol, ProactorType, OpCount> (std::move (other))
+        : BasicAsyncRawSocket (std::move (other), true)
         {
-            this->resumeAll ();
         }
 
+    protected:
+        /**
+         * @brief move constructor.
+         * @param other other object to move.
+         * @param resume resume the operations moved.
+         */
+        BasicAsyncRawSocket (BasicAsyncRawSocket&& other, bool resume) noexcept
+        : BasicAsyncSocket<Protocol, ProactorType, OpCount> (std::move (other))
+        {
+            if (resume)
+            {
+                this->resumeAll ();
+            }
+        }
+
+    public:
         /**
          * @brief move assignment operator.
          * @param other other object to assign.
