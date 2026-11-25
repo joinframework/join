@@ -26,6 +26,7 @@
 #define JOIN_CORE_TIMER_HPP
 
 // libjoin.
+#include <join/io_descriptor.hpp>
 #include <join/proactor.hpp>
 #include <join/function.hpp>
 #include <join/backoff.hpp>
@@ -68,20 +69,22 @@ namespace join
          * @param proactor completion dispatcher.
          */
         explicit BasicTimer (ProactorType& proactor = ProactorThread::proactor ())
-        : _handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC))
-        , _proactor (proactor)
+        : _proactor (proactor)
         {
-            if (_handle == -1)
+            _descriptor.handle (timerfd_create (ClockPolicy::type (), TFD_NONBLOCK | TFD_CLOEXEC));
+
+            if (_descriptor.handle () == -1)
             {
                 throw std::system_error (errno, std::system_category (), "timerfd_create failed");  // LCOV_EXCL_LINE
             }
 
-            _ops->op = IoOperation::makeRead (_handle, &_ops->expirations, sizeof (_ops->expirations), this);
+            _ops->op =
+                IoOperation::makeRead (_descriptor.handle (), &_ops->expirations, sizeof (_ops->expirations), this);
 
             if (_proactor.submit (_ops->op, true, true) == -1)
             {
                 // LCOV_EXCL_START
-                close (_handle);
+                close (_descriptor.handle ());
                 throw std::system_error (lastError, "timerfd submit failed");
                 // LCOV_EXCL_STOP
             }
@@ -127,7 +130,7 @@ namespace join
                 backoff ();
             }
 
-            close (_handle);
+            close (_descriptor.handle ());
         }
 
         /**
@@ -148,7 +151,7 @@ namespace join
             _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (_descriptor.handle (), 0, &ts, nullptr);
         }
 
         /**
@@ -175,7 +178,7 @@ namespace join
             _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns);
-            timerfd_settime (_handle, TFD_TIMER_ABSTIME, &ts, nullptr);
+            timerfd_settime (_descriptor.handle (), TFD_TIMER_ABSTIME, &ts, nullptr);
         }
 
         /**
@@ -196,7 +199,7 @@ namespace join
             _state.store (State::Armed, std::memory_order_release);
 
             auto ts = toTimerSpec (ns, true);
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (_descriptor.handle (), 0, &ts, nullptr);
         }
 
         /**
@@ -208,7 +211,7 @@ namespace join
             _ns.store (std::chrono::nanoseconds::zero (), std::memory_order_relaxed);
 
             struct itimerspec ts = {};
-            timerfd_settime (_handle, 0, &ts, nullptr);
+            timerfd_settime (_descriptor.handle (), 0, &ts, nullptr);
 
             if (JOIN_UNLIKELY (_proactor.isProactorThread ()))
             {
@@ -241,7 +244,7 @@ namespace join
         bool active () const noexcept
         {
             struct itimerspec ts = {};
-            timerfd_gettime (_handle, &ts);
+            timerfd_gettime (_descriptor.handle (), &ts);
             const bool hasValue = (ts.it_value.tv_sec != 0 || ts.it_value.tv_nsec != 0);
             const bool hasInterval = (ts.it_interval.tv_sec != 0 || ts.it_interval.tv_nsec != 0);
             return hasValue || hasInterval;
@@ -254,7 +257,7 @@ namespace join
         std::chrono::nanoseconds remaining () const noexcept
         {
             struct itimerspec ts = {};
-            timerfd_gettime (_handle, &ts);
+            timerfd_gettime (_descriptor.handle (), &ts);
             return std::chrono::seconds (ts.it_value.tv_sec) + std::chrono::nanoseconds (ts.it_value.tv_nsec);
         }
 
@@ -422,8 +425,8 @@ namespace join
         /// timer type
         std::atomic_bool _oneShot{true};
 
-        /// timer handle.
-        int _handle = -1;
+        /// timer descriptor.
+        IoDescriptor _descriptor;
 
         /// completion dispatcher.
         ProactorType& _proactor;
