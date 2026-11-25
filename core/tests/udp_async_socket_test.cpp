@@ -34,6 +34,7 @@
 
 // C++.
 #include <chrono>
+#include <limits>
 
 // C.
 #include <unistd.h>
@@ -1009,6 +1010,9 @@ TEST_F (UdpAsyncSocket, asyncRead)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (client.asyncRead (nullptr, _buf, static_cast<size_t> (std::numeric_limits<uint32_t>::max ()) + 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
     ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
     ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
 
@@ -1243,6 +1247,10 @@ TEST_F (UdpAsyncSocket, asyncReadFromMulti)
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
 
+    ASSERT_EQ (client.asyncReadFromMulti (nullptr, 0, static_cast<size_t> (std::numeric_limits<uint16_t>::max ()) + 1),
+               -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
+
     LocalMem::SlabAllocator<4, sizeof (_buf)> arena;
     ASSERT_EQ (client.registerBufferRing (0, arena), 0) << join::lastError.message ();
 
@@ -1301,6 +1309,10 @@ TEST_F (UdpAsyncSocket, asyncWrite)
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
+
+    ASSERT_EQ (client.asyncWrite (nullptr, "hello", static_cast<size_t> (std::numeric_limits<uint32_t>::max ()) + 1),
+               -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
     ASSERT_NE (client.asyncWrite (onReport, "hello", 5), -1) << join::lastError.message ();
 
     {

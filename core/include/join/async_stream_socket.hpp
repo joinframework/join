@@ -33,6 +33,7 @@
 #include <system_error>
 #include <utility>
 #include <chrono>
+#include <limits>
 
 // C.
 #include <sys/socket.h>
@@ -317,6 +318,12 @@ namespace join
                 return -1;
             }
 
+            if (JOIN_UNLIKELY (maxSize > std::numeric_limits<uint32_t>::max ()))
+            {
+                lastError = std::make_error_code (std::errc::message_size);
+                return -1;
+            }
+
             AsyncRead* read = this->allocateRead ();
             if (JOIN_UNLIKELY (read == nullptr))
             {
@@ -388,6 +395,12 @@ namespace join
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (size > std::numeric_limits<uint32_t>::max ()))
+            {
+                lastError = std::make_error_code (std::errc::message_size);
                 return -1;
             }
 
@@ -464,6 +477,12 @@ namespace join
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (size > std::numeric_limits<uint32_t>::max ()))
+            {
+                lastError = std::make_error_code (std::errc::message_size);
                 return -1;
             }
 
@@ -554,6 +573,12 @@ namespace join
             if (JOIN_UNLIKELY (!this->_socket.opened ()))
             {
                 lastError = make_error_code (Errc::OperationFailed);
+                return -1;
+            }
+
+            if (JOIN_UNLIKELY (size > std::numeric_limits<uint32_t>::max ()))
+            {
+                lastError = std::make_error_code (std::errc::message_size);
                 return -1;
             }
 

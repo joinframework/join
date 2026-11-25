@@ -623,7 +623,9 @@ int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush,
     if (JOIN_UNLIKELY (op.multishot && ((op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ||
                                         (op.code == static_cast<uint8_t> (IoOperation::Opcode::Recv)))))
     {
-        auto it = _bufferRings.find (op.group);
+        const uint16_t group =
+            (op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ? op.data.msg.group : op.data.stream.group;
+        auto it = _bufferRings.find (group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
             resetOperation (op);
@@ -855,7 +857,7 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
                 op.data.msg.msg->msg_iovlen = 0;
                 io_uring_prep_recvmsg_multishot (sqe, op.fd, op.data.msg.msg, op.flags);
                 sqe->flags |= IOSQE_BUFFER_SELECT;
-                sqe->buf_group = op.group;
+                sqe->buf_group = op.data.msg.group;
             }
             else
             {
@@ -876,7 +878,7 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             {
                 io_uring_prep_recv_multishot (sqe, op.fd, nullptr, 0, op.flags);
                 sqe->flags |= IOSQE_BUFFER_SELECT;
-                sqe->buf_group = op.group;
+                sqe->buf_group = op.data.stream.group;
             }
             else
             {
