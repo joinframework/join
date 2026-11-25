@@ -49,6 +49,8 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
     more = other.more;
     group = other.group;
     handler = other.handler;
+    fd = other.fd;
+    flags = other.flags;
     data = other.data;
     ring = other.ring;
     timer = other.timer;
@@ -72,6 +74,8 @@ IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
     more = other.more;
     group = other.group;
     handler = other.handler;
+    fd = other.fd;
+    flags = other.flags;
     data = other.data;
     ring = other.ring;
     timer = other.timer;
@@ -87,7 +91,7 @@ IoOperation IoOperation::makePoll (int fd, uint32_t events, CompletionHandler* h
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Poll);
     op.handler = handler;
-    op.data.poll.fd = fd;
+    op.fd = fd;
     op.data.poll.events = events;
     return op;
 }
@@ -102,7 +106,7 @@ IoOperation IoOperation::makePollMulti (int fd, uint32_t events, CompletionHandl
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Poll);
     op.multishot = true;
     op.handler = handler;
-    op.data.poll.fd = fd;
+    op.fd = fd;
     op.data.poll.events = events;
     return op;
 }
@@ -117,10 +121,10 @@ IoOperation IoOperation::makeAccept (int fd, sockaddr* addr, socklen_t* addrlen,
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Accept);
     op.handler = handler;
-    op.data.accept.fd = fd;
+    op.fd = fd;
     op.data.accept.addr = addr;
     op.data.accept.addrlen = addrlen;
-    op.data.accept.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -134,10 +138,10 @@ IoOperation IoOperation::makeAcceptMulti (int fd, int flags, CompletionHandler* 
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Accept);
     op.multishot = true;
     op.handler = handler;
-    op.data.accept.fd = fd;
+    op.fd = fd;
     op.data.accept.addr = nullptr;
     op.data.accept.addrlen = nullptr;
-    op.data.accept.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -151,7 +155,7 @@ IoOperation IoOperation::makeConnect (int fd, const sockaddr* addr, socklen_t ad
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Connect);
     op.handler = handler;
-    op.data.connect.fd = fd;
+    op.fd = fd;
     op.data.connect.addr = addr;
     op.data.connect.addrlen = addrlen;
     return op;
@@ -167,7 +171,7 @@ IoOperation IoOperation::makeRead (int fd, void* buf, size_t len, CompletionHand
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Read);
     op.handler = handler;
     op.linked = linked;
-    op.data.rw.fd = fd;
+    op.fd = fd;
     op.data.rw.buf = buf;
     op.data.rw.len = len;
     return op;
@@ -184,7 +188,7 @@ IoOperation IoOperation::makeWrite (int fd, const void* buf, size_t len, Complet
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Write);
     op.handler = handler;
     op.linked = linked;
-    op.data.rw.fd = fd;
+    op.fd = fd;
     op.data.rw.buf = const_cast<void*> (buf);
     op.data.rw.len = len;
     return op;
@@ -200,9 +204,9 @@ IoOperation IoOperation::makeRecvmsg (int fd, msghdr* msg, int flags, Completion
     op.code = static_cast<uint8_t> (IoOperation::Opcode::RecvMsg);
     op.handler = handler;
     op.linked = linked;
-    op.data.msg.fd = fd;
+    op.fd = fd;
     op.data.msg.msg = msg;
-    op.data.msg.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -218,9 +222,9 @@ IoOperation IoOperation::makeRecvmsgMulti (int fd, uint16_t group, msghdr* msg, 
     op.multishot = true;
     op.group = group;
     op.handler = handler;
-    op.data.msg.fd = fd;
+    op.fd = fd;
     op.data.msg.msg = msg;
-    op.data.msg.flags = flags;
+    op.flags = flags;
     op.data.msg.namelen = msg->msg_namelen;
     op.data.msg.controllen = static_cast<uint32_t> (msg->msg_controllen);
     return op;
@@ -237,9 +241,9 @@ IoOperation IoOperation::makeSendmsg (int fd, const msghdr* msg, int flags, Comp
     op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
     op.handler = handler;
     op.linked = linked;
-    op.data.msg.fd = fd;
+    op.fd = fd;
     op.data.msg.msg = const_cast<msghdr*> (msg);
-    op.data.msg.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -254,9 +258,9 @@ IoOperation IoOperation::makeSendmsgZc (int fd, const msghdr* msg, int flags, Co
     op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc);
     op.handler = handler;
     op.linked = linked;
-    op.data.msg.fd = fd;
+    op.fd = fd;
     op.data.msg.msg = const_cast<msghdr*> (msg);
-    op.data.msg.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -271,10 +275,10 @@ IoOperation IoOperation::makeRecv (int fd, void* buf, size_t len, int flags, Com
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Recv);
     op.handler = handler;
     op.linked = linked;
-    op.data.stream.fd = fd;
+    op.fd = fd;
     op.data.stream.buf = buf;
     op.data.stream.len = len;
-    op.data.stream.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -289,10 +293,10 @@ IoOperation IoOperation::makeRecvMulti (int fd, uint16_t group, int flags, Compl
     op.multishot = true;
     op.group = group;
     op.handler = handler;
-    op.data.stream.fd = fd;
+    op.fd = fd;
     op.data.stream.buf = nullptr;
     op.data.stream.len = 0;
-    op.data.stream.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -307,10 +311,10 @@ IoOperation IoOperation::makeSend (int fd, const void* buf, size_t len, int flag
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Send);
     op.handler = handler;
     op.linked = linked;
-    op.data.stream.fd = fd;
+    op.fd = fd;
     op.data.stream.buf = const_cast<void*> (buf);
     op.data.stream.len = len;
-    op.data.stream.flags = flags;
+    op.flags = flags;
     return op;
 }
 
@@ -325,39 +329,9 @@ IoOperation IoOperation::makeSendZc (int fd, const void* buf, size_t len, int fl
     op.code = static_cast<uint8_t> (IoOperation::Opcode::SendZc);
     op.handler = handler;
     op.linked = linked;
-    op.data.stream.fd = fd;
+    op.fd = fd;
     op.data.stream.buf = const_cast<void*> (buf);
     op.data.stream.len = len;
-    op.data.stream.flags = flags;
+    op.flags = flags;
     return op;
-}
-
-// =========================================================================
-//   CLASS     : IoOperation
-//   METHOD    : fd
-// =========================================================================
-int IoOperation::fd () const noexcept
-{
-    switch (static_cast<Opcode> (code))
-    {
-        case Opcode::Poll:
-            return data.poll.fd;
-        case Opcode::Accept:
-            return data.accept.fd;
-        case Opcode::Connect:
-            return data.connect.fd;
-        case Opcode::Read:
-        case Opcode::Write:
-            return data.rw.fd;
-        case Opcode::RecvMsg:
-        case Opcode::SendMsg:
-        case Opcode::SendMsgZc:
-            return data.msg.fd;
-        case Opcode::Recv:
-        case Opcode::Send:
-        case Opcode::SendZc:
-            return data.stream.fd;
-        default:
-            return -1;
-    }
 }

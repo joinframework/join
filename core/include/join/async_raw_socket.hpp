@@ -519,7 +519,7 @@ namespace join
             {
                 case IoOperation::Opcode::Recv:
                     data = static_cast<const char*> (read->op.data.stream.buf);
-                    if (JOIN_UNLIKELY (read->op.data.stream.flags & MSG_WAITALL))
+                    if (JOIN_UNLIKELY (read->op.flags & MSG_WAITALL))
                     {
                         if (!result && (size > 0) && (size < read->op.data.stream.len))
                         {
@@ -622,7 +622,7 @@ namespace join
         {
             std::error_code result = code;
 
-            if (JOIN_UNLIKELY (write->op.data.stream.flags & MSG_WAITALL))
+            if (JOIN_UNLIKELY (write->op.flags & MSG_WAITALL))
             {
                 if (!result && (size > 0) && (size < write->op.data.stream.len))
                 {

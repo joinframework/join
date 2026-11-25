@@ -2077,11 +2077,11 @@ TEST_F (ProactorTest, asyncRecvMulti)
         void onComplete (IoOperation& op, [[maybe_unused]] int result) override
         {
             char data[3] = {};
-            ::recv (op.fd (), data, sizeof (data), MSG_DONTWAIT | MSG_PEEK);
+            ::recv (op.fd, data, sizeof (data), MSG_DONTWAIT | MSG_PEEK);
 
             if (::memcmp (data, "one", sizeof (data)) == 0)
             {
-                ::recv (op.fd (), data, sizeof (data), MSG_DONTWAIT);
+                ::recv (op.fd, data, sizeof (data), MSG_DONTWAIT);
             }
 
             ScopedLock<Mutex> lock (_mut);

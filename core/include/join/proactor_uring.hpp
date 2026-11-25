@@ -605,7 +605,7 @@ int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush,
         op.state.store (IoOperation::State::Submitted, std::memory_order_release);
     }
 
-    if (JOIN_UNLIKELY (op.fd () < 0))
+    if (JOIN_UNLIKELY (op.fd < 0))
     {
         resetOperation (op);
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
@@ -675,7 +675,7 @@ int join::BasicProactor<IoPolicy>::submitOperation (IoOperation& op, bool flush,
 template <typename IoPolicy>
 int join::BasicProactor<IoPolicy>::cancelOperation (IoOperation& op, bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op.fd () < 0))
+    if (JOIN_UNLIKELY (op.fd < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
@@ -800,29 +800,27 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
         case IoOperation::Opcode::Poll:
             if (op.multishot)
             {
-                io_uring_prep_poll_multishot (sqe, op.data.poll.fd, op.data.poll.events);
+                io_uring_prep_poll_multishot (sqe, op.fd, op.data.poll.events);
             }
             else
             {
-                io_uring_prep_poll_add (sqe, op.data.poll.fd, op.data.poll.events);
+                io_uring_prep_poll_add (sqe, op.fd, op.data.poll.events);
             }
             break;
 
         case IoOperation::Opcode::Accept:
             if (op.multishot)
             {
-                io_uring_prep_multishot_accept (sqe, op.data.accept.fd, op.data.accept.addr, op.data.accept.addrlen,
-                                                op.data.accept.flags);
+                io_uring_prep_multishot_accept (sqe, op.fd, op.data.accept.addr, op.data.accept.addrlen, op.flags);
             }
             else
             {
-                io_uring_prep_accept (sqe, op.data.accept.fd, op.data.accept.addr, op.data.accept.addrlen,
-                                      op.data.accept.flags);
+                io_uring_prep_accept (sqe, op.fd, op.data.accept.addr, op.data.accept.addrlen, op.flags);
             }
             break;
 
         case IoOperation::Opcode::Connect:
-            io_uring_prep_connect (sqe, op.data.connect.fd, op.data.connect.addr, op.data.connect.addrlen);
+            io_uring_prep_connect (sqe, op.fd, op.data.connect.addr, op.data.connect.addrlen);
             break;
 
         case IoOperation::Opcode::Read:
@@ -830,11 +828,11 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             {
                 if (_fixedBuffer.owns (op.data.rw.buf, op.data.rw.len))
                 {
-                    io_uring_prep_read_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, 0);
+                    io_uring_prep_read_fixed (sqe, op.fd, op.data.rw.buf, op.data.rw.len, 0, 0);
                     break;
                 }
             }
-            io_uring_prep_read (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0);
+            io_uring_prep_read (sqe, op.fd, op.data.rw.buf, op.data.rw.len, 0);
             break;
 
         case IoOperation::Opcode::Write:
@@ -842,11 +840,11 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             {
                 if (_fixedBuffer.owns (op.data.rw.buf, op.data.rw.len))
                 {
-                    io_uring_prep_write_fixed (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0, 0);
+                    io_uring_prep_write_fixed (sqe, op.fd, op.data.rw.buf, op.data.rw.len, 0, 0);
                     break;
                 }
             }
-            io_uring_prep_write (sqe, op.data.rw.fd, op.data.rw.buf, op.data.rw.len, 0);
+            io_uring_prep_write (sqe, op.fd, op.data.rw.buf, op.data.rw.len, 0);
             break;
 
         case IoOperation::Opcode::RecvMsg:
@@ -855,40 +853,39 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
                 op.data.msg.msg->msg_namelen = op.data.msg.namelen;
                 op.data.msg.msg->msg_controllen = op.data.msg.controllen;
                 op.data.msg.msg->msg_iovlen = 0;
-                io_uring_prep_recvmsg_multishot (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
+                io_uring_prep_recvmsg_multishot (sqe, op.fd, op.data.msg.msg, op.flags);
                 sqe->flags |= IOSQE_BUFFER_SELECT;
                 sqe->buf_group = op.group;
             }
             else
             {
-                io_uring_prep_recvmsg (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
+                io_uring_prep_recvmsg (sqe, op.fd, op.data.msg.msg, op.flags);
             }
             break;
 
         case IoOperation::Opcode::SendMsg:
-            io_uring_prep_sendmsg (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
+            io_uring_prep_sendmsg (sqe, op.fd, op.data.msg.msg, op.flags);
             break;
 
         case IoOperation::Opcode::SendMsgZc:
-            io_uring_prep_sendmsg_zc (sqe, op.data.msg.fd, op.data.msg.msg, op.data.msg.flags);
+            io_uring_prep_sendmsg_zc (sqe, op.fd, op.data.msg.msg, op.flags);
             break;
 
         case IoOperation::Opcode::Recv:
             if (op.multishot)
             {
-                io_uring_prep_recv_multishot (sqe, op.data.stream.fd, nullptr, 0, op.data.stream.flags);
+                io_uring_prep_recv_multishot (sqe, op.fd, nullptr, 0, op.flags);
                 sqe->flags |= IOSQE_BUFFER_SELECT;
                 sqe->buf_group = op.group;
             }
             else
             {
-                io_uring_prep_recv (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len,
-                                    op.data.stream.flags);
+                io_uring_prep_recv (sqe, op.fd, op.data.stream.buf, op.data.stream.len, op.flags);
             }
             break;
 
         case IoOperation::Opcode::Send:
-            io_uring_prep_send (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags);
+            io_uring_prep_send (sqe, op.fd, op.data.stream.buf, op.data.stream.len, op.flags);
             break;
 
         case IoOperation::Opcode::SendZc:
@@ -896,13 +893,11 @@ void join::BasicProactor<IoPolicy>::prepareSqe (io_uring_sqe* sqe, IoOperation& 
             {
                 if (_fixedBuffer.owns (op.data.stream.buf, op.data.stream.len))
                 {
-                    io_uring_prep_send_zc_fixed (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len,
-                                                 op.data.stream.flags, 0, 0);
+                    io_uring_prep_send_zc_fixed (sqe, op.fd, op.data.stream.buf, op.data.stream.len, op.flags, 0, 0);
                     break;
                 }
             }
-            io_uring_prep_send_zc (sqe, op.data.stream.fd, op.data.stream.buf, op.data.stream.len, op.data.stream.flags,
-                                   0);
+            io_uring_prep_send_zc (sqe, op.fd, op.data.stream.buf, op.data.stream.len, op.flags, 0);
             break;
 
         default:                      // LCOV_EXCL_LINE
