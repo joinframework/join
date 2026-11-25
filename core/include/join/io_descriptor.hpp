@@ -261,9 +261,6 @@ namespace join
         int _handle = -1;
 
 #ifndef JOIN_HAS_IO_URING
-        /// owning proactor.
-        BasicProactor* _proactor = nullptr;
-
         /// read queue.
         IoOperation* _readOps = nullptr;
 
