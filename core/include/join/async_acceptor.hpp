@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/async_stream_socket.hpp>
+#include <join/io_descriptor.hpp>
 #include <join/acceptor.hpp>
 #include <join/function.hpp>
 #include <join/proactor.hpp>
@@ -102,7 +103,14 @@ namespace join
          */
         int create (const Endpoint& endpoint, int flags = SOCK_CLOEXEC | SOCK_NONBLOCK) noexcept
         {
-            return _acceptor.create (endpoint, flags | SOCK_NONBLOCK);
+            if (_acceptor.create (endpoint, flags | SOCK_NONBLOCK) == -1)
+            {
+                return -1;
+            }
+
+            _descriptor.handle (_acceptor.handle ());
+
+            return 0;
         }
 
         /**
@@ -121,6 +129,7 @@ namespace join
             while (!_proactor->isProactorThread () && pending (_acceptOp.op));
 
             _acceptor.close ();
+            _descriptor.handle (-1);
         }
 
         /**
@@ -147,8 +156,8 @@ namespace join
 
             _acceptOp.remoteLen = sizeof (struct sockaddr_storage);
             _acceptOp.acceptHandler = std::move (handler);
-            _acceptOp.op = IoOperation::makeAccept (_acceptor.handle (), _acceptOp.remote.addr (), &_acceptOp.remoteLen,
-                                                    flags | SOCK_NONBLOCK, this);
+            _acceptOp.op = IoOperation::makeAccept (_descriptor.handle (), _acceptOp.remote.addr (),
+                                                    &_acceptOp.remoteLen, flags | SOCK_NONBLOCK, this);
 
             if (_proactor->submit (_acceptOp.op, flush, false) == -1)
             {
@@ -186,7 +195,7 @@ namespace join
 
             _acceptOp.remote = Endpoint ();
             _acceptOp.acceptHandler = std::move (handler);
-            _acceptOp.op = IoOperation::makeAcceptMulti (_acceptor.handle (), flags | SOCK_NONBLOCK, this);
+            _acceptOp.op = IoOperation::makeAcceptMulti (_descriptor.handle (), flags | SOCK_NONBLOCK, this);
 
             if (_proactor->submit (_acceptOp.op, flush, false) == -1)
             {
@@ -400,6 +409,9 @@ namespace join
 
         /// underlying synchronous acceptor.
         Acceptor _acceptor;
+
+        /// acceptor descriptor.
+        IoDescriptor _descriptor;
 
         /// accept operation.
         AsyncAccept _acceptOp;
