@@ -20,6 +20,7 @@ set(PUBLIC_HEADERS
     include/join/traits.hpp
     include/join/variant.hpp
     include/join/reactor.hpp
+    include/join/io_descriptor.hpp
     include/join/io_operation.hpp
     include/join/io_ring_buffer.hpp
     include/join/proactor.hpp
