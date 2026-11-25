@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/slab_allocator.hpp>
+#include <join/io_descriptor.hpp>
 #include <join/io_operation.hpp>
 #include <join/function.hpp>
 #ifdef JOIN_HAS_IO_URING
@@ -735,7 +736,7 @@ private:
 #endif
 
     /// eventfd descriptor.
-    int _wakeup = -1;
+    IoDescriptor _wakeup;
 
 #ifdef JOIN_HAS_IO_URING
     /// buffer for the wakeup eventfd read.
