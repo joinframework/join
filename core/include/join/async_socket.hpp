@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/async_operation.hpp>
+#include <join/io_descriptor.hpp>
 #include <join/proactor.hpp>
 #include <join/protocol.hpp>
 #include <join/backoff.hpp>
@@ -300,7 +301,7 @@ namespace join
             }
 
             wait->waitHandler = std::move (handler);
-            wait->op = IoOperation::makePoll (_socket.handle (), wantRead ? POLLIN : POLLOUT, this);
+            wait->op = IoOperation::makePoll (descriptor ().handle (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = _allocator.getIndex (wait);
@@ -346,7 +347,7 @@ namespace join
             }
 
             wait->waitHandler = std::move (handler);
-            wait->op = IoOperation::makePollMulti (_socket.handle (), wantRead ? POLLIN : POLLOUT, this);
+            wait->op = IoOperation::makePollMulti (descriptor ().handle (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = _allocator.getIndex (wait);
@@ -661,6 +662,20 @@ namespace join
         }
 
         /**
+         * @brief get the socket descriptor, synchronized with the socket handle.
+         * @return socket descriptor.
+         */
+        IoDescriptor& descriptor () noexcept
+        {
+            if (_descriptor.handle () != _socket.handle ())
+            {
+                _descriptor.handle (_socket.handle ());
+            }
+
+            return _descriptor;
+        }
+
+        /**
          * @brief check if an operation is in flight.
          * @param op operation to check.
          * @return true if the operation is in flight, false otherwise.
@@ -687,6 +702,9 @@ namespace join
 
         /// underlying synchronous socket.
         Socket _socket;
+
+        /// socket descriptor.
+        IoDescriptor _descriptor;
 
         /// operations allocator.
         OpAllocator _allocator;
