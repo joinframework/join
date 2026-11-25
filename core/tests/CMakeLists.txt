@@ -42,6 +42,11 @@ target_link_libraries(reactor.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME reactor.gtest COMMAND reactor.gtest)
 install(TARGETS reactor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
 
+add_executable(io_descriptor.gtest io_descriptor_test.cpp)
+target_link_libraries(io_descriptor.gtest ${JOIN_CORE} GTest::gtest_main)
+add_test(NAME io_descriptor.gtest COMMAND io_descriptor.gtest)
+install(TARGETS io_descriptor.gtest RUNTIME DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}/test)
+
 add_executable(io_operation.gtest io_operation_test.cpp)
 target_link_libraries(io_operation.gtest ${JOIN_CORE} GTest::gtest_main)
 add_test(NAME io_operation.gtest COMMAND io_operation.gtest)
