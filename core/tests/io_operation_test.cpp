@@ -76,7 +76,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (copy.multishot, op.multishot);
     ASSERT_EQ (copy.group, op.group);
     ASSERT_EQ (copy.handler, op.handler);
-    ASSERT_EQ (copy.data.msg.fd, op.data.msg.fd);
+    ASSERT_EQ (copy.fd, op.fd);
     ASSERT_EQ (copy.data.msg.msg, op.data.msg.msg);
     ASSERT_EQ (copy.ring, op.ring);
     ASSERT_EQ (copy.timer, op.timer);
@@ -97,7 +97,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (assigned.multishot, op.multishot);
     ASSERT_EQ (assigned.group, op.group);
     ASSERT_EQ (assigned.handler, op.handler);
-    ASSERT_EQ (assigned.data.msg.fd, op.data.msg.fd);
+    ASSERT_EQ (assigned.fd, op.fd);
     ASSERT_EQ (assigned.data.msg.msg, op.data.msg.msg);
     ASSERT_EQ (assigned.ring, op.ring);
     ASSERT_EQ (assigned.timer, op.timer);
@@ -113,7 +113,7 @@ TEST (IoOperation, makePoll)
     ASSERT_EQ (in.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_FALSE (in.multishot);
     ASSERT_EQ (in.handler, nullptr);
-    ASSERT_EQ (in.data.poll.fd, 8);
+    ASSERT_EQ (in.fd, 8);
     ASSERT_EQ (in.data.poll.events, static_cast<uint32_t> (POLLIN));
 
     auto out = IoOperation::makePoll (9, POLLOUT, nullptr);
@@ -121,7 +121,7 @@ TEST (IoOperation, makePoll)
     ASSERT_EQ (out.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_FALSE (out.multishot);
     ASSERT_EQ (out.handler, nullptr);
-    ASSERT_EQ (out.data.poll.fd, 9);
+    ASSERT_EQ (out.fd, 9);
     ASSERT_EQ (out.data.poll.events, static_cast<uint32_t> (POLLOUT));
 }
 
@@ -135,7 +135,7 @@ TEST (IoOperation, makePollMulti)
     ASSERT_EQ (in.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_TRUE (in.multishot);
     ASSERT_EQ (in.handler, nullptr);
-    ASSERT_EQ (in.data.poll.fd, 8);
+    ASSERT_EQ (in.fd, 8);
     ASSERT_EQ (in.data.poll.events, static_cast<uint32_t> (POLLIN));
 
     auto out = IoOperation::makePollMulti (9, POLLOUT, nullptr);
@@ -143,7 +143,7 @@ TEST (IoOperation, makePollMulti)
     ASSERT_EQ (out.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_TRUE (out.multishot);
     ASSERT_EQ (out.handler, nullptr);
-    ASSERT_EQ (out.data.poll.fd, 9);
+    ASSERT_EQ (out.fd, 9);
     ASSERT_EQ (out.data.poll.events, static_cast<uint32_t> (POLLOUT));
 }
 
@@ -160,10 +160,10 @@ TEST (IoOperation, makeAccept)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Accept));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.accept.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.accept.addr, reinterpret_cast<sockaddr*> (&addr));
     ASSERT_EQ (op.data.accept.addrlen, &addrlen);
-    ASSERT_EQ (op.data.accept.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
+    ASSERT_EQ (op.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
 }
 
 /**
@@ -176,10 +176,10 @@ TEST (IoOperation, makeAcceptMulti)
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Accept));
     ASSERT_TRUE (op.multishot);
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.accept.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.accept.addr, nullptr);
     ASSERT_EQ (op.data.accept.addrlen, nullptr);
-    ASSERT_EQ (op.data.accept.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
+    ASSERT_EQ (op.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
 }
 
 /**
@@ -193,7 +193,7 @@ TEST (IoOperation, makeConnect)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Connect));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.connect.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.connect.addr, endpoint.addr ());
     ASSERT_EQ (op.data.connect.addrlen, endpoint.length ());
 }
@@ -207,7 +207,7 @@ TEST (IoOperation, makeRead)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Read));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.rw.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.rw.buf, buffer);
     ASSERT_EQ (op.data.rw.len, sizeof (buffer));
 }
@@ -221,7 +221,7 @@ TEST (IoOperation, makeWrite)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Write));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.rw.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.rw.buf, buffer);
     ASSERT_EQ (op.data.rw.len, sizeof (buffer));
 }
@@ -240,9 +240,9 @@ TEST (IoOperation, makeRecvmsg)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::RecvMsg));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.msg.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.msg.msg, &msg);
-    ASSERT_EQ (op.data.msg.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
 
 /**
@@ -260,9 +260,9 @@ TEST (IoOperation, makeRecvmsgMulti)
     ASSERT_TRUE (op.multishot);
     ASSERT_EQ (op.group, 3);
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.msg.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.msg.msg, &msg);
-    ASSERT_EQ (op.data.msg.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.flags, MSG_DONTWAIT);
     ASSERT_EQ (op.data.msg.namelen, sizeof (struct sockaddr_storage));
     ASSERT_EQ (op.data.msg.controllen, CMSG_SPACE (sizeof (int)));
 }
@@ -282,9 +282,9 @@ TEST (IoOperation, makeSendmsg)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendMsg));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.msg.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.msg.msg, &msg);
-    ASSERT_EQ (op.data.msg.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
 
 /**
@@ -303,9 +303,9 @@ TEST (IoOperation, makeSendmsgZc)
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc));
     ASSERT_EQ (op.handler, nullptr);
     ASSERT_FALSE (op.linked);
-    ASSERT_EQ (op.data.msg.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.msg.msg, &msg);
-    ASSERT_EQ (op.data.msg.flags, MSG_NOSIGNAL);
+    ASSERT_EQ (op.flags, MSG_NOSIGNAL);
 
     op = IoOperation::makeSendmsgZc (8, &msg, MSG_NOSIGNAL, nullptr, true);
     ASSERT_TRUE (op.linked);
@@ -320,10 +320,10 @@ TEST (IoOperation, makeRecv)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Recv));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.stream.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.stream.buf, buffer);
     ASSERT_EQ (op.data.stream.len, sizeof (buffer));
-    ASSERT_EQ (op.data.stream.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
 
 /**
@@ -337,10 +337,10 @@ TEST (IoOperation, makeRecvMulti)
     ASSERT_TRUE (op.multishot);
     ASSERT_EQ (op.group, 3);
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.stream.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.stream.buf, nullptr);
     ASSERT_EQ (op.data.stream.len, 0U);
-    ASSERT_EQ (op.data.stream.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
 
 /**
@@ -354,10 +354,10 @@ TEST (IoOperation, makeSend)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Send));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.data.stream.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.stream.buf, payload);
     ASSERT_EQ (op.data.stream.len, strlen (payload));
-    ASSERT_EQ (op.data.stream.flags, MSG_DONTWAIT);
+    ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
 
 /**
@@ -372,68 +372,13 @@ TEST (IoOperation, makeSendZc)
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendZc));
     ASSERT_EQ (op.handler, nullptr);
     ASSERT_FALSE (op.linked);
-    ASSERT_EQ (op.data.stream.fd, 8);
+    ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.stream.buf, payload);
     ASSERT_EQ (op.data.stream.len, strlen (payload));
-    ASSERT_EQ (op.data.stream.flags, MSG_NOSIGNAL);
+    ASSERT_EQ (op.flags, MSG_NOSIGNAL);
 
     op = IoOperation::makeSendZc (8, payload, strlen (payload), MSG_NOSIGNAL, nullptr, true);
     ASSERT_TRUE (op.linked);
-}
-
-/**
- * @brief Test fd.
- */
-TEST (IoOperation, fd)
-{
-    IoOperation op;
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Poll);
-    op.data.poll.fd = 10;
-    ASSERT_EQ (op.fd (), 10);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Accept);
-    op.data.accept.fd = 0;
-    ASSERT_EQ (op.fd (), 0);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Connect);
-    op.data.connect.fd = 1;
-    ASSERT_EQ (op.fd (), 1);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Read);
-    op.data.rw.fd = 2;
-    ASSERT_EQ (op.fd (), 2);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Write);
-    op.data.rw.fd = 4;
-    ASSERT_EQ (op.fd (), 4);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::RecvMsg);
-    op.data.msg.fd = 6;
-    ASSERT_EQ (op.fd (), 6);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsg);
-    op.data.msg.fd = 7;
-    ASSERT_EQ (op.fd (), 7);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc);
-    op.data.msg.fd = 12;
-    ASSERT_EQ (op.fd (), 12);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Recv);
-    op.data.stream.fd = 8;
-    ASSERT_EQ (op.fd (), 8);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::Send);
-    op.data.stream.fd = 9;
-    ASSERT_EQ (op.fd (), 9);
-
-    op.code = static_cast<uint8_t> (IoOperation::Opcode::SendZc);
-    op.data.stream.fd = 11;
-    ASSERT_EQ (op.fd (), 11);
-
-    op.code = 255;
-    ASSERT_EQ (op.fd (), -1);
 }
 
 /**

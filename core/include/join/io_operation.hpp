@@ -102,9 +102,6 @@ namespace join
          */
         struct PollData
         {
-            /// file descriptor.
-            int fd;
-
             /// requested events.
             uint32_t events;
         };
@@ -132,12 +129,6 @@ namespace join
          */
         struct AcceptData
         {
-            /// file descriptor.
-            int fd;
-
-            /// accept flags.
-            int flags;
-
             /// peer address.
             sockaddr* addr;
 
@@ -171,9 +162,6 @@ namespace join
          */
         struct ConnectData
         {
-            /// file descriptor.
-            int fd;
-
             /// remote address.
             const sockaddr* addr;
 
@@ -197,9 +185,6 @@ namespace join
          */
         struct RwData
         {
-            /// file descriptor.
-            int fd;
-
             /// buffer.
             void* buf;
 
@@ -236,12 +221,6 @@ namespace join
          */
         struct MsgData
         {
-            /// file descriptor.
-            int fd;
-
-            /// sendmsg / recvmsg flags.
-            int flags;
-
             /// message header.
             msghdr* msg;
 
@@ -305,12 +284,6 @@ namespace join
          */
         struct StreamData
         {
-            /// file descriptor.
-            int fd;
-
-            /// send / recv flags.
-            int flags;
-
             /// buffer.
             void* buf;
 
@@ -377,12 +350,6 @@ namespace join
             StreamData stream;
         };
 
-        /**
-         * @brief return the file descriptor associated with this operation.
-         * @return file descriptor, or -1 if opcode is unknown.
-         */
-        int fd () const noexcept;
-
 #ifdef JOIN_HAS_IO_URING
         /// index of this operation in the proactor pending ops.
         uint32_t index = 0;
@@ -418,6 +385,12 @@ namespace join
         /// handler to dispatch to on completion.
         CompletionHandler* handler = nullptr;
 
+        /// file descriptor.
+        int fd = -1;
+
+        /// accept / send / recv flags.
+        int flags = 0;
+
         /// operation code specific payload.
         Data data = {};
 
@@ -430,6 +403,8 @@ namespace join
 
     static_assert (offsetof (IoOperation, state) >= sizeof (uint32_t),
                    "state must survive the arena free list link stored in the first bytes of a released chunk");
+
+    static_assert (sizeof (IoOperation) == 64, "an operation must fit in one cache line");
 }
 
 #endif
