@@ -35,12 +35,12 @@ inline join::BasicProactor::BasicProactor ()
 , _readOps (256, nullptr)
 , _writeOps (256, nullptr)
 {
-    if (_wakeup == -1)
+    if (_wakeup.handle () == -1)
     {
         throw std::system_error (errno, std::system_category (), "eventfd failed");  // LCOV_EXCL_LINE
     }
 
-    _reactor.addHandler (_wakeup, this, true, false, false);
+    _reactor.addHandler (_wakeup.handle (), this, true, false, false);
 }
 
 // =========================================================================
@@ -51,7 +51,7 @@ inline join::BasicProactor::~BasicProactor () noexcept
 {
     stop (true);
 
-    ::close (_wakeup);
+    ::close (_wakeup.handle ());
 }
 
 // =========================================================================
@@ -346,7 +346,7 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
     if (_wakeupState.compare_exchange_strong (state, WakeupState::Waking, std::memory_order_seq_cst))
     {
         uint64_t value = 1;
-        if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+        if (JOIN_UNLIKELY (::write (_wakeup.handle (), &value, sizeof (uint64_t)) == -1))
         {
             _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
         }
@@ -362,7 +362,7 @@ inline int join::BasicProactor::writeCommand (const Command& cmd) noexcept
 inline void join::BasicProactor::readCommands () noexcept
 {
     uint64_t count;
-    [[maybe_unused]] ssize_t nread = ::read (_wakeup, &count, sizeof (count));
+    [[maybe_unused]] ssize_t nread = ::read (_wakeup.handle (), &count, sizeof (count));
     _wakeupState.store (WakeupState::Sleeping, std::memory_order_relaxed);
     std::atomic_thread_fence (std::memory_order_seq_cst);
 
@@ -650,7 +650,7 @@ inline void join::BasicProactor::expireOperation (IoOperation& op) noexcept
 // =========================================================================
 inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
 {
-    if (JOIN_UNLIKELY (fd == _wakeup))
+    if (JOIN_UNLIKELY (fd == _wakeup.handle ()))
     {
         readCommands ();
         return;

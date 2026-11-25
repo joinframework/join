@@ -56,7 +56,7 @@ join::BasicProactor<IoPolicy>::BasicProactor ()
     int result = io_uring_queue_init_params (IoPolicy::sqEntries, &_ring, &params);
     if (result < 0)
     {
-        ::close (_wakeup);
+        ::close (_wakeup.handle ());
         throw std::system_error (-result, std::system_category (), "io_uring_queue_init failed");
     }
 
@@ -66,7 +66,7 @@ join::BasicProactor<IoPolicy>::BasicProactor ()
         {
             // LCOV_EXCL_START
             io_uring_queue_exit (&_ring);
-            ::close (_wakeup);
+            ::close (_wakeup.handle ());
             throw std::system_error (lastError, "io_uring_register_buffers failed");
             // LCOV_EXCL_STOP
         }
@@ -74,7 +74,7 @@ join::BasicProactor<IoPolicy>::BasicProactor ()
 
     if constexpr (is_default_v<IoPolicy>)
     {
-        _wakeupOp = IoOperation::makeRead (_wakeup, &_wakeupBuf, sizeof (_wakeupBuf), nullptr);
+        _wakeupOp = IoOperation::makeRead (_wakeup.handle (), &_wakeupBuf, sizeof (_wakeupBuf), nullptr);
     }
 
     _pendingOps.reserve (IoPolicy::sqEntries);
@@ -96,9 +96,9 @@ join::BasicProactor<IoPolicy>::~BasicProactor () noexcept
 
     io_uring_queue_exit (&_ring);
 
-    if (_wakeup != -1)
+    if (_wakeup.handle () != -1)
     {
-        ::close (_wakeup);
+        ::close (_wakeup.handle ());
     }
 }
 
@@ -493,7 +493,7 @@ int join::BasicProactor<IoPolicy>::wakeup () noexcept
         if (_wakeupState.compare_exchange_strong (state, WakeupState::Waking, std::memory_order_seq_cst))
         {
             uint64_t value = 1;
-            if (JOIN_UNLIKELY (::write (_wakeup, &value, sizeof (uint64_t)) == -1))
+            if (JOIN_UNLIKELY (::write (_wakeup.handle (), &value, sizeof (uint64_t)) == -1))
             {
                 _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);  // LCOV_EXCL_LINE
             }
