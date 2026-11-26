@@ -47,7 +47,6 @@ IoOperation::IoOperation (const IoOperation& other) noexcept
     linked = other.linked;
     multishot = other.multishot;
     more = other.more;
-    group = other.group;
     handler = other.handler;
     fd = other.fd;
     flags = other.flags;
@@ -72,7 +71,6 @@ IoOperation& IoOperation::operator= (const IoOperation& other) noexcept
     linked = other.linked;
     multishot = other.multishot;
     more = other.more;
-    group = other.group;
     handler = other.handler;
     fd = other.fd;
     flags = other.flags;
@@ -173,7 +171,7 @@ IoOperation IoOperation::makeRead (int fd, void* buf, size_t len, CompletionHand
     op.linked = linked;
     op.fd = fd;
     op.data.rw.buf = buf;
-    op.data.rw.len = len;
+    op.data.rw.len = static_cast<uint32_t> (len);
     return op;
 }
 
@@ -190,7 +188,7 @@ IoOperation IoOperation::makeWrite (int fd, const void* buf, size_t len, Complet
     op.linked = linked;
     op.fd = fd;
     op.data.rw.buf = const_cast<void*> (buf);
-    op.data.rw.len = len;
+    op.data.rw.len = static_cast<uint32_t> (len);
     return op;
 }
 
@@ -220,13 +218,13 @@ IoOperation IoOperation::makeRecvmsgMulti (int fd, uint16_t group, msghdr* msg, 
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::RecvMsg);
     op.multishot = true;
-    op.group = group;
     op.handler = handler;
     op.fd = fd;
     op.data.msg.msg = msg;
     op.flags = flags;
-    op.data.msg.namelen = msg->msg_namelen;
-    op.data.msg.controllen = static_cast<uint32_t> (msg->msg_controllen);
+    op.data.msg.namelen = static_cast<uint16_t> (msg->msg_namelen);
+    op.data.msg.controllen = static_cast<uint16_t> (msg->msg_controllen);
+    op.data.msg.group = group;
     return op;
 }
 
@@ -277,7 +275,7 @@ IoOperation IoOperation::makeRecv (int fd, void* buf, size_t len, int flags, Com
     op.linked = linked;
     op.fd = fd;
     op.data.stream.buf = buf;
-    op.data.stream.len = len;
+    op.data.stream.len = static_cast<uint32_t> (len);
     op.flags = flags;
     return op;
 }
@@ -291,11 +289,11 @@ IoOperation IoOperation::makeRecvMulti (int fd, uint16_t group, int flags, Compl
     IoOperation op;
     op.code = static_cast<uint8_t> (IoOperation::Opcode::Recv);
     op.multishot = true;
-    op.group = group;
     op.handler = handler;
     op.fd = fd;
     op.data.stream.buf = nullptr;
     op.data.stream.len = 0;
+    op.data.stream.group = group;
     op.flags = flags;
     return op;
 }
@@ -313,7 +311,7 @@ IoOperation IoOperation::makeSend (int fd, const void* buf, size_t len, int flag
     op.linked = linked;
     op.fd = fd;
     op.data.stream.buf = const_cast<void*> (buf);
-    op.data.stream.len = len;
+    op.data.stream.len = static_cast<uint32_t> (len);
     op.flags = flags;
     return op;
 }
@@ -331,7 +329,7 @@ IoOperation IoOperation::makeSendZc (int fd, const void* buf, size_t len, int fl
     op.linked = linked;
     op.fd = fd;
     op.data.stream.buf = const_cast<void*> (buf);
-    op.data.stream.len = len;
+    op.data.stream.len = static_cast<uint32_t> (len);
     op.flags = flags;
     return op;
 }

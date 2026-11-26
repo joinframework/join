@@ -38,6 +38,7 @@
 // C++.
 #include <algorithm>
 #include <chrono>
+#include <limits>
 #include <vector>
 
 // C.
@@ -1635,6 +1636,9 @@ TEST_F (TcpAsyncSocket, asyncRead)
         ASSERT_FALSE (_code) << _code.message ();
     }
 
+    ASSERT_EQ (client.asyncRead (nullptr, _buf, static_cast<size_t> (std::numeric_limits<uint32_t>::max ()) + 1), -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
+
     ASSERT_NE (
         client.asyncRead (
             [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
@@ -1790,6 +1794,10 @@ TEST_F (TcpAsyncSocket, asyncReadExactly)
     Tcp::Socket remote = acceptor.accept ();
     ASSERT_TRUE (remote.connected ()) << join::lastError.message ();
 
+    ASSERT_EQ (client.asyncReadExactly (nullptr, _buf, static_cast<size_t> (std::numeric_limits<uint32_t>::max ()) + 1),
+               -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
+
     ASSERT_NE (client.asyncReadExactly (onRead, _buf, 10), -1) << join::lastError.message ();
     ASSERT_EQ (remote.writeExactly ("hello", 5), 0) << join::lastError.message ();
     ASSERT_EQ (remote.writeExactly ("world", 5), 0) << join::lastError.message ();
@@ -1897,6 +1905,10 @@ TEST_F (TcpAsyncSocket, asyncWrite)
         }));
         ASSERT_FALSE (_code) << _code.message ();
     }
+
+    ASSERT_EQ (client.asyncWrite (nullptr, "hello", static_cast<size_t> (std::numeric_limits<uint32_t>::max ()) + 1),
+               -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
 
     ASSERT_NE (client.asyncWrite (
                    [] (const std::error_code& ec, size_t size) {
@@ -2068,6 +2080,11 @@ TEST_F (TcpAsyncSocket, asyncWriteExactly)
 
     Tcp::Socket remote = acceptor.accept ();
     ASSERT_TRUE (remote.connected ()) << join::lastError.message ();
+
+    ASSERT_EQ (
+        client.asyncWriteExactly (nullptr, "hello", static_cast<size_t> (std::numeric_limits<uint32_t>::max ()) + 1),
+        -1);
+    ASSERT_EQ (join::lastError, std::errc::message_size);
 
     ASSERT_NE (client.asyncWriteExactly (onWrite, data.data (), data.size ()), -1) << join::lastError.message ();
     ASSERT_EQ (remote.readExactly (sink.data (), sink.size (), _timeout), 0) << join::lastError.message ();

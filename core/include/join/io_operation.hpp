@@ -189,7 +189,7 @@ namespace join
             void* buf;
 
             /// number of bytes to transfer.
-            unsigned long len;
+            uint32_t len;
         };
 
         /**
@@ -225,10 +225,13 @@ namespace join
             msghdr* msg;
 
             /// reserved name area length.
-            uint32_t namelen;
+            uint16_t namelen;
 
             /// reserved control area length.
-            uint32_t controllen;
+            uint16_t controllen;
+
+            /// provided buffer group.
+            uint16_t group;
         };
 
         /**
@@ -288,7 +291,10 @@ namespace join
             void* buf;
 
             /// number of bytes to transfer.
-            unsigned long len;
+            uint32_t len;
+
+            /// provided buffer group.
+            uint16_t group;
         };
 
         /**
@@ -371,25 +377,22 @@ namespace join
         State resume{State::Idle};
 
         /// link this SQE to the next one (next executes only if this succeeds, io_uring only).
-        bool linked = false;
+        bool linked : 1 = false;
 
         /// rearm the operation after each completion.
-        bool multishot = false;
+        bool multishot : 1 = false;
 
         /// true while a multishot operation stays armed.
-        bool more = false;
+        bool more : 1 = false;
 
-        /// provided buffer group.
-        uint16_t group = 0;
+        /// accept / send / recv flags.
+        int flags = 0;
 
         /// handler to dispatch to on completion.
         CompletionHandler* handler = nullptr;
 
         /// file descriptor.
         int fd = -1;
-
-        /// accept / send / recv flags.
-        int flags = 0;
 
         /// operation code specific payload.
         Data data = {};

@@ -74,7 +74,7 @@ TEST (IoOperation, copy)
 #endif
     ASSERT_EQ (copy.linked, op.linked);
     ASSERT_EQ (copy.multishot, op.multishot);
-    ASSERT_EQ (copy.group, op.group);
+    ASSERT_EQ (copy.data.msg.group, op.data.msg.group);
     ASSERT_EQ (copy.handler, op.handler);
     ASSERT_EQ (copy.fd, op.fd);
     ASSERT_EQ (copy.data.msg.msg, op.data.msg.msg);
@@ -95,7 +95,7 @@ TEST (IoOperation, copy)
 #endif
     ASSERT_EQ (assigned.linked, op.linked);
     ASSERT_EQ (assigned.multishot, op.multishot);
-    ASSERT_EQ (assigned.group, op.group);
+    ASSERT_EQ (assigned.data.msg.group, op.data.msg.group);
     ASSERT_EQ (assigned.handler, op.handler);
     ASSERT_EQ (assigned.fd, op.fd);
     ASSERT_EQ (assigned.data.msg.msg, op.data.msg.msg);
@@ -258,7 +258,7 @@ TEST (IoOperation, makeRecvmsgMulti)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::RecvMsg));
     ASSERT_TRUE (op.multishot);
-    ASSERT_EQ (op.group, 3);
+    ASSERT_EQ (op.data.msg.group, 3);
     ASSERT_EQ (op.handler, nullptr);
     ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.msg.msg, &msg);
@@ -335,7 +335,7 @@ TEST (IoOperation, makeRecvMulti)
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Recv));
     ASSERT_TRUE (op.multishot);
-    ASSERT_EQ (op.group, 3);
+    ASSERT_EQ (op.data.stream.group, 3);
     ASSERT_EQ (op.handler, nullptr);
     ASSERT_EQ (op.fd, 8);
     ASSERT_EQ (op.data.stream.buf, nullptr);

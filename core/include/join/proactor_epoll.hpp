@@ -451,7 +451,9 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
     if (JOIN_UNLIKELY (op.multishot && ((op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ||
                                         (op.code == static_cast<uint8_t> (IoOperation::Opcode::Recv)))))
     {
-        auto it = _bufferRings.find (op.group);
+        const uint16_t group =
+            (op.code == static_cast<uint8_t> (IoOperation::Opcode::RecvMsg)) ? op.data.msg.group : op.data.stream.group;
+        auto it = _bufferRings.find (group);
         if (JOIN_UNLIKELY (it == _bufferRings.end ()))
         {
             resetOperation (op);
