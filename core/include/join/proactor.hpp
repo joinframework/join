@@ -682,11 +682,11 @@ private:
 
     /**
      * @brief notify every poll operation of a queue whose descriptor is ready and execute its first other operation.
-     * @param fd file descriptor.
+     * @param descriptor ready descriptor.
      * @param write true to serve the write queue, false to serve the read queue.
      * @param revents events reported by the reactor.
      */
-    void processQueue (int fd, bool write, uint32_t revents) noexcept;
+    void processQueue (IoDescriptor& descriptor, bool write, uint32_t revents) noexcept;
 
     /**
      * @brief execute an operation whose descriptor is ready.
@@ -702,20 +702,6 @@ private:
      * @return bytes transferred or ready events (>= 0), or -errno (< 0).
      */
     static int executeOperation (IoOperation& op, uint32_t revents) noexcept;
-
-    /**
-     * @brief remove an operation from the queue of its descriptor and direction.
-     * @param op operation to remove.
-     * @return true if the operation was queued, false otherwise.
-     */
-    bool unqueueOperation (IoOperation& op) noexcept;
-
-    /**
-     * @brief return true if operation requires EPOLLOUT.
-     * @param op operation.
-     * @return true for Connect, Write, SendMsg, Send and Poll without POLLIN.
-     */
-    static bool isWriteOperation (const IoOperation& op) noexcept;
 #endif
 
 #ifdef JOIN_HAS_IO_URING
@@ -758,11 +744,14 @@ private:
     /// running flag.
     std::atomic<bool> _running{false};
 #else
-    /// pending read operations.
-    std::vector<IoOperation*> _readOps;
+    /// descriptors with pending operations.
+    IoDescriptor* _descriptors = nullptr;
 
-    /// pending write operations.
-    std::vector<IoOperation*> _writeOps;
+    /// descriptor being dispatched.
+    IoDescriptor* _dispatching = nullptr;
+
+    /// stop requested.
+    bool _stopping = false;
 
     /// reactor instance.
     Reactor _reactor;
@@ -770,6 +759,11 @@ private:
 
     /// registered provided buffer rings.
     std::unordered_map<uint16_t, IoRingBuffer> _bufferRings;
+
+#ifndef JOIN_HAS_IO_URING
+    /// friendship with descriptor.
+    friend class join::IoDescriptor;
+#endif
 };
 
 // =========================================================================

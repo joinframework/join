@@ -205,6 +205,13 @@ TEST_F (TcpAsyncAcceptor, close)
     }
 
     ASSERT_FALSE (server.opened ());
+
+    join::Proactor stopped;
+    Tcp::AsyncAcceptor idle (stopped);
+
+    ASSERT_EQ (idle.create ({_address, _port}), 0) << join::lastError.message ();
+    idle.close ();
+    ASSERT_FALSE (idle.opened ());
 }
 
 /**

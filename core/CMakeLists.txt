@@ -79,6 +79,10 @@ set(SOURCES
     src/cpu.cpp
 )
 
+if(NOT JOIN_ENABLE_IO_URING)
+    list(APPEND SOURCES src/io_descriptor.cpp)
+endif()
+
 add_library(${JOIN_CORE} ${SOURCES})
 add_library(join::core ALIAS ${JOIN_CORE})
 
