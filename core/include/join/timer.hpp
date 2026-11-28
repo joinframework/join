@@ -36,13 +36,10 @@
 #include <functional>
 #include <chrono>
 #include <atomic>
-#include <memory>
-#include <new>
 
 // C.
 #include <sys/timerfd.h>
 #include <unistd.h>
-#include <cstdlib>
 
 namespace join
 {
@@ -78,10 +75,9 @@ namespace join
                 throw std::system_error (errno, std::system_category (), "timerfd_create failed");  // LCOV_EXCL_LINE
             }
 
-            _ops->op =
-                IoOperation::makeRead (_descriptor.handle (), &_ops->expirations, sizeof (_ops->expirations), this);
+            _op = IoOperation::makeRead (_descriptor.handle (), &_expirations, sizeof (_expirations), this);
 
-            if (_proactor.submit (_ops->op, true, true) == -1)
+            if (_proactor.submit (_op, true, true) == -1)
             {
                 // LCOV_EXCL_START
                 close (_descriptor.handle ());
@@ -126,7 +122,7 @@ namespace join
             Backoff backoff;
             while (_state.load (std::memory_order_acquire) != State::Closed)
             {
-                _proactor.cancel (_ops->op, true, true);
+                _proactor.cancel (_op, true, true);
                 backoff ();
             }
 
@@ -296,9 +292,9 @@ namespace join
          */
         void onComplete ([[maybe_unused]] IoOperation& op, int result) override
         {
-            uint64_t expirations = _ops->expirations;
+            uint64_t expirations = _expirations;
 
-            if (JOIN_UNLIKELY (result != static_cast<int> (sizeof (_ops->expirations)) && result != -EAGAIN &&
+            if (JOIN_UNLIKELY (result != static_cast<int> (sizeof (_expirations)) && result != -EAGAIN &&
                                result != -EINTR))
             {
                 // LCOV_EXCL_START
@@ -307,7 +303,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (JOIN_UNLIKELY (_proactor.submit (_ops->op) == -1))
+            if (JOIN_UNLIKELY (_proactor.submit (_op) == -1))
             {
                 // LCOV_EXCL_START
                 _state.store (State::Closed, std::memory_order_release);
@@ -315,7 +311,7 @@ namespace join
                 // LCOV_EXCL_STOP
             }
 
-            if (JOIN_UNLIKELY (result != static_cast<int> (sizeof (_ops->expirations))))
+            if (JOIN_UNLIKELY (result != static_cast<int> (sizeof (_expirations))))
             {
                 return;  // LCOV_EXCL_LINE
             }
@@ -369,49 +365,14 @@ namespace join
             return ts;
         }
 
-        /**
-         * @brief operation block, kept at its extended alignment.
-         */
-        struct Ops
-        {
-            /**
-             * @brief allocate a block honouring its extended alignment.
-             * @param size allocation size in bytes.
-             * @return pointer to the allocated storage.
-             */
-            static void* operator new (size_t size)
-            {
-                void* mem = ::aligned_alloc (alignof (Ops), size);
-
-                if (mem == nullptr)
-                {
-                    throw std::bad_alloc ();  // LCOV_EXCL_LINE
-                }
-
-                return mem;
-            }
-
-            /**
-             * @brief release storage allocated by operator new.
-             * @param mem storage to release.
-             */
-            static void operator delete (void* mem) noexcept
-            {
-                ::free (mem);
-            }
-
-            /// timerfd read operation.
-            IoOperation op = {};
-
-            /// expiration count, written by the kernel until the read completes.
-            uint64_t expirations = 0;
-        };
-
         /// ns per sec.
         static constexpr uint64_t _nsPerSec = 1000000000ULL;
 
-        /// operation block.
-        const std::unique_ptr<Ops> _ops{new Ops ()};
+        /// timerfd read operation.
+        IoOperation _op = {};
+
+        /// expiration count.
+        uint64_t _expirations = 0;
 
         /// timer state.
         std::atomic<State> _state{State::Idle};

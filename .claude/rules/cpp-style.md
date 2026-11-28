@@ -35,5 +35,5 @@ paths:
 - `noexcept` when it cannot throw, `constexpr` wherever possible, `[[maybe_unused]]` on unused parameters, `static_assert` with message. No `[[nodiscard]]`.
 
 ## Doxygen
-- Every header declaration: `/**`, ` * @brief ...` (lowercase), then `@param`/`@return`/`@throw` lines, ` */`. One short line per tag, a noun phrase ending with a period; no rationale (it goes in the reply or commit). Wording: `create instance.`, `destroy instance.`, `copy constructor.`, `move assignment operator.`, `@param other other object to copy.`, `@return current object.`. Class members: `/// text.` above; enum values and plain struct fields: trailing `/**< ... */`.
+- Every header declaration: `/**`, ` * @brief ...` (lowercase), then `@param`/`@return`/`@throw` lines, ` */`. One short line per tag, a noun phrase ending with a period, a few words; no rationale, no "when/until/by/so that" clause (it goes in the reply or commit). A comment moved or copied is rewritten to this rule. Wording: `create instance.`, `destroy instance.`, `copy constructor.`, `move assignment operator.`, `@param other other object to copy.`, `@return current object.`. Class members: `/// text.` above; enum values and plain struct fields: trailing `/**< ... */`.
 - No comments inside method bodies except `// LCOV_EXCL_LINE` and `LCOV_EXCL_START`/`STOP`.
