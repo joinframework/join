@@ -33,8 +33,6 @@
 #include <join/utils.hpp>
 
 // C++.
-#include <unordered_map>
-#include <unordered_set>
 #include <atomic>
 #include <chrono>
 #include <limits>
@@ -59,27 +57,27 @@ namespace join
          * @brief copy constructor.
          * @param other other object to copy.
          */
-        EventHandler (const EventHandler& other) = default;
+        EventHandler (const EventHandler& other) = delete;
 
         /**
          * @brief copy assignment operator.
          * @param other other object to copy.
          * @return current object.
          */
-        EventHandler& operator= (const EventHandler& other) = default;
+        EventHandler& operator= (const EventHandler& other) = delete;
 
         /**
          * @brief move constructor.
          * @param other other object to move.
          */
-        EventHandler (EventHandler&& other) = default;
+        EventHandler (EventHandler&& other) = delete;
 
         /**
          * @brief move assignment operator.
          * @param other other object to move.
          * @return current object.
          */
-        EventHandler& operator= (EventHandler&& other) = default;
+        EventHandler& operator= (EventHandler&& other) = delete;
 
         /**
          * @brief destroy instance.
@@ -148,6 +146,10 @@ namespace join
             // do nothing.
         }
 
+    private:
+        /// registered handle.
+        int _handle = -1;
+
         /// friendship with reactor.
         friend class Reactor;
     };
@@ -158,9 +160,6 @@ namespace join
     class Reactor
     {
     private:
-        /// deleted handlers reserve size.
-        static constexpr size_t _deletedReserve = 64;
-
         /// queue size.
         static constexpr size_t _queueSize = 1024;
 
@@ -325,11 +324,11 @@ namespace join
 
         /**
          * @brief delete handler from reactor.
-         * @param fd file descriptor.
+         * @param handler registered handler.
          * @param sync wait for operation completion if true.
          * @return 0 on success, -1 on failure.
          */
-        int delHandler (int fd, bool sync = true) noexcept;
+        int delHandler (EventHandler* handler, bool sync = true) noexcept;
 
         /**
          * @brief invoke a function from the reactor thread.
@@ -428,10 +427,10 @@ namespace join
 
         /**
          * @brief unregister handler from epoll.
-         * @param fd file descriptor.
+         * @param handler registered handler.
          * @return 0 on success, -1 on failure.
          */
-        int unregisterHandler (int fd) noexcept;
+        int unregisterHandler (EventHandler* handler) noexcept;
 
         /**
          * @brief invoke function.
@@ -475,13 +474,6 @@ namespace join
          */
         void eventLoop ();
 
-        /**
-         * @brief check if handler is active.
-         * @param fd file descriptor.
-         * @return true if handler is active, false otherwise.
-         */
-        bool isActive (int fd) const noexcept;
-
         /// timer wheel advanced by the event loop, built first so that nothing leaks if it throws.
         Wheel _wheel{*this};
 
@@ -497,11 +489,11 @@ namespace join
         /// command queue
         LocalMem::Mpsc::Queue<Command> _commands;
 
-        /// registered handlers
-        std::unordered_map<int, EventHandler*> _handlers;
+        /// events being dispatched.
+        epoll_event* _dispatched = nullptr;
 
-        /// deleted handlers.
-        std::unordered_set<int> _deleted;
+        /// number of events being dispatched.
+        int _dispatchedCount = 0;
 
         /// running flag for dispatcher thread.
         std::atomic<bool> _running{false};

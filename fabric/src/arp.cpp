@@ -80,7 +80,7 @@ Arp::Arp (const std::string& interface, NeighborManager& neighbors)
 // =========================================================================
 Arp::~Arp ()
 {
-    _reactor.delHandler (_socket.handle ());
+    _reactor.delHandler (this);
 }
 
 // =========================================================================

@@ -719,7 +719,7 @@ namespace join
                 return 0;
             }
 
-            _reactor.delHandler (_socket.handle ());
+            _reactor.delHandler (this);
 
             if (_socket.disconnect () == -1)
             {
@@ -1255,7 +1255,7 @@ namespace join
                 return 0;
             }
 
-            this->_reactor.delHandler (this->_socket.handle ());
+            this->_reactor.delHandler (this);
 
             if (this->_socket.shutdown () == -1)
             {
