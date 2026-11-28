@@ -500,7 +500,7 @@ TEST_F (RawAsyncSocket, cancel)
         Raw::AsyncSocket rawSocket;
 
         ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (rawSocket.cancel (Raw::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (rawSocket.cancel (Raw::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
         ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
@@ -536,8 +536,9 @@ TEST_F (RawAsyncSocket, cancel)
         ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
 
         ASSERT_EQ (rawSocket.bind (_interface), 0) << join::lastError.message ();
-        ASSERT_NE (rawSocket.asyncRead (onReadCompletion, _buf, sizeof (_buf)), -1) << join::lastError.message ();
-        ASSERT_EQ (rawSocket.cancel (0), 0) << join::lastError.message ();
+        ssize_t index = rawSocket.asyncRead (onReadCompletion, _buf, sizeof (_buf));
+        ASSERT_NE (index, -1) << join::lastError.message ();
+        ASSERT_EQ (rawSocket.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         ASSERT_TRUE (wait (1));
         ASSERT_EQ (code (), std::errc::operation_canceled) << code ().message ();

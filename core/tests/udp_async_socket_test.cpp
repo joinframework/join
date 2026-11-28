@@ -621,12 +621,17 @@ TEST_F (UdpAsyncSocket, create)
         ASSERT_NE (firstIndex, secondIndex);
         ASSERT_EQ (first.cancel (static_cast<size_t> (secondIndex)), 0) << join::lastError.message ();
 
-        for (size_t i = 2; i < Udp::AsyncSocket::_opCount; ++i)
+        for (size_t i = 2; i < Udp::AsyncSocket::_slotCount - 2; ++i)
         {
             ASSERT_NE (second.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
         }
 
         ASSERT_EQ (first.asyncWait (nullptr, true, false), -1);
+        ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+
+        Udp::AsyncSocket third (allocator);
+        ASSERT_EQ (third.open (), 0) << join::lastError.message ();
+        ASSERT_EQ (third.asyncWait (nullptr, true, false), -1);
         ASSERT_EQ (join::lastError, Errc::OutOfMemory);
     }
 
@@ -756,7 +761,7 @@ TEST_F (UdpAsyncSocket, asyncWait)
     ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
-    for (size_t i = 0; i < Udp::AsyncSocket::_opCount; ++i)
+    for (size_t i = 0; i < Udp::AsyncSocket::_slotCount; ++i)
     {
         ASSERT_EQ (client.cancel (i), 0) << join::lastError.message ();
     }
@@ -895,7 +900,7 @@ TEST_F (UdpAsyncSocket, cancel)
         Udp::AsyncSocket client;
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Udp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (client.cancel (Udp::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
         ASSERT_EQ (client.bind (Udp::Endpoint (_host, 0)), 0) << join::lastError.message ();
@@ -930,8 +935,9 @@ TEST_F (UdpAsyncSocket, cancel)
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
         ASSERT_EQ (client.bind (Udp::Endpoint (_host, 0)), 0) << join::lastError.message ();
-        ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ssize_t index = client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from);
+        ASSERT_NE (index, -1) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);

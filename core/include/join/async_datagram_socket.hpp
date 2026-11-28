@@ -241,7 +241,7 @@ namespace join
             }
 
             read->readHandler = std::move (handler);
-            read->op = IoOperation::makeRecv (this->descriptor ().handle (), data, maxSize, MSG_TRUNC, this, link);
+            read->op = IoOperation::makeRecv (this->descriptor (), data, maxSize, MSG_TRUNC, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -337,7 +337,7 @@ namespace join
             read->msg.msg_control = control;
             read->msg.msg_controllen = controlSize;
             read->msg.msg_flags = 0;
-            read->op = IoOperation::makeRecvmsg (this->descriptor ().handle (), &read->msg, 0, this, link);
+            read->op = IoOperation::makeRecvmsg (this->descriptor (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -391,7 +391,7 @@ namespace join
             read->msg.msg_control = nullptr;
             read->msg.msg_controllen = controlSize;
             read->msg.msg_flags = 0;
-            read->op = IoOperation::makeRecvmsgMulti (this->descriptor ().handle (), group, &read->msg, 0, this);
+            read->op = IoOperation::makeRecvmsgMulti (this->descriptor (), group, &read->msg, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -475,18 +475,16 @@ namespace join
             {
                 if (this->_proactor->fixedBuffer ().owns (data, size))
                 {
-                    write->op =
-                        IoOperation::makeSendZc (this->descriptor ().handle (), data, size, MSG_NOSIGNAL, this, link);
+                    write->op = IoOperation::makeSendZc (this->descriptor (), data, size, MSG_NOSIGNAL, this, link);
                 }
                 else
                 {
-                    write->op =
-                        IoOperation::makeSend (this->descriptor ().handle (), data, size, MSG_NOSIGNAL, this, link);
+                    write->op = IoOperation::makeSend (this->descriptor (), data, size, MSG_NOSIGNAL, this, link);
                 }
             }
             else
             {
-                write->op = IoOperation::makeSend (this->descriptor ().handle (), data, size, MSG_NOSIGNAL, this, link);
+                write->op = IoOperation::makeSend (this->descriptor (), data, size, MSG_NOSIGNAL, this, link);
             }
 
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
@@ -583,7 +581,7 @@ namespace join
             write->msg.msg_control = const_cast<char*> (control);
             write->msg.msg_controllen = controlSize;
             write->msg.msg_flags = 0;
-            write->op = IoOperation::makeSendmsg (this->descriptor ().handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            write->op = IoOperation::makeSendmsg (this->descriptor (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (write);

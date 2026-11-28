@@ -439,7 +439,16 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         op.state.store (IoOperation::State::Submitted, std::memory_order_release);
     }
 
-    if (JOIN_UNLIKELY (op.fd < 0))
+    if (JOIN_UNLIKELY (op.descriptor == nullptr))
+    {
+        resetOperation (op);
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        return -1;
+    }
+
+    const int fd = op.descriptor->handle ();
+
+    if (JOIN_UNLIKELY (fd < 0))
     {
         resetOperation (op);
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
@@ -478,8 +487,7 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
 
     if (JOIN_UNLIKELY (static_cast<IoOperation::Opcode> (op.code) == IoOperation::Opcode::Connect))
     {
-        if (JOIN_UNLIKELY (::connect (op.fd, op.data.connect.addr, op.data.connect.addrlen) == -1 &&
-                           errno != EINPROGRESS))
+        if (JOIN_UNLIKELY (::connect (fd, op.data.connect.addr, op.data.connect.addrlen) == -1 && errno != EINPROGRESS))
         {
             lastError = std::error_code (errno, std::system_category ());
             resetOperation (op);
@@ -487,14 +495,14 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         }
     }
 
-    if (JOIN_UNLIKELY (static_cast<size_t> (op.fd) >= _readOps.size ()))
+    if (JOIN_UNLIKELY (static_cast<size_t> (fd) >= _readOps.size ()))
     {
-        size_t newSize = static_cast<size_t> (op.fd) + 1;
+        size_t newSize = static_cast<size_t> (fd) + 1;
         _readOps.resize (newSize, nullptr);
         _writeOps.resize (newSize, nullptr);
     }
 
-    IoOperation*& last = isWriteOperation (op) ? _writeOps[op.fd] : _readOps[op.fd];
+    IoOperation*& last = isWriteOperation (op) ? _writeOps[fd] : _readOps[fd];
 
     if (JOIN_UNLIKELY (ring != nullptr))
     {
@@ -518,7 +526,7 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
     op.next = &op;
     last = &op;
 
-    int err = _reactor.addHandler (op.fd, this, _readOps[op.fd] != nullptr, _writeOps[op.fd] != nullptr);
+    int err = _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
     if (JOIN_UNLIKELY (err == -1))
     {
         op.next = nullptr;
@@ -542,7 +550,15 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
 // =========================================================================
 inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused]] bool flush) noexcept
 {
-    if (JOIN_UNLIKELY (op.fd < 0))
+    if (JOIN_UNLIKELY (op.descriptor == nullptr))
+    {
+        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        return -1;
+    }
+
+    const int fd = op.descriptor->handle ();
+
+    if (JOIN_UNLIKELY (fd < 0))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
@@ -554,7 +570,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
         return -1;
     }
 
-    if (JOIN_UNLIKELY (static_cast<size_t> (op.fd) >= _readOps.size ()))
+    if (JOIN_UNLIKELY (static_cast<size_t> (fd) >= _readOps.size ()))
     {
         lastError = std::make_error_code (std::errc::bad_file_descriptor);
         return -1;
@@ -568,13 +584,13 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
 
     int ret = 0;
 
-    if (_readOps[op.fd] == nullptr && _writeOps[op.fd] == nullptr)
+    if (_readOps[fd] == nullptr && _writeOps[fd] == nullptr)
     {
-        ret = _reactor.delHandler (op.fd);
+        ret = _reactor.delHandler (fd);
     }
-    else if ((isWriteOperation (op) ? _writeOps[op.fd] : _readOps[op.fd]) == nullptr)
+    else if ((isWriteOperation (op) ? _writeOps[fd] : _readOps[fd]) == nullptr)
     {
-        ret = _reactor.addHandler (op.fd, this, _readOps[op.fd] != nullptr, _writeOps[op.fd] != nullptr);
+        ret = _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
     }
 
     dispatchOperation (op, -ECANCELED, true);
@@ -614,7 +630,7 @@ inline void join::BasicProactor::cancelAllOperations ([[maybe_unused]] bool flus
 // =========================================================================
 inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool cancelled) noexcept
 {
-    int fd = op.fd;
+    const int fd = op.descriptor->handle ();
 
     if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
     {
@@ -847,7 +863,8 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
 
             case IoOperation::Opcode::Accept:
                 {
-                    int fd = ::accept4 (op.fd, op.data.accept.addr, op.data.accept.addrlen, op.flags);
+                    int fd =
+                        ::accept4 (op.descriptor->handle (), op.data.accept.addr, op.data.accept.addrlen, op.flags);
                     if (JOIN_UNLIKELY ((fd == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -859,7 +876,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
                 {
                     int err = 0;
                     socklen_t len = sizeof (err);
-                    if (JOIN_UNLIKELY (::getsockopt (op.fd, SOL_SOCKET, SO_ERROR, &err, &len) == -1))
+                    if (JOIN_UNLIKELY (::getsockopt (op.descriptor->handle (), SOL_SOCKET, SO_ERROR, &err, &len) == -1))
                     {
                         return -errno;  // LCOV_EXCL_LINE
                     }
@@ -868,7 +885,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
 
             case IoOperation::Opcode::Read:
                 {
-                    ssize_t n = ::read (op.fd, op.data.rw.buf, op.data.rw.len);
+                    ssize_t n = ::read (op.descriptor->handle (), op.data.rw.buf, op.data.rw.len);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -878,7 +895,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
 
             case IoOperation::Opcode::Write:
                 {
-                    ssize_t n = ::write (op.fd, op.data.rw.buf, op.data.rw.len);
+                    ssize_t n = ::write (op.descriptor->handle (), op.data.rw.buf, op.data.rw.len);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -888,7 +905,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
 
             case IoOperation::Opcode::RecvMsg:
                 {
-                    ssize_t n = ::recvmsg (op.fd, op.data.msg.msg, op.flags);
+                    ssize_t n = ::recvmsg (op.descriptor->handle (), op.data.msg.msg, op.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -899,7 +916,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
             case IoOperation::Opcode::SendMsg:
             case IoOperation::Opcode::SendMsgZc:
                 {
-                    ssize_t n = ::sendmsg (op.fd, op.data.msg.msg, op.flags);
+                    ssize_t n = ::sendmsg (op.descriptor->handle (), op.data.msg.msg, op.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -909,7 +926,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
 
             case IoOperation::Opcode::Recv:
                 {
-                    ssize_t n = ::recv (op.fd, op.data.stream.buf, op.data.stream.len, op.flags);
+                    ssize_t n = ::recv (op.descriptor->handle (), op.data.stream.buf, op.data.stream.len, op.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -920,7 +937,7 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
             case IoOperation::Opcode::Send:
             case IoOperation::Opcode::SendZc:
                 {
-                    ssize_t n = ::send (op.fd, op.data.stream.buf, op.data.stream.len, op.flags);
+                    ssize_t n = ::send (op.descriptor->handle (), op.data.stream.buf, op.data.stream.len, op.flags);
                     if (JOIN_UNLIKELY ((n == -1) && (errno == EINTR)))
                     {
                         continue;  // LCOV_EXCL_LINE
@@ -945,7 +962,8 @@ inline bool join::BasicProactor::unqueueOperation (IoOperation& op) noexcept
         return false;
     }
 
-    IoOperation*& last = isWriteOperation (op) ? _writeOps[op.fd] : _readOps[op.fd];
+    const int fd = op.descriptor->handle ();
+    IoOperation*& last = isWriteOperation (op) ? _writeOps[fd] : _readOps[fd];
     IoOperation* prev = last;
 
     while (prev->next != &op)

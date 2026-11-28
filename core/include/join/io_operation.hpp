@@ -42,6 +42,9 @@ namespace join
     // forward declaration.
     class CompletionHandler;
 
+    // forward declaration.
+    class IoDescriptor;
+
     /**
      * @brief Describes a single asynchronous operation submitted to the Proactor.
      */
@@ -108,21 +111,22 @@ namespace join
 
         /**
          * @brief build a poll operation.
-         * @param fd file descriptor to watch.
+         * @param descriptor descriptor to watch.
          * @param events requested events, POLLIN or POLLOUT.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makePoll (int fd, uint32_t events, CompletionHandler* handler) noexcept;
+        static IoOperation makePoll (IoDescriptor& descriptor, uint32_t events, CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a multishot poll operation, staying armed until cancelled or failed.
-         * @param fd file descriptor to watch.
+         * @param descriptor descriptor to watch.
          * @param events requested events, POLLIN or POLLOUT.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makePollMulti (int fd, uint32_t events, CompletionHandler* handler) noexcept;
+        static IoOperation makePollMulti (IoDescriptor& descriptor, uint32_t events,
+                                          CompletionHandler* handler) noexcept;
 
         /**
          * @brief payload for accept.
@@ -138,24 +142,24 @@ namespace join
 
         /**
          * @brief build an accept operation.
-         * @param fd listening socket file descriptor.
+         * @param descriptor listening socket descriptor.
          * @param addr peer address.
          * @param addrlen peer address length.
          * @param flags accept flags.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makeAccept (int fd, sockaddr* addr, socklen_t* addrlen, int flags,
+        static IoOperation makeAccept (IoDescriptor& descriptor, sockaddr* addr, socklen_t* addrlen, int flags,
                                        CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a multishot accept operation.
-         * @param fd listening socket file descriptor.
+         * @param descriptor listening socket descriptor.
          * @param flags accept flags.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makeAcceptMulti (int fd, int flags, CompletionHandler* handler) noexcept;
+        static IoOperation makeAcceptMulti (IoDescriptor& descriptor, int flags, CompletionHandler* handler) noexcept;
 
         /**
          * @brief payload for connect.
@@ -171,13 +175,13 @@ namespace join
 
         /**
          * @brief build a connect operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param addr remote address.
          * @param addrlen remote address length.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makeConnect (int fd, const sockaddr* addr, socklen_t addrlen,
+        static IoOperation makeConnect (IoDescriptor& descriptor, const sockaddr* addr, socklen_t addrlen,
                                         CompletionHandler* handler) noexcept;
 
         /**
@@ -194,26 +198,26 @@ namespace join
 
         /**
          * @brief build a regular read operation.
-         * @param fd file descriptor to read from.
+         * @param descriptor descriptor to read from.
          * @param buf destination buffer.
          * @param len number of bytes to read.
          * @param handler handler to notify on completion.
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRead (int fd, void* buf, size_t len, CompletionHandler* handler,
+        static IoOperation makeRead (IoDescriptor& descriptor, void* buf, size_t len, CompletionHandler* handler,
                                      bool linked = false) noexcept;
 
         /**
          * @brief build a regular write operation.
-         * @param fd file descriptor to write to.
+         * @param descriptor descriptor to write to.
          * @param buf source buffer.
          * @param len number of bytes to write.
          * @param handler handler to notify on completion.
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeWrite (int fd, const void* buf, size_t len, CompletionHandler* handler,
+        static IoOperation makeWrite (IoDescriptor& descriptor, const void* buf, size_t len, CompletionHandler* handler,
                                       bool linked = false) noexcept;
 
         /**
@@ -236,51 +240,51 @@ namespace join
 
         /**
          * @brief build a receive-message operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param msg message header.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecvmsg (int fd, msghdr* msg, int flags, CompletionHandler* handler,
+        static IoOperation makeRecvmsg (IoDescriptor& descriptor, msghdr* msg, int flags, CompletionHandler* handler,
                                         bool linked = false) noexcept;
 
         /**
          * @brief build a multishot receive-message operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param group provided buffer group, the selected buffer is only valid during the callback.
          * @param msg message header.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecvmsgMulti (int fd, uint16_t group, msghdr* msg, int flags,
+        static IoOperation makeRecvmsgMulti (IoDescriptor& descriptor, uint16_t group, msghdr* msg, int flags,
                                              CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a send-message operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param msg message header.
          * @param flags send flags.
          * @param handler handler to notify on completion.
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSendmsg (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
-                                        bool linked = false) noexcept;
+        static IoOperation makeSendmsg (IoDescriptor& descriptor, const msghdr* msg, int flags,
+                                        CompletionHandler* handler, bool linked = false) noexcept;
 
         /**
          * @brief build a zero-copy send-message operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param msg message header.
          * @param flags send flags.
          * @param handler handler to notify on completion.
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSendmsgZc (int fd, const msghdr* msg, int flags, CompletionHandler* handler,
-                                          bool linked = false) noexcept;
+        static IoOperation makeSendmsgZc (IoDescriptor& descriptor, const msghdr* msg, int flags,
+                                          CompletionHandler* handler, bool linked = false) noexcept;
 
         /**
          * @brief payload for recv / send.
@@ -299,7 +303,7 @@ namespace join
 
         /**
          * @brief build a receive operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param buf destination buffer.
          * @param len number of bytes to receive.
          * @param flags recv flags.
@@ -307,22 +311,23 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecv (int fd, void* buf, size_t len, int flags, CompletionHandler* handler,
-                                     bool linked = false) noexcept;
+        static IoOperation makeRecv (IoDescriptor& descriptor, void* buf, size_t len, int flags,
+                                     CompletionHandler* handler, bool linked = false) noexcept;
 
         /**
          * @brief build a multishot receive operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param group provided buffer group, the selected buffer is only valid during the callback.
          * @param flags recv flags.
          * @param handler handler to notify on completion.
          * @return initialized IoOperation.
          */
-        static IoOperation makeRecvMulti (int fd, uint16_t group, int flags, CompletionHandler* handler) noexcept;
+        static IoOperation makeRecvMulti (IoDescriptor& descriptor, uint16_t group, int flags,
+                                          CompletionHandler* handler) noexcept;
 
         /**
          * @brief build a send operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param buf source buffer.
          * @param len number of bytes to send.
          * @param flags send flags.
@@ -330,12 +335,12 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSend (int fd, const void* buf, size_t len, int flags, CompletionHandler* handler,
-                                     bool linked = false) noexcept;
+        static IoOperation makeSend (IoDescriptor& descriptor, const void* buf, size_t len, int flags,
+                                     CompletionHandler* handler, bool linked = false) noexcept;
 
         /**
          * @brief build a zero-copy send operation.
-         * @param fd socket file descriptor.
+         * @param descriptor socket descriptor.
          * @param buf source buffer.
          * @param len number of bytes to send.
          * @param flags send flags.
@@ -343,8 +348,8 @@ namespace join
          * @param linked link this SQE to the next one (io_uring only).
          * @return initialized IoOperation.
          */
-        static IoOperation makeSendZc (int fd, const void* buf, size_t len, int flags, CompletionHandler* handler,
-                                       bool linked = false) noexcept;
+        static IoOperation makeSendZc (IoDescriptor& descriptor, const void* buf, size_t len, int flags,
+                                       CompletionHandler* handler, bool linked = false) noexcept;
 
         union Data
         {
@@ -391,8 +396,8 @@ namespace join
         /// handler to dispatch to on completion.
         CompletionHandler* handler = nullptr;
 
-        /// file descriptor.
-        int fd = -1;
+        /// operation descriptor.
+        IoDescriptor* descriptor = nullptr;
 
         /// operation code specific payload.
         Data data = {};

@@ -542,7 +542,7 @@ TEST_F (IcmpAsyncSocket, cancel)
         Icmp::AsyncSocket client;
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Icmp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (client.cancel (Icmp::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
         ASSERT_EQ (client.connect (_host), 0) << join::lastError.message ();
@@ -577,8 +577,9 @@ TEST_F (IcmpAsyncSocket, cancel)
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
         ASSERT_EQ (client.bind (_host), 0) << join::lastError.message ();
-        ASSERT_NE (client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ssize_t index = client.asyncReadFrom (onReportFrom, _buf, sizeof (_buf), _from);
+        ASSERT_NE (index, -1) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);

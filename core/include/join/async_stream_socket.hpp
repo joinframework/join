@@ -198,7 +198,7 @@ namespace join
             this->_socket._state = Socket::Connecting;
             this->_socket._remote = endpoint;
             connect->connectHandler = std::move (handler);
-            connect->op = IoOperation::makeConnect (this->descriptor ().handle (), this->_socket._remote.addr (),
+            connect->op = IoOperation::makeConnect (this->descriptor (), this->_socket._remote.addr (),
                                                     this->_socket._remote.length (), this);
             connect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
@@ -274,8 +274,8 @@ namespace join
 
             disconnect->disconnectHandler = std::move (handler);
             disconnect->deadline = deadline;
-            disconnect->op = IoOperation::makeRead (this->descriptor ().handle (), disconnect->buffer,
-                                                    sizeof (disconnect->buffer), this);
+            disconnect->op =
+                IoOperation::makeRead (this->descriptor (), disconnect->buffer, sizeof (disconnect->buffer), this);
             disconnect->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             if (this->_proactor->submit (disconnect->op, deadline, true, false) == -1)
@@ -352,7 +352,7 @@ namespace join
             }
 
             read->readHandler = std::move (handler);
-            read->op = IoOperation::makeRecv (this->descriptor ().handle (), data, maxSize, 0, this, link);
+            read->op = IoOperation::makeRecv (this->descriptor (), data, maxSize, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -435,7 +435,7 @@ namespace join
             read->iov.iov_base = data;
             read->iov.iov_len = size;
             read->deadline = deadline;
-            read->op = IoOperation::makeRecv (this->descriptor ().handle (), data, size, MSG_WAITALL, this, link);
+            read->op = IoOperation::makeRecv (this->descriptor (), data, size, MSG_WAITALL, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -519,18 +519,16 @@ namespace join
             {
                 if (this->_proactor->fixedBuffer ().owns (data, size))
                 {
-                    write->op =
-                        IoOperation::makeSendZc (this->descriptor ().handle (), data, size, MSG_NOSIGNAL, this, link);
+                    write->op = IoOperation::makeSendZc (this->descriptor (), data, size, MSG_NOSIGNAL, this, link);
                 }
                 else
                 {
-                    write->op =
-                        IoOperation::makeSend (this->descriptor ().handle (), data, size, MSG_NOSIGNAL, this, link);
+                    write->op = IoOperation::makeSend (this->descriptor (), data, size, MSG_NOSIGNAL, this, link);
                 }
             }
             else
             {
-                write->op = IoOperation::makeSend (this->descriptor ().handle (), data, size, MSG_NOSIGNAL, this, link);
+                write->op = IoOperation::makeSend (this->descriptor (), data, size, MSG_NOSIGNAL, this, link);
             }
 
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
@@ -620,19 +618,19 @@ namespace join
             {
                 if (this->_proactor->fixedBuffer ().owns (data, size))
                 {
-                    write->op = IoOperation::makeSendZc (this->descriptor ().handle (), data, size,
-                                                         MSG_NOSIGNAL | MSG_WAITALL, this, link);
+                    write->op = IoOperation::makeSendZc (this->descriptor (), data, size, MSG_NOSIGNAL | MSG_WAITALL,
+                                                         this, link);
                 }
                 else
                 {
-                    write->op = IoOperation::makeSend (this->descriptor ().handle (), data, size,
-                                                       MSG_NOSIGNAL | MSG_WAITALL, this, link);
+                    write->op =
+                        IoOperation::makeSend (this->descriptor (), data, size, MSG_NOSIGNAL | MSG_WAITALL, this, link);
                 }
             }
             else
             {
-                write->op = IoOperation::makeSend (this->descriptor ().handle (), data, size,
-                                                   MSG_NOSIGNAL | MSG_WAITALL, this, link);
+                write->op =
+                    IoOperation::makeSend (this->descriptor (), data, size, MSG_NOSIGNAL | MSG_WAITALL, this, link);
             }
 
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
