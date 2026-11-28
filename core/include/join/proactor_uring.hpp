@@ -181,7 +181,7 @@ void join::BasicProactor<IoPolicy>::stop (bool sync) noexcept
     if (isProactorThread ())
     {
         _running.store (false, std::memory_order_release);
-        cancelAllOperations ();
+        cancelAllOperations (true);
         return;
     }
 
@@ -190,7 +190,7 @@ void join::BasicProactor<IoPolicy>::stop (bool sync) noexcept
         return;
     }
 
-    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, nullptr, true, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
@@ -547,11 +547,7 @@ void join::BasicProactor<IoPolicy>::processCommand (const Command& cmd) noexcept
 
         case CommandType::Stop:
             _running.store (false, std::memory_order_release);
-            cancelAllOperations ();
-            if (JOIN_UNLIKELY (cmd.flush))
-            {
-                io_uring_submit (&_ring);
-            }
+            cancelAllOperations (cmd.flush);
             break;
 
         case CommandType::Flush:
@@ -720,7 +716,7 @@ int join::BasicProactor<IoPolicy>::cancelOperation (IoOperation& op, bool flush)
 //   METHOD    : cancelAllOperations
 // =========================================================================
 template <typename IoPolicy>
-void join::BasicProactor<IoPolicy>::cancelAllOperations () noexcept
+void join::BasicProactor<IoPolicy>::cancelAllOperations (bool flush) noexcept
 {
     for (IoOperation* op : _pendingOps)
     {
@@ -730,6 +726,11 @@ void join::BasicProactor<IoPolicy>::cancelAllOperations () noexcept
             backoff ();  // LCOV_EXCL_LINE
         }
         cancelOperation (*op, false);
+    }
+
+    if (JOIN_LIKELY (flush))
+    {
+        io_uring_submit (&_ring);
     }
 }
 

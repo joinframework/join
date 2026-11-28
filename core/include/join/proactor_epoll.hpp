@@ -72,7 +72,7 @@ inline void join::BasicProactor::stop (bool sync) noexcept
 {
     if (isProactorThread ())
     {
-        cancelAllOperations ();
+        cancelAllOperations (true);
         _reactor.stop (false);
         return;
     }
@@ -82,7 +82,7 @@ inline void join::BasicProactor::stop (bool sync) noexcept
         return;
     }
 
-    writeCommand ({CommandType::Stop, nullptr, sync, nullptr, nullptr, nullptr});
+    writeCommand ({CommandType::Stop, nullptr, true, nullptr, nullptr, nullptr});
 
     if (JOIN_LIKELY (sync))
     {
@@ -400,7 +400,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
             break;
 
         case CommandType::Stop:
-            cancelAllOperations ();
+            cancelAllOperations (cmd.flush);
             _reactor.stop (false);
             break;
 
@@ -586,7 +586,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
 //   CLASS     : BasicProactor
 //   METHOD    : cancelAllOperations
 // =========================================================================
-inline void join::BasicProactor::cancelAllOperations () noexcept
+inline void join::BasicProactor::cancelAllOperations ([[maybe_unused]] bool flush) noexcept
 {
     for (size_t fd = 0; fd < _readOps.size (); ++fd)
     {
