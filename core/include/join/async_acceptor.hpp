@@ -118,11 +118,21 @@ namespace join
          */
         void close () noexcept
         {
+            typename ProactorType::InvokeHandler fn = [this] () {
+                cancel ();
+            };
             Backoff backoff;
 
             do
             {
-                cancel ();
+                if (_proactor->isRunning ())
+                {
+                    _proactor->invoke (&fn);
+                }
+                else
+                {
+                    fn ();
+                }
 
                 backoff ();
             }
