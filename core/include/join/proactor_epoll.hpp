@@ -583,7 +583,7 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
 
     if (descriptor.empty ())
     {
-        ret = _reactor.delHandler (fd);
+        ret = _reactor.delHandler (&descriptor);
         descriptor.unlink (_descriptors);
 
         if (_dispatching != &descriptor)
@@ -642,7 +642,7 @@ inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool
 
         if (descriptor.empty ())
         {
-            _reactor.delHandler (fd);
+            _reactor.delHandler (&descriptor);
             descriptor.unlink (_descriptors);
 
             if (_dispatching != &descriptor)

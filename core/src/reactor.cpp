@@ -33,7 +33,6 @@
 #include <sys/eventfd.h>
 #include <sys/prctl.h>
 #include <unistd.h>
-#include <cassert>
 
 using join::Backoff;
 using join::EventHandler;
@@ -65,11 +64,9 @@ Reactor::Reactor ()
         // LCOV_EXCL_STOP
     }
 
-    _deleted.reserve (_deletedReserve);
-
     struct epoll_event ev = {};
     ev.events = EPOLLIN;
-    ev.data.fd = _wakeup;
+    ev.data.ptr = &_wakeup;
 
     if (epoll_ctl (_epoll, EPOLL_CTL_ADD, _wakeup, &ev) == -1)
     {
@@ -153,11 +150,11 @@ int Reactor::addHandler (int fd, EventHandler* handler, bool wantRead, bool want
 //   CLASS     : Reactor
 //   METHOD    : delHandler
 // =========================================================================
-int Reactor::delHandler (int fd, bool sync) noexcept
+int Reactor::delHandler (EventHandler* handler, bool sync) noexcept
 {
     if (isReactorThread ())
     {
-        return unregisterHandler (fd);
+        return unregisterHandler (handler);
     }
 
     std::atomic<bool> done{false}, *pdone = nullptr;
@@ -169,7 +166,7 @@ int Reactor::delHandler (int fd, bool sync) noexcept
         perrc = &errc;
     }
 
-    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, fd, 0, nullptr, pdone, perrc, nullptr}) == -1))
+    if (JOIN_UNLIKELY (writeCommand ({CommandType::Del, -1, 0, handler, pdone, perrc, nullptr}) == -1))
     {
         return -1;  // LCOV_EXCL_LINE
     }
@@ -363,33 +360,30 @@ int Reactor::registerHandler (int fd, EventHandler* handler, uint32_t events) no
         return -1;
     }
 
-    struct epoll_event ev = {};
-    ev.events = events;
-    ev.data.fd = fd;
-
-    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_ADD, fd, &ev) == -1))
+    if (JOIN_UNLIKELY ((handler->_handle != -1) && (handler->_handle != fd)))
     {
-        if (JOIN_LIKELY (errno == EEXIST))
-        {
-            if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_MOD, fd, &ev) == -1))
-            {
-                // LCOV_EXCL_START
-                lastError = std::make_error_code (static_cast<std::errc> (errno));
-                return -1;
-                // LCOV_EXCL_STOP
-            }
-        }
-        else
-        {
-            // LCOV_EXCL_START
-            lastError = std::make_error_code (static_cast<std::errc> (errno));
-            return -1;
-            // LCOV_EXCL_STOP
-        }
+        lastError = make_error_code (Errc::InUse);
+        return -1;
     }
 
-    _deleted.erase (fd);
-    _handlers[fd] = handler;
+    struct epoll_event ev = {};
+    ev.events = events;
+    ev.data.ptr = handler;
+
+    int op = EPOLL_CTL_MOD;
+
+    if (handler->_handle == -1)
+    {
+        op = EPOLL_CTL_ADD;
+    }
+
+    if (JOIN_UNLIKELY (epoll_ctl (_epoll, op, fd, &ev) == -1))
+    {
+        lastError = std::make_error_code (static_cast<std::errc> (errno));
+        return -1;
+    }
+
+    handler->_handle = fd;
 
     return 0;
 }
@@ -398,27 +392,37 @@ int Reactor::registerHandler (int fd, EventHandler* handler, uint32_t events) no
 //   CLASS     : Reactor
 //   METHOD    : unregisterHandler
 // =========================================================================
-int Reactor::unregisterHandler (int fd) noexcept
+int Reactor::unregisterHandler (EventHandler* handler) noexcept
 {
-    if (JOIN_UNLIKELY (fd < 0))
+    if (JOIN_UNLIKELY (handler == nullptr))
     {
-        lastError = std::make_error_code (std::errc::bad_file_descriptor);
+        lastError = make_error_code (Errc::InvalidParam);
         return -1;
     }
 
-    if (JOIN_UNLIKELY (epoll_ctl (_epoll, EPOLL_CTL_DEL, fd, nullptr) == -1))
+    if (JOIN_UNLIKELY (handler->_handle == -1))
     {
-        if (errno == EBADF || errno == ENOENT)
-        {
-            _deleted.insert (fd);
-        }
+        lastError = std::make_error_code (std::errc::no_such_file_or_directory);
+        return -1;
+    }
+
+    int err = epoll_ctl (_epoll, EPOLL_CTL_DEL, handler->_handle, nullptr);
+    if (JOIN_UNLIKELY (err == -1))
+    {
         lastError = std::make_error_code (static_cast<std::errc> (errno));
-        return -1;
     }
 
-    _deleted.insert (fd);
+    for (int i = 0; i < _dispatchedCount; ++i)
+    {
+        if (_dispatched[i].data.ptr == handler)
+        {
+            _dispatched[i].data.ptr = nullptr;
+        }
+    }
 
-    return 0;
+    handler->_handle = -1;
+
+    return err;
 }
 
 // =========================================================================
@@ -490,7 +494,7 @@ void Reactor::processCommand (const Command& cmd) noexcept
             break;
 
         case CommandType::Del:
-            err = unregisterHandler (cmd.fd);
+            err = unregisterHandler (cmd.handler);
             break;
 
         case CommandType::Invoke:
@@ -535,18 +539,11 @@ void Reactor::readCommands () noexcept
 // =========================================================================
 void Reactor::dispatchEvent (const epoll_event& event)
 {
-    int fd = event.data.fd;
-    assert (fd != _wakeup);
+    EventHandler* handler = static_cast<EventHandler*> (event.data.ptr);
 
-    auto it = _handlers.find (fd);
-    if (JOIN_UNLIKELY (it == _handlers.end ()))
+    if (JOIN_LIKELY (handler != nullptr))
     {
-        return;
-    }
-
-    if (JOIN_LIKELY (isActive (fd)))
-    {
-        it->second->onEvent (fd, event.events);
+        handler->onEvent (handler->_handle, event.events);
     }
 }
 
@@ -571,9 +568,12 @@ void Reactor::eventLoop ()
         int eventCount =
             epoll_pwait2 (_epoll, events.data (), events.size (), WheelPolicy::timeout (_wheel, ts), nullptr);
 
+        _dispatched = events.data ();
+        _dispatchedCount = eventCount;
+
         for (int i = 0; i < eventCount; ++i)
         {
-            if (JOIN_UNLIKELY (events[i].data.fd == _wakeup))
+            if (JOIN_UNLIKELY (events[i].data.ptr == &_wakeup))
             {
                 readCommands ();
             }
@@ -581,28 +581,15 @@ void Reactor::eventLoop ()
 
         for (int i = 0; i < eventCount; ++i)
         {
-            if (JOIN_LIKELY (events[i].data.fd != _wakeup))
+            if (JOIN_LIKELY (events[i].data.ptr != &_wakeup))
             {
                 dispatchEvent (events[i]);
             }
         }
 
-        for (int fd : _deleted)
-        {
-            _handlers.erase (fd);
-        }
-
-        _deleted.clear ();
+        _dispatched = nullptr;
+        _dispatchedCount = 0;
     }
-}
-
-// =========================================================================
-//   CLASS     : Reactor
-//   METHOD    : isActive
-// =========================================================================
-bool Reactor::isActive (int fd) const noexcept
-{
-    return _deleted.count (fd) == 0;
 }
 
 // =========================================================================

@@ -69,7 +69,7 @@ void NetlinkManager::start ()
 // =========================================================================
 void NetlinkManager::stop ()
 {
-    _reactor.delHandler (_socket.handle ());
+    _reactor.delHandler (this);
 }
 
 // =========================================================================

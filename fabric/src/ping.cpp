@@ -537,7 +537,7 @@ int Ping::setFilter (Icmp::Socket& socket, PingStats& stats)
 // =========================================================================
 void Ping::close (Icmp::Socket& socket)
 {
-    _reactor.delHandler (socket.handle ());
+    _reactor.delHandler (this);
     socket.close ();
 }
 

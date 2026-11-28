@@ -108,7 +108,7 @@ namespace join
          */
         virtual void close () noexcept
         {
-            _reactor.delHandler (_socket.handle ());
+            _reactor.delHandler (this);
             _socket.close ();
         }
 

@@ -176,7 +176,7 @@ namespace join
          */
         void detach () noexcept
         {
-            _reactor.delHandler (_socket.handle ());
+            _reactor.delHandler (this);
         }
 
         /**

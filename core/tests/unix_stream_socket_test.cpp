@@ -67,7 +67,7 @@ protected:
      */
     void TearDown () override
     {
-        ASSERT_EQ (ReactorThread::reactor ().delHandler (_server.handle ()), 0) << join::lastError.message ();
+        ASSERT_EQ (ReactorThread::reactor ().delHandler (this), 0) << join::lastError.message ();
         _server.close ();
     }
 
