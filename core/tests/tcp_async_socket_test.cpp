@@ -784,12 +784,12 @@ TEST_F (TcpAsyncSocket, asyncWaitMulti)
     {
         ScopedLock<Mutex> lock (_mut);
         ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [completions] () {
-            return _completions > completions;
+            return (_completions > completions) && !_more;
         }));
         ASSERT_FALSE (_code) << _code.message ();
-        ASSERT_FALSE (_more);
-        ASSERT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [completions] () {
-            return _completions > (completions + 1);
+        const int last = _completions;
+        ASSERT_FALSE (_cond.timedWait (lock, std::chrono::milliseconds (100), [last] () {
+            return _completions > last;
         }));
     }
 
