@@ -40,6 +40,7 @@
 #include <utility>
 #include <atomic>
 #include <chrono>
+#include <memory>
 #include <array>
 #include <new>
 
@@ -70,7 +71,7 @@ namespace join
     /**
      * @brief basic asynchronous socket class.
      */
-    template <class Protocol, class ProactorType, size_t OpCount>
+    template <class Protocol, class ProactorType, class Allocator>
     class BasicAsyncSocket : public CompletionHandler
     {
     public:
@@ -81,22 +82,24 @@ namespace join
         using WaitHandler = typename AsyncWait::Wait;
 
         /// number of operations in flight.
-        static constexpr size_t _opCount = OpCount;
+        static constexpr size_t _opCount = Allocator::count;
 
-        static_assert (OpCount > 0, "a socket needs at least one operation slot");
-
-        /// size of an operation slot.
-        static constexpr size_t _opSize = nextPow2 (AsyncOp<Protocol, ProactorType>::maxSize);
-
-        using OpAllocator = LocalMem::SlabAllocator<_opCount, _opSize>;
+        static_assert (_opCount > 0, "a socket needs at least one operation slot");
+        static_assert (Allocator::pools == 1, "the operations allocator needs a single pool");
+        static_assert (AsyncOp<Protocol, ProactorType>::maxSize <= Allocator::size,
+                       "operation larger than an allocator slot");
 
     protected:
         /**
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
+         * @throw std::system_error if mmap fails.
+         * @throw std::bad_alloc if the allocator cannot be created.
          */
         explicit BasicAsyncSocket (ProactorType& proactor = ProactorThread::proactor ())
         : _proactor (&proactor)
+        , _allocator (new Allocator ())
+        , _owner (true)
         {
         }
 
@@ -104,10 +107,38 @@ namespace join
          * @brief create the socket instance adopting an already opened socket.
          * @param sock socket to adopt.
          * @param proactor proactor driving the operations.
+         * @throw std::system_error if mmap fails.
+         * @throw std::bad_alloc if the allocator cannot be created.
          */
         explicit BasicAsyncSocket (Socket&& sock, ProactorType& proactor = ProactorThread::proactor ())
         : _proactor (&proactor)
         , _socket (std::move (sock))
+        , _allocator (new Allocator ())
+        , _owner (true)
+        {
+        }
+
+        /**
+         * @brief create instance with a caller allocator.
+         * @param allocator caller allocator.
+         * @param proactor proactor driving the operations.
+         */
+        explicit BasicAsyncSocket (Allocator& allocator, ProactorType& proactor = ProactorThread::proactor ())
+        : _proactor (&proactor)
+        , _allocator (std::addressof (allocator))
+        {
+        }
+
+        /**
+         * @brief adopt a socket with a caller allocator.
+         * @param sock socket to adopt.
+         * @param allocator caller allocator.
+         * @param proactor proactor driving the operations.
+         */
+        BasicAsyncSocket (Socket&& sock, Allocator& allocator, ProactorType& proactor = ProactorThread::proactor ())
+        : _proactor (&proactor)
+        , _socket (std::move (sock))
+        , _allocator (std::addressof (allocator))
         {
         }
 
@@ -126,7 +157,13 @@ namespace join
         {
             other.suspendAll ();
 
-            _allocator = std::move (other._allocator);
+            _allocator = other._allocator;
+            _owner = std::exchange (other._owner, false);
+
+            if (_owner)
+            {
+                other._allocator = nullptr;
+            }
 
             for (size_t i = 0; i < other._ops.size (); ++i)
             {
@@ -151,13 +188,29 @@ namespace join
          */
         BasicAsyncSocket& operator= (BasicAsyncSocket&& other) noexcept
         {
+            if (this == &other)
+            {
+                return *this;
+            }
+
             close ();
 
             _proactor = other._proactor;
 
             other.suspendAll ();
 
-            _allocator = std::move (other._allocator);
+            if (_owner)
+            {
+                delete _allocator;
+            }
+
+            _allocator = other._allocator;
+            _owner = std::exchange (other._owner, false);
+
+            if (_owner)
+            {
+                other._allocator = nullptr;
+            }
 
             for (size_t i = 0; i < other._ops.size (); ++i)
             {
@@ -175,6 +228,11 @@ namespace join
         virtual ~BasicAsyncSocket ()
         {
             close ();
+
+            if (_owner)
+            {
+                delete _allocator;
+            }
         }
 
         /**
@@ -304,7 +362,7 @@ namespace join
             wait->op = IoOperation::makePoll (descriptor ().handle (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _allocator.getIndex (wait);
+            size_t index = _allocator->getIndex (wait);
 
             if (_proactor->submit (wait->op, deadline, flush, false) == -1)
             {
@@ -350,7 +408,7 @@ namespace join
             wait->op = IoOperation::makePollMulti (descriptor ().handle (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = _allocator.getIndex (wait);
+            size_t index = _allocator->getIndex (wait);
 
             if (_proactor->submit (wait->op, flush, false) == -1)
             {
@@ -544,22 +602,47 @@ namespace join
         }
 
         /**
+         * @brief get the allocator, created on first use.
+         * @return allocator, nullptr on failure.
+         */
+        Allocator* allocator () noexcept
+        {
+            if (JOIN_UNLIKELY (_allocator == nullptr))
+            {
+                try
+                {
+                    _allocator = new Allocator ();
+                    _owner = true;
+                }
+                catch (...)  // LCOV_EXCL_LINE
+                {
+                }
+            }
+
+            return _allocator;
+        }
+
+        /**
          * @brief allocate an operation in the allocator.
          * @return allocated operation, or nullptr if the allocator is exhausted.
          */
         template <class Op>
         Op* allocateOperation () noexcept
         {
-            static_assert (sizeof (Op) <= _opSize, "operation larger than an allocator slot");
+            Allocator* ops = allocator ();
+            if (JOIN_UNLIKELY (ops == nullptr))
+            {
+                return nullptr;  // LCOV_EXCL_LINE
+            }
 
-            void* chunk = _allocator.allocate (sizeof (Op));
+            void* chunk = ops->allocate (sizeof (Op));
             if (JOIN_UNLIKELY (chunk == nullptr))
             {
                 return nullptr;
             }
 
             Op* operation = new (chunk) Op;
-            _ops[_allocator.getIndex (chunk)].store (&operation->op, std::memory_order_release);
+            _ops[ops->getIndex (chunk)].store (&operation->op, std::memory_order_release);
 
             return operation;
         }
@@ -571,11 +654,10 @@ namespace join
         template <class Op>
         void releaseOperation (Op* operation) noexcept
         {
-            const uint32_t index = _allocator.getIndex (operation);
+            _ops[_allocator->getIndex (operation)].store (nullptr, std::memory_order_release);
 
             operation->~Op ();
-            _allocator.deallocate (operation);
-            _ops[index].store (nullptr, std::memory_order_release);
+            _allocator->deallocate (operation);
         }
 
         /**
@@ -707,7 +789,10 @@ namespace join
         IoDescriptor _descriptor;
 
         /// operations allocator.
-        OpAllocator _allocator;
+        Allocator* _allocator = nullptr;
+
+        /// owns the allocator.
+        bool _owner = false;
 
         /// operations in flight.
         std::array<std::atomic<IoOperation*>, _opCount> _ops{};

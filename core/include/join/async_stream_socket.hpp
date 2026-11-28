@@ -44,8 +44,8 @@ namespace join
     /**
      * @brief asynchronous stream socket class.
      */
-    template <class Protocol, class ProactorType, size_t OpCount>
-    class BasicAsyncStreamSocket final : public BasicAsyncRawSocket<Protocol, ProactorType, OpCount>
+    template <class Protocol, class ProactorType, class Allocator>
+    class BasicAsyncStreamSocket final : public BasicAsyncRawSocket<Protocol, ProactorType, Allocator>
     {
     public:
         using Socket = typename Protocol::Socket;
@@ -63,9 +63,11 @@ namespace join
         /**
          * @brief create the socket instance.
          * @param proactor proactor driving the operations.
+         * @throw std::system_error if mmap fails.
+         * @throw std::bad_alloc if the allocator cannot be created.
          */
         explicit BasicAsyncStreamSocket (ProactorType& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (proactor)
+        : BasicAsyncRawSocket<Protocol, ProactorType, Allocator> (proactor)
         {
         }
 
@@ -73,9 +75,33 @@ namespace join
          * @brief create the socket instance adopting an already connected socket.
          * @param sock socket to adopt.
          * @param proactor proactor driving the operations.
+         * @throw std::system_error if mmap fails.
+         * @throw std::bad_alloc if the allocator cannot be created.
          */
         explicit BasicAsyncStreamSocket (Socket&& sock, ProactorType& proactor = ProactorThread::proactor ())
-        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (std::move (sock), proactor)
+        : BasicAsyncRawSocket<Protocol, ProactorType, Allocator> (std::move (sock), proactor)
+        {
+        }
+
+        /**
+         * @brief create instance with a caller allocator.
+         * @param allocator caller allocator.
+         * @param proactor proactor driving the operations.
+         */
+        explicit BasicAsyncStreamSocket (Allocator& allocator, ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, Allocator> (allocator, proactor)
+        {
+        }
+
+        /**
+         * @brief adopt a socket with a caller allocator.
+         * @param sock socket to adopt.
+         * @param allocator caller allocator.
+         * @param proactor proactor driving the operations.
+         */
+        BasicAsyncStreamSocket (Socket&& sock, Allocator& allocator,
+                                ProactorType& proactor = ProactorThread::proactor ())
+        : BasicAsyncRawSocket<Protocol, ProactorType, Allocator> (std::move (sock), allocator, proactor)
         {
         }
 
@@ -97,7 +123,7 @@ namespace join
          * @param other other object to move.
          */
         BasicAsyncStreamSocket (BasicAsyncStreamSocket&& other) noexcept
-        : BasicAsyncRawSocket<Protocol, ProactorType, OpCount> (std::move (other), false)
+        : BasicAsyncRawSocket<Protocol, ProactorType, Allocator> (std::move (other), false)
         {
             this->resumeAll ();
         }
@@ -149,12 +175,6 @@ namespace join
          */
         int asyncConnect (ConnectHandler handler, const Endpoint& endpoint, TimePoint deadline) noexcept
         {
-            if (JOIN_UNLIKELY (!this->_allocator.hasBackend ()))
-            {
-                lastError = make_error_code (Errc::OperationFailed);
-                return -1;
-            }
-
             if (this->_socket.connected () || this->_socket.connecting ())
             {
                 lastError = make_error_code (Errc::InUse);
@@ -335,7 +355,7 @@ namespace join
             read->op = IoOperation::makeRecv (this->descriptor ().handle (), data, maxSize, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_allocator.getIndex (read);
+            size_t index = this->_allocator->getIndex (read);
 
             if (this->_proactor->submit (read->op, deadline, flush, false) == -1)
             {
@@ -418,7 +438,7 @@ namespace join
             read->op = IoOperation::makeRecv (this->descriptor ().handle (), data, size, MSG_WAITALL, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_allocator.getIndex (read);
+            size_t index = this->_allocator->getIndex (read);
 
             if (this->_proactor->submit (read->op, deadline, flush, false) == -1)
             {
@@ -515,7 +535,7 @@ namespace join
 
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_allocator.getIndex (write);
+            size_t index = this->_allocator->getIndex (write);
 
             if (this->_proactor->submit (write->op, deadline, flush, false) == -1)
             {
@@ -617,7 +637,7 @@ namespace join
 
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
-            size_t index = this->_allocator.getIndex (write);
+            size_t index = this->_allocator->getIndex (write);
 
             if (this->_proactor->submit (write->op, deadline, flush, false) == -1)
             {

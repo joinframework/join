@@ -347,6 +347,15 @@ namespace join
         /// total bytes required in the mapped region.
         static constexpr size_t total = (BasicSlabPool<Count, Sizes>::total + ...);
 
+        /// number of chunks per pool.
+        static constexpr size_t count = Count;
+
+        /// number of pools.
+        static constexpr size_t pools = sizeof...(Sizes);
+
+        /// largest chunk size.
+        static constexpr size_t size = std::max ({Sizes...});
+
         /// pool sizes checks.
         static_assert (sizeof...(Sizes) > 0, "slab allocator must have at least one pool size");
         static_assert (std::ranges::is_sorted (std::array{Sizes...}), "pool sizes must be provided in ascending order");
