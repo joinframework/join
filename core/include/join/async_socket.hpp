@@ -86,6 +86,8 @@ namespace join
 
         static_assert (_opCount > 0, "a socket needs at least one operation slot");
         static_assert (Allocator::pools == 1, "the operations allocator needs a single pool");
+        static_assert (AsyncOp<Protocol, ProactorType>::maxSize <= Allocator::size,
+                       "operation larger than an allocator slot");
 
     protected:
         /**
