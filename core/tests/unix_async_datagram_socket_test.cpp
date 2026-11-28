@@ -391,10 +391,11 @@ TEST_F (UnixAsyncDatagramSocket, move)
 
     ASSERT_EQ (client1.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncWriteTo (nullptr, "one", 3, _dest), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.open (), 0) << join::lastError.message ();
+    ssize_t index = client1.asyncWait (nullptr, true, false);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
     client1.close ();
 
     ASSERT_NE (client2.asyncReadFrom (onRead, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();

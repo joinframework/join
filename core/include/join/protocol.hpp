@@ -27,6 +27,7 @@
 
 // libjoin.
 #include <join/endpoint.hpp>
+#include <join/memory.hpp>
 
 // C++.
 #include <bit>
@@ -64,16 +65,20 @@ namespace join
     template <typename IoPolicy>
     class BasicProactor;
 
-    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>,
+              class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncSocket;
 
-    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>,
+              class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncRawSocket;
 
-    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>,
+              class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>,
+              class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncStreamSocket;
 
     template <class Protocol, class ProactorType = BasicProactor<IoDefaultPolicy>>
@@ -81,16 +86,16 @@ namespace join
 #else
     class BasicProactor;
 
-    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncSocket;
 
-    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncRawSocket;
 
-    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncDatagramSocket;
 
-    template <class Protocol, class ProactorType = BasicProactor, size_t OpCount = 16>
+    template <class Protocol, class ProactorType = BasicProactor, class Allocator = typename Protocol::AsyncAllocator>
     class BasicAsyncStreamSocket;
 
     template <class Protocol, class ProactorType = BasicProactor>
@@ -105,6 +110,7 @@ namespace join
     public:
         using Endpoint = BasicLinkLayerEndpoint<Raw>;
         using Socket = BasicRawSocket<Raw>;
+        using AsyncAllocator = LocalMem::SlabAllocator<16, 256>;
         using AsyncSocket = BasicAsyncRawSocket<Raw>;
 
         /**
@@ -195,6 +201,7 @@ namespace join
     public:
         using Endpoint = BasicUnixEndpoint<UnixDgram>;
         using Socket = BasicDatagramSocket<UnixDgram>;
+        using AsyncAllocator = LocalMem::SlabAllocator<16, 256>;
         using AsyncSocket = BasicAsyncDatagramSocket<UnixDgram>;
 
         /**
@@ -240,6 +247,7 @@ namespace join
         using Socket = BasicStreamSocket<UnixStream>;
         using Stream = BasicSocketStream<UnixStream>;
         using Acceptor = BasicStreamAcceptor<UnixStream>;
+        using AsyncAllocator = LocalMem::SlabAllocator<16, 256>;
         using AsyncSocket = BasicAsyncStreamSocket<UnixStream>;
         using AsyncAcceptor = BasicAsyncStreamAcceptor<UnixStream>;
 
@@ -284,6 +292,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint<Udp>;
         using Socket = BasicDatagramSocket<Udp>;
+        using AsyncAllocator = LocalMem::SlabAllocator<16, 256>;
         using AsyncSocket = BasicAsyncDatagramSocket<Udp>;
 
         /**
@@ -366,6 +375,7 @@ namespace join
     public:
         using Endpoint = BasicInternetEndpoint<Icmp>;
         using Socket = BasicDatagramSocket<Icmp>;
+        using AsyncAllocator = LocalMem::SlabAllocator<16, 256>;
         using AsyncSocket = BasicAsyncDatagramSocket<Icmp>;
 
         /**
@@ -455,6 +465,7 @@ namespace join
         using Socket = BasicStreamSocket<Tcp>;
         using Stream = BasicSocketStream<Tcp>;
         using Acceptor = BasicStreamAcceptor<Tcp>;
+        using AsyncAllocator = LocalMem::SlabAllocator<16, 256>;
         using AsyncSocket = BasicAsyncStreamSocket<Tcp>;
         using AsyncAcceptor = BasicAsyncStreamAcceptor<Tcp>;
 

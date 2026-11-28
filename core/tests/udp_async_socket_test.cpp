@@ -472,10 +472,11 @@ TEST_F (UdpAsyncSocket, move)
 
     ASSERT_EQ (client1.asyncReadFrom (nullptr, _buf, sizeof (_buf), _from), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.asyncWriteTo (nullptr, "one", 3, dest), -1);
-    ASSERT_EQ (join::lastError, Errc::OperationFailed);
-    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
-    ASSERT_EQ (client1.cancel (0), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.open (), 0) << join::lastError.message ();
+    ssize_t index = client1.asyncWait (nullptr, true, false);
+    ASSERT_NE (index, -1) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
+    ASSERT_EQ (client1.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
     client1.close ();
 
     ASSERT_NE (client2.asyncReadFrom (onRead, _buf, sizeof (_buf), _from), -1) << join::lastError.message ();
@@ -540,6 +541,127 @@ TEST_F (UdpAsyncSocket, move)
     }
 
     target.close ();
+}
+
+/**
+ * @brief Test create method.
+ */
+TEST_F (UdpAsyncSocket, create)
+{
+    Udp::AsyncAllocator allocator;
+
+    {
+        Udp::AsyncSocket client (allocator);
+
+        ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
+        ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 1;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+        }
+    }
+
+    {
+        Udp::AsyncSocket client (64, allocator);
+
+        ASSERT_EQ (client.connect ({_host, _port}), 0) << join::lastError.message ();
+        ASSERT_EQ (client.ttl (), 64);
+        ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 2;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+        }
+    }
+
+    {
+        Udp::Socket sock;
+
+        ASSERT_EQ (sock.connect ({_host, _port}), 0) << join::lastError.message ();
+
+        Udp::AsyncSocket client (std::move (sock), allocator);
+
+        ASSERT_NE (client.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        ASSERT_NE (client.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+        {
+            ScopedLock<Mutex> lock (_mut);
+            ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+                return _completions >= 3;
+            }));
+            ASSERT_FALSE (_code) << _code.message ();
+            ASSERT_EQ (_transferred, 5u);
+            ASSERT_EQ (std::string (_buf, 5), "hello");
+        }
+    }
+
+    {
+        Udp::AsyncSocket first (allocator), second (allocator);
+
+        ASSERT_EQ (first.open (), 0) << join::lastError.message ();
+        ASSERT_EQ (second.open (), 0) << join::lastError.message ();
+
+        ssize_t firstIndex = first.asyncWait (nullptr, true, false);
+        ASSERT_NE (firstIndex, -1) << join::lastError.message ();
+        ssize_t secondIndex = second.asyncWait (nullptr, true, false);
+        ASSERT_NE (secondIndex, -1) << join::lastError.message ();
+        ASSERT_NE (firstIndex, secondIndex);
+        ASSERT_EQ (first.cancel (static_cast<size_t> (secondIndex)), 0) << join::lastError.message ();
+
+        for (size_t i = 2; i < Udp::AsyncSocket::_opCount; ++i)
+        {
+            ASSERT_NE (second.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
+        }
+
+        ASSERT_EQ (first.asyncWait (nullptr, true, false), -1);
+        ASSERT_EQ (join::lastError, Errc::OutOfMemory);
+    }
+
+    ASSERT_TRUE (allocator.reserveAll ());
+    allocator.releaseAll ();
+
+    {
+        Udp::AsyncSocket borrowed (allocator);
+        Udp::AsyncSocket target (std::move (borrowed));
+
+        ASSERT_EQ (borrowed.open (), 0) << join::lastError.message ();
+        ASSERT_NE (borrowed.asyncWait (nullptr, true, false), -1) << join::lastError.message ();
+        ASSERT_FALSE (allocator.reserveAll ());
+    }
+
+    ASSERT_TRUE (allocator.reserveAll ());
+    allocator.releaseAll ();
+
+    Udp::AsyncSocket owner;
+
+    std::swap (owner, owner);
+
+    ASSERT_EQ (owner.connect ({_host, _port}), 0) << join::lastError.message ();
+    ASSERT_NE (owner.asyncRead (onReportRead, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+    ASSERT_NE (owner.asyncWrite (nullptr, "hello", 5), -1) << join::lastError.message ();
+
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [] () {
+            return _completions >= 4;
+        }));
+        ASSERT_FALSE (_code) << _code.message ();
+        ASSERT_EQ (_transferred, 5u);
+        ASSERT_EQ (std::string (_buf, 5), "hello");
+    }
 }
 
 /**
