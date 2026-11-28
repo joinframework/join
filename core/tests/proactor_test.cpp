@@ -24,6 +24,7 @@
 
 // libjoin.
 #include <join/datagram_socket.hpp>
+#include <join/io_descriptor.hpp>
 #include <join/condition.hpp>
 #include <join/proactor.hpp>
 #ifdef JOIN_HAS_IO_URING
@@ -58,6 +59,7 @@ using join::Thread;
 using join::Proactor;
 using join::ProactorThread;
 using join::IoOperation;
+using join::IoDescriptor;
 using join::CompletionHandler;
 using join::Tcp;
 using join::Udp;
@@ -106,6 +108,7 @@ protected:
         _flags = 0;
 
         ASSERT_EQ (_acceptor.create ({_host, _port}), 0) << join::lastError.message ();
+        _acceptorDescriptor.handle (_acceptor.handle ());
     }
 
     /**
@@ -236,6 +239,30 @@ protected:
     /// server socket.
     static Tcp::Socket _server;
 
+    /// acceptor descriptor.
+    static IoDescriptor _acceptorDescriptor;
+
+    /// client descriptor.
+    static IoDescriptor _clientDescriptor;
+
+    /// server descriptor.
+    static IoDescriptor _serverDescriptor;
+
+    /// invalid descriptor.
+    static IoDescriptor _invalidDescriptor;
+
+    /// datagram descriptor.
+    static IoDescriptor _datagramDescriptor;
+
+    /// pipe descriptor.
+    static IoDescriptor _pipeDescriptor;
+
+    /// memfd descriptor.
+    static IoDescriptor _memDescriptor;
+
+    /// unknown descriptor.
+    static IoDescriptor _unknownDescriptor;
+
     /// host.
     static std::string _host;
 
@@ -327,6 +354,14 @@ protected:
 Tcp::Acceptor ProactorTest::_acceptor;
 Tcp::Socket ProactorTest::_client (Tcp::Socket::NonBlocking);
 Tcp::Socket ProactorTest::_server;
+IoDescriptor ProactorTest::_acceptorDescriptor;
+IoDescriptor ProactorTest::_clientDescriptor;
+IoDescriptor ProactorTest::_serverDescriptor;
+IoDescriptor ProactorTest::_invalidDescriptor;
+IoDescriptor ProactorTest::_datagramDescriptor;
+IoDescriptor ProactorTest::_pipeDescriptor;
+IoDescriptor ProactorTest::_memDescriptor;
+IoDescriptor ProactorTest::_unknownDescriptor;
 std::string ProactorTest::_host = "127.0.0.1";
 uint16_t ProactorTest::_port = 5001;
 const std::chrono::milliseconds ProactorTest::_timeout{1000};
@@ -383,8 +418,9 @@ TEST_F (ProactorTest, stop)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     int fds[2];
@@ -395,7 +431,8 @@ TEST_F (ProactorTest, stop)
     {
     }
 
-    _writeOp = IoOperation::makeWrite (fds[1], chunk, sizeof (chunk), this);
+    _pipeDescriptor.handle (fds[1]);
+    _writeOp = IoOperation::makeWrite (_pipeDescriptor, chunk, sizeof (chunk), this);
     ASSERT_EQ (proactor.submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     proactor.stop ();
@@ -423,7 +460,7 @@ TEST_F (ProactorTest, stop)
         _handlerProactor = &local;
         _stopFromHandler = true;
 
-        _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+        _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
         EXPECT_EQ (local.submit (_readOp, true, true), 0) << join::lastError.message ();
         EXPECT_EQ (_client.writeExactly ("stop", 4), 0) << join::lastError.message ();
 
@@ -506,8 +543,12 @@ TEST_F (ProactorTest, submit)
         proactor.run ();
     });
 
-    _readOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_invalidDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    IoOperation none;
+    ASSERT_EQ (proactor.submit (none, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     if (_client.connect ({_host, _port}) == -1)
@@ -516,14 +557,15 @@ TEST_F (ProactorTest, submit)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     ASSERT_EQ (proactor.submit (_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
 
-    _invalidOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
+    _invalidOp = IoOperation::makeRead (_invalidDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_invalidOp, true, false), 0) << join::lastError.message ();
 
     {
@@ -547,7 +589,7 @@ TEST_F (ProactorTest, submit)
     }
 
     char spare[16] = {};
-    _spareOp = IoOperation::makeRead (_server.handle (), spare, sizeof (spare), this);
+    _spareOp = IoOperation::makeRead (_serverDescriptor, spare, sizeof (spare), this);
     ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (_spareOp, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::device_or_resource_busy);
@@ -588,7 +630,7 @@ TEST_F (ProactorTest, submit)
     ASSERT_EQ (std::string ((first == &_readOp) ? _buf : spare, 5), "first");
     ASSERT_EQ (std::string ((first == &_readOp) ? spare : _buf, 6), "second");
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
@@ -602,7 +644,8 @@ TEST_F (ProactorTest, submit)
     }
 
     ASSERT_EQ (::dup2 (_server.handle (), 512), 512) << strerror (errno);
-    _readOp = IoOperation::makeRead (512, _buf, sizeof (_buf), this);
+    _unknownDescriptor.handle (512);
+    _readOp = IoOperation::makeRead (_unknownDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.cancel (_readOp, true, true), 0) << join::lastError.message ();
     {
@@ -615,7 +658,7 @@ TEST_F (ProactorTest, submit)
     }
     ASSERT_EQ (::close (512), 0) << strerror (errno);
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, 10ms, true, true), 0) << join::lastError.message ();
     {
         ScopedLock<Mutex> lock (_mut);
@@ -662,15 +705,15 @@ TEST_F (ProactorTest, submit)
         _result = 0;
     }
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this, true);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this, true);
     ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    _readOp = IoOperation::makePollMulti (_server.handle (), POLLIN, this);
+    _readOp = IoOperation::makePollMulti (_serverDescriptor, POLLIN, this);
     ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
-    _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _spareOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_spareOp, 10s, true, true), 0) << join::lastError.message ();
 
     Proactor::InvokeHandler fill = [&proactor] () {
@@ -681,7 +724,7 @@ TEST_F (ProactorTest, submit)
     };
     ASSERT_EQ (proactor.invoke (&fill), 0) << join::lastError.message ();
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
@@ -716,8 +759,12 @@ TEST_F (ProactorTest, cancel)
         proactor.run ();
     });
 
-    _readOp = IoOperation::makeRead (-1, _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_invalidDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.cancel (_readOp, true, true), -1);
+    ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
+
+    IoOperation none;
+    ASSERT_EQ (proactor.cancel (none, true, true), -1);
     ASSERT_EQ (join::lastError, std::errc::bad_file_descriptor);
 
     if (_client.connect ({_host, _port}) == -1)
@@ -726,14 +773,15 @@ TEST_F (ProactorTest, cancel)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.cancel (_readOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::OperationFailed);
 
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
-    _spareOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _spareOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     _spareOp.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.cancel (_spareOp, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -749,7 +797,8 @@ TEST_F (ProactorTest, cancel)
     }
 
     // cancel an operation from within a completion handler.
-    _spareOp = IoOperation::makeRead (_client.handle (), _buf, sizeof (_buf), this);
+    _clientDescriptor.handle (_client.handle ());
+    _spareOp = IoOperation::makeRead (_clientDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();
 
     _handlerProactor = &proactor;
@@ -757,7 +806,7 @@ TEST_F (ProactorTest, cancel)
     _cancelResult = -1;
     _cancelled = nullptr;
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("cancel", 6), 0) << join::lastError.message ();
 
@@ -775,10 +824,10 @@ TEST_F (ProactorTest, cancel)
 
     // cancel operations queued behind another one.
     char middle[16] = {}, tail[16] = {};
-    IoOperation tailOp = IoOperation::makeRead (_server.handle (), tail, sizeof (tail), this);
+    IoOperation tailOp = IoOperation::makeRead (_serverDescriptor, tail, sizeof (tail), this);
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    _spareOp = IoOperation::makeRead (_server.handle (), middle, sizeof (middle), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
+    _spareOp = IoOperation::makeRead (_serverDescriptor, middle, sizeof (middle), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (tailOp, true, true), 0) << join::lastError.message ();
@@ -809,7 +858,8 @@ TEST_F (ProactorTest, cancel)
         _result = 0;
     }
 
-    _spareOp = IoOperation::makeRead (4096, _buf, sizeof (_buf), this);
+    _unknownDescriptor.handle (4096);
+    _spareOp = IoOperation::makeRead (_unknownDescriptor, _buf, sizeof (_buf), this);
     _spareOp.state = IoOperation::State::Submitted;
     ASSERT_EQ (proactor.cancel (_spareOp, true, true), -1);
 
@@ -817,8 +867,8 @@ TEST_F (ProactorTest, cancel)
     {
     }
 
-    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
-    _writeOp = IoOperation::makePoll (_server.handle (), POLLOUT, this);
+    _readOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
+    _writeOp = IoOperation::makePoll (_serverDescriptor, POLLOUT, this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (_writeOp, true, true), 0) << join::lastError.message ();
 
@@ -848,9 +898,9 @@ TEST_F (ProactorTest, cancel)
     _handlerProactor = &proactor;
     _cancelTarget = &_spareOp;
 
-    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
-    _spareOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
-    tailOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    _readOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
+    _spareOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
+    tailOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (_spareOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (tailOp, true, true), 0) << join::lastError.message ();
@@ -886,8 +936,9 @@ TEST_F (ProactorTest, flush)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, false, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.flush (true), 0) << join::lastError.message ();
 
@@ -923,9 +974,10 @@ TEST_F (ProactorTest, chain)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _writeOp = IoOperation::makeWrite (_server.handle (), "ping", 4, this, true);
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _writeOp = IoOperation::makeWrite (_serverDescriptor, "ping", 4, this, true);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
 
     ASSERT_EQ (proactor.submit (_writeOp, false, true), 0) << join::lastError.message ();
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
@@ -956,8 +1008,8 @@ TEST_F (ProactorTest, chain)
     std::vector<char> data (8 * 1024 * 1024, 'x');
     std::vector<char> received (data.size ());
 
-    _writeOp = IoOperation::makeSend (_server.handle (), data.data (), data.size (), MSG_NOSIGNAL, this, true);
-    _spareOp = IoOperation::makeSend (_server.handle (), "tail", 4, MSG_NOSIGNAL, this);
+    _writeOp = IoOperation::makeSend (_serverDescriptor, data.data (), data.size (), MSG_NOSIGNAL, this, true);
+    _spareOp = IoOperation::makeSend (_serverDescriptor, "tail", 4, MSG_NOSIGNAL, this);
 
     Proactor::InvokeHandler fn = [&proactor] () {
         ASSERT_EQ (proactor.submit (_writeOp, false), 0) << join::lastError.message ();
@@ -999,8 +1051,9 @@ TEST_F (ProactorTest, suspend)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
 
     proactor.suspend (_readOp);
@@ -1028,7 +1081,7 @@ TEST_F (ProactorTest, suspend)
     _handlerProactor = &proactor;
     _suspendFromHandler = true;
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("busy", 4), 0) << join::lastError.message ();
 
@@ -1333,8 +1386,9 @@ TEST_F (ProactorTest, asyncPoll)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _writeOp = IoOperation::makePoll (_server.handle (), POLLOUT, this);
+    _writeOp = IoOperation::makePoll (_serverDescriptor, POLLOUT, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
@@ -1347,7 +1401,7 @@ TEST_F (ProactorTest, asyncPoll)
         _result = 0;
     }
 
-    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    _readOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncPoll", strlen ("asyncPoll"), _timeout), 0) << join::lastError.message ();
@@ -1376,9 +1430,10 @@ TEST_F (ProactorTest, asyncPollMulti)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     _completions = 0;
-    _readOp = IoOperation::makePollMulti (_server.handle (), POLLIN, this);
+    _readOp = IoOperation::makePollMulti (_serverDescriptor, POLLIN, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
@@ -1399,7 +1454,7 @@ TEST_F (ProactorTest, asyncPollMulti)
 
     // a read queued behind the armed poll.
     char spare[16] = {};
-    _spareOp = IoOperation::makeRead (_server.handle (), spare, sizeof (spare), this);
+    _spareOp = IoOperation::makeRead (_serverDescriptor, spare, sizeof (spare), this);
     ASSERT_EQ (ProactorThread::proactor ().submit (_spareOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("read", 4, _timeout), 0) << join::lastError.message ();
 
@@ -1434,10 +1489,13 @@ TEST_F (ProactorTest, asyncConnect)
 
     ASSERT_EQ (_client.open (Tcp::v4 ()), 0) << join::lastError.message ();
 
-    _readOp = IoOperation::makeConnect (_client.handle (), endpoint.addr (), endpoint.length (), this);
+    _clientDescriptor.handle (_client.handle ());
+    _readOp = IoOperation::makeConnect (_clientDescriptor, endpoint.addr (), endpoint.length (), this);
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+
+    _serverDescriptor.handle (_server.handle ());
 
     {
         ScopedLock<Mutex> lock (_mut);
@@ -1466,7 +1524,7 @@ TEST_F (ProactorTest, asyncAccept)
 
     sockaddr_storage addr = {};
     socklen_t addrlen = sizeof (addr);
-    _readOp = IoOperation::makeAccept (_acceptor.handle (), reinterpret_cast<sockaddr*> (&addr), &addrlen,
+    _readOp = IoOperation::makeAccept (_acceptorDescriptor, reinterpret_cast<sockaddr*> (&addr), &addrlen,
                                        SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
@@ -1493,7 +1551,7 @@ TEST_F (ProactorTest, asyncAccept)
 TEST_F (ProactorTest, asyncAcceptMulti)
 {
     _completions = 0;
-    _readOp = IoOperation::makeAcceptMulti (_acceptor.handle (), SOCK_NONBLOCK | SOCK_CLOEXEC, this);
+    _readOp = IoOperation::makeAcceptMulti (_acceptorDescriptor, SOCK_NONBLOCK | SOCK_CLOEXEC, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
@@ -1544,6 +1602,7 @@ TEST_F (ProactorTest, asyncWrite)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::affinity (), 0);
@@ -1556,7 +1615,7 @@ TEST_F (ProactorTest, asyncWrite)
     ASSERT_GT (ProactorThread::handle (), 0);
 
     const char* msg = "asyncWrite";
-    _writeOp = IoOperation::makeWrite (_server.handle (), msg, strlen (msg), this);
+    _writeOp = IoOperation::makeWrite (_serverDescriptor, msg, strlen (msg), this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
@@ -1579,7 +1638,7 @@ TEST_F (ProactorTest, asyncWrite)
     ASSERT_NE (regbuf, nullptr) << join::lastError.message ();
     ::memcpy (regbuf, msg, strlen (msg));
 
-    _writeOp = IoOperation::makeWrite (_server.handle (), regbuf, strlen (msg), this);
+    _writeOp = IoOperation::makeWrite (_serverDescriptor, regbuf, strlen (msg), this);
     ASSERT_EQ (FixedProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
@@ -1610,6 +1669,7 @@ TEST_F (ProactorTest, asyncRead)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::affinity (), 0);
@@ -1621,7 +1681,7 @@ TEST_F (ProactorTest, asyncRead)
     ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ProactorThread::handle (), 0);
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
@@ -1640,7 +1700,7 @@ TEST_F (ProactorTest, asyncRead)
     char* regbuf = FixedProactorThread::proactor ().fixedBuffer ().acquire (sizeof (_buf));
     ASSERT_NE (regbuf, nullptr) << join::lastError.message ();
 
-    _readOp = IoOperation::makeRead (_server.handle (), regbuf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, regbuf, sizeof (_buf), this);
     ASSERT_EQ (FixedProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRead", strlen ("asyncRead"), _timeout), 0) << join::lastError.message ();
 
@@ -1669,6 +1729,7 @@ TEST_F (ProactorTest, asyncSendmsg)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::affinity (), 0);
@@ -1685,7 +1746,7 @@ TEST_F (ProactorTest, asyncSendmsg)
     msghdr msg = {};
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
-    _writeOp = IoOperation::makeSendmsg (_server.handle (), &msg, 0, this);
+    _writeOp = IoOperation::makeSendmsg (_serverDescriptor, &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
@@ -1715,13 +1776,14 @@ TEST_F (ProactorTest, asyncSendmsgZc)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     const char* payload = "asyncSendmsgZc";
     iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
     msghdr msg = {};
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
-    _writeOp = IoOperation::makeSendmsgZc (_server.handle (), &msg, 0, this);
+    _writeOp = IoOperation::makeSendmsgZc (_serverDescriptor, &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
@@ -1751,6 +1813,7 @@ TEST_F (ProactorTest, asyncRecvmsg)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::affinity (), 0);
@@ -1766,7 +1829,7 @@ TEST_F (ProactorTest, asyncRecvmsg)
     msghdr msg = {};
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
-    _readOp = IoOperation::makeRecvmsg (_server.handle (), &msg, 0, this);
+    _readOp = IoOperation::makeRecvmsg (_serverDescriptor, &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecvmsg", strlen ("asyncRecvmsg"), _timeout), 0)
@@ -1801,7 +1864,8 @@ TEST_F (ProactorTest, asyncRecvmsgMulti)
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
-    _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 1, &msg, 0, this);
+    _datagramDescriptor.handle (server.handle ());
+    _readOp = IoOperation::makeRecvmsgMulti (_datagramDescriptor, 1, &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), -1);
 
@@ -1809,7 +1873,7 @@ TEST_F (ProactorTest, asyncRecvmsgMulti)
     ASSERT_EQ (ProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     _completions = 0;
-    _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 0, &msg, 0, this);
+    _readOp = IoOperation::makeRecvmsgMulti (_datagramDescriptor, 0, &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
@@ -1882,7 +1946,7 @@ TEST_F (ProactorTest, asyncRecvmsgMulti)
 
     _completions = 0;
     msg.msg_namelen = sizeof (name);
-    _readOp = IoOperation::makeRecvmsgMulti (server.handle (), 1, &msg, 0, this);
+    _readOp = IoOperation::makeRecvmsgMulti (_datagramDescriptor, 1, &msg, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (client.writeTo (payload, strlen (payload), to), static_cast<ssize_t> (strlen (payload)))
@@ -1912,9 +1976,10 @@ TEST_F (ProactorTest, asyncSend)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     const char* msg = "asyncSend";
-    _writeOp = IoOperation::makeSend (_server.handle (), msg, strlen (msg), 0, this);
+    _writeOp = IoOperation::makeSend (_serverDescriptor, msg, strlen (msg), 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
@@ -1944,9 +2009,10 @@ TEST_F (ProactorTest, asyncSendZc)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     const char* msg = "asyncSendZc";
-    _writeOp = IoOperation::makeSendZc (_server.handle (), msg, strlen (msg), 0, this);
+    _writeOp = IoOperation::makeSendZc (_serverDescriptor, msg, strlen (msg), 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_writeOp, 10s, true, true), 0) << join::lastError.message ();
 
@@ -1970,7 +2036,7 @@ TEST_F (ProactorTest, asyncSendZc)
     ASSERT_NE (regbuf, nullptr) << join::lastError.message ();
     ::memcpy (regbuf, msg, strlen (msg));
 
-    _writeOp = IoOperation::makeSendZc (_server.handle (), regbuf, strlen (msg), 0, this);
+    _writeOp = IoOperation::makeSendZc (_serverDescriptor, regbuf, strlen (msg), 0, this);
     ASSERT_EQ (FixedProactorThread::proactor ().submit (_writeOp, true, true), 0) << join::lastError.message ();
 
     {
@@ -2001,8 +2067,9 @@ TEST_F (ProactorTest, asyncRecv)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRecv (_server.handle (), _buf, sizeof (_buf), 0, this);
+    _readOp = IoOperation::makeRecv (_serverDescriptor, _buf, sizeof (_buf), 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly ("asyncRecv", strlen ("asyncRecv"), _timeout), 0) << join::lastError.message ();
@@ -2029,8 +2096,9 @@ TEST_F (ProactorTest, asyncRecvMulti)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makeRecvMulti (_server.handle (), 1, 0, this);
+    _readOp = IoOperation::makeRecvMulti (_serverDescriptor, 1, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), -1);
 
@@ -2038,7 +2106,7 @@ TEST_F (ProactorTest, asyncRecvMulti)
     ASSERT_EQ (ProactorThread::proactor ().registerBufferRing (0, arena), 0) << join::lastError.message ();
 
     _completions = 0;
-    _readOp = IoOperation::makeRecvMulti (_server.handle (), 0, 0, this);
+    _readOp = IoOperation::makeRecvMulti (_serverDescriptor, 0, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
 
@@ -2077,11 +2145,11 @@ TEST_F (ProactorTest, asyncRecvMulti)
         void onComplete (IoOperation& op, [[maybe_unused]] int result) override
         {
             char data[3] = {};
-            ::recv (op.fd, data, sizeof (data), MSG_DONTWAIT | MSG_PEEK);
+            ::recv (op.descriptor->handle (), data, sizeof (data), MSG_DONTWAIT | MSG_PEEK);
 
             if (::memcmp (data, "one", sizeof (data)) == 0)
             {
-                ::recv (op.fd, data, sizeof (data), MSG_DONTWAIT);
+                ::recv (op.descriptor->handle (), data, sizeof (data), MSG_DONTWAIT);
             }
 
             ScopedLock<Mutex> lock (_mut);
@@ -2092,8 +2160,8 @@ TEST_F (ProactorTest, asyncRecvMulti)
         bool drained = false;
     } drainer;
 
-    _spareOp = IoOperation::makePoll (_server.handle (), POLLIN, &drainer);
-    _readOp = IoOperation::makeRecvMulti (_server.handle (), 0, 0, this);
+    _spareOp = IoOperation::makePoll (_serverDescriptor, POLLIN, &drainer);
+    _readOp = IoOperation::makeRecvMulti (_serverDescriptor, 0, 0, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_spareOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
@@ -2130,7 +2198,8 @@ TEST_F (ProactorTest, asyncRecvMulti)
     int fd = ::memfd_create ("asyncRecvMulti", MFD_CLOEXEC);
     ASSERT_NE (fd, -1) << strerror (errno);
 
-    _readOp = IoOperation::makeRecvMulti (fd, 0, 0, this);
+    _memDescriptor.handle (fd);
+    _readOp = IoOperation::makeRecvMulti (_memDescriptor, 0, 0, this);
 
     if (ProactorThread::proactor ().submit (_readOp, true, true) == 0)
     {
@@ -2157,6 +2226,7 @@ TEST_F (ProactorTest, onClose)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::affinity (), 0);
@@ -2169,8 +2239,8 @@ TEST_F (ProactorTest, onClose)
     ASSERT_GT (ProactorThread::handle (), 0);
 
     char spare[16] = {};
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
-    _spareOp = IoOperation::makeRead (_server.handle (), spare, sizeof (spare), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
+    _spareOp = IoOperation::makeRead (_serverDescriptor, spare, sizeof (spare), this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::proactor ().submit (_spareOp, true, true), 0) << join::lastError.message ();
@@ -2191,8 +2261,9 @@ TEST_F (ProactorTest, onClose)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    _readOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     _client.close ();
@@ -2218,6 +2289,7 @@ TEST_F (ProactorTest, onError)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     ASSERT_EQ (ProactorThread::affinity (0), 0) << join::lastError.message ();
     ASSERT_EQ (ProactorThread::affinity (), 0);
@@ -2229,7 +2301,7 @@ TEST_F (ProactorTest, onError)
     ASSERT_EQ (ProactorThread::mlock (), 0) << join::lastError.message ();
     ASSERT_GT (ProactorThread::handle (), 0);
 
-    _readOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     linger sl{.l_onoff = 1, .l_linger = 0};
@@ -2251,8 +2323,9 @@ TEST_F (ProactorTest, onError)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
-    _readOp = IoOperation::makePoll (_server.handle (), POLLIN, this);
+    _readOp = IoOperation::makePoll (_serverDescriptor, POLLIN, this);
 
     ASSERT_EQ (ProactorThread::proactor ().submit (_readOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (setsockopt (_client.handle (), SOL_SOCKET, SO_LINGER, &sl, sizeof (sl)), 0) << strerror (errno);
@@ -2281,12 +2354,13 @@ TEST_F (ProactorTest, resubmit)
     }
     ASSERT_TRUE (_client.waitConnected (_timeout)) << join::lastError.message ();
     ASSERT_TRUE ((_server = _acceptor.accept ()).connected ()) << join::lastError.message ();
+    _serverDescriptor.handle (_server.handle ());
 
     _resubmits = 1;
     _resubmitted = 0;
     _rejected = 0;
 
-    _resubmitOp = IoOperation::makeRead (_server.handle (), _buf, sizeof (_buf), this);
+    _resubmitOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this);
     ASSERT_EQ (ProactorThread::proactor ().submit (_resubmitOp, true, true), 0) << join::lastError.message ();
     ASSERT_EQ (_client.writeExactly (msg, strlen (msg)), 0) << join::lastError.message ();
 

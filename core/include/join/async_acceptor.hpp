@@ -156,8 +156,8 @@ namespace join
 
             _acceptOp.remoteLen = sizeof (struct sockaddr_storage);
             _acceptOp.acceptHandler = std::move (handler);
-            _acceptOp.op = IoOperation::makeAccept (_descriptor.handle (), _acceptOp.remote.addr (),
-                                                    &_acceptOp.remoteLen, flags | SOCK_NONBLOCK, this);
+            _acceptOp.op = IoOperation::makeAccept (_descriptor, _acceptOp.remote.addr (), &_acceptOp.remoteLen,
+                                                    flags | SOCK_NONBLOCK, this);
 
             if (_proactor->submit (_acceptOp.op, flush, false) == -1)
             {
@@ -195,7 +195,7 @@ namespace join
 
             _acceptOp.remote = Endpoint ();
             _acceptOp.acceptHandler = std::move (handler);
-            _acceptOp.op = IoOperation::makeAcceptMulti (_descriptor.handle (), flags | SOCK_NONBLOCK, this);
+            _acceptOp.op = IoOperation::makeAcceptMulti (_descriptor, flags | SOCK_NONBLOCK, this);
 
             if (_proactor->submit (_acceptOp.op, flush, false) == -1)
             {

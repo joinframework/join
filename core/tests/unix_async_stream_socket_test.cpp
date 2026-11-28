@@ -689,7 +689,7 @@ TEST_F (UnixAsyncStreamSocket, cancel)
         UnixStream::AsyncSocket client;
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (UnixStream::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (client.cancel (UnixStream::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
         ASSERT_EQ (client.asyncConnect (
@@ -760,20 +760,18 @@ TEST_F (UnixAsyncStreamSocket, cancel)
             ASSERT_FALSE (_code) << _code.message ();
         }
 
-        ASSERT_NE (client.asyncRead (
-                       [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                           [[maybe_unused]] bool more) {
-                           ScopedLock<Mutex> lock (_mut);
-                           _code = ec;
-                           _transferred = size;
-                           ++_completions;
-                           _cond.signal ();
-                       },
-                       _buf, sizeof (_buf)),
-                   -1)
-            << join::lastError.message ();
+        ssize_t index = client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf));
+        ASSERT_NE (index, -1) << join::lastError.message ();
 
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -840,12 +838,13 @@ TEST_F (UnixAsyncStreamSocket, cancel)
 
         ASSERT_LT (filled, 4096);
 
-        ASSERT_NE (sender.asyncWrite (onWrite, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        ssize_t index = sender.asyncWrite (onWrite, _buf, sizeof (_buf));
+        ASSERT_NE (index, -1) << join::lastError.message ();
 
         ASSERT_EQ (sender.asyncConnect (nullptr, _stallpath), -1);
         ASSERT_EQ (join::lastError, Errc::InUse);
 
-        ASSERT_EQ (sender.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (sender.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);

@@ -23,6 +23,7 @@
  */
 
 // libjoin.
+#include <join/io_descriptor.hpp>
 #include <join/io_operation.hpp>
 #include <join/socket.hpp>
 
@@ -33,6 +34,7 @@
 #include <poll.h>
 
 using join::IoOperation;
+using join::IoDescriptor;
 using join::CompletionHandler;
 using join::Tcp;
 
@@ -45,11 +47,13 @@ static char buffer[256] = {};
  */
 TEST (IoOperation, copy)
 {
+    IoDescriptor descriptor (8);
+
     msghdr msg = {};
     msg.msg_namelen = sizeof (struct sockaddr_storage);
     msg.msg_controllen = CMSG_SPACE (sizeof (int));
 
-    auto op = IoOperation::makeRecvmsgMulti (8, 3, &msg, MSG_DONTWAIT, nullptr);
+    auto op = IoOperation::makeRecvmsgMulti (descriptor, 3, &msg, MSG_DONTWAIT, nullptr);
     op.state.store (IoOperation::State::Submitted);
     op.resume = IoOperation::State::Submitted;
 #ifdef JOIN_HAS_IO_URING
@@ -76,7 +80,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (copy.multishot, op.multishot);
     ASSERT_EQ (copy.data.msg.group, op.data.msg.group);
     ASSERT_EQ (copy.handler, op.handler);
-    ASSERT_EQ (copy.fd, op.fd);
+    ASSERT_EQ (copy.descriptor, op.descriptor);
     ASSERT_EQ (copy.data.msg.msg, op.data.msg.msg);
     ASSERT_EQ (copy.ring, op.ring);
     ASSERT_EQ (copy.timer, op.timer);
@@ -97,7 +101,7 @@ TEST (IoOperation, copy)
     ASSERT_EQ (assigned.multishot, op.multishot);
     ASSERT_EQ (assigned.data.msg.group, op.data.msg.group);
     ASSERT_EQ (assigned.handler, op.handler);
-    ASSERT_EQ (assigned.fd, op.fd);
+    ASSERT_EQ (assigned.descriptor, op.descriptor);
     ASSERT_EQ (assigned.data.msg.msg, op.data.msg.msg);
     ASSERT_EQ (assigned.ring, op.ring);
     ASSERT_EQ (assigned.timer, op.timer);
@@ -108,20 +112,23 @@ TEST (IoOperation, copy)
  */
 TEST (IoOperation, makePoll)
 {
-    auto in = IoOperation::makePoll (8, POLLIN, nullptr);
+    IoDescriptor descriptor (8);
+    IoDescriptor other (9);
+
+    auto in = IoOperation::makePoll (descriptor, POLLIN, nullptr);
 
     ASSERT_EQ (in.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_FALSE (in.multishot);
     ASSERT_EQ (in.handler, nullptr);
-    ASSERT_EQ (in.fd, 8);
+    ASSERT_EQ (in.descriptor, &descriptor);
     ASSERT_EQ (in.data.poll.events, static_cast<uint32_t> (POLLIN));
 
-    auto out = IoOperation::makePoll (9, POLLOUT, nullptr);
+    auto out = IoOperation::makePoll (other, POLLOUT, nullptr);
 
     ASSERT_EQ (out.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_FALSE (out.multishot);
     ASSERT_EQ (out.handler, nullptr);
-    ASSERT_EQ (out.fd, 9);
+    ASSERT_EQ (out.descriptor, &other);
     ASSERT_EQ (out.data.poll.events, static_cast<uint32_t> (POLLOUT));
 }
 
@@ -130,20 +137,23 @@ TEST (IoOperation, makePoll)
  */
 TEST (IoOperation, makePollMulti)
 {
-    auto in = IoOperation::makePollMulti (8, POLLIN, nullptr);
+    IoDescriptor descriptor (8);
+    IoDescriptor other (9);
+
+    auto in = IoOperation::makePollMulti (descriptor, POLLIN, nullptr);
 
     ASSERT_EQ (in.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_TRUE (in.multishot);
     ASSERT_EQ (in.handler, nullptr);
-    ASSERT_EQ (in.fd, 8);
+    ASSERT_EQ (in.descriptor, &descriptor);
     ASSERT_EQ (in.data.poll.events, static_cast<uint32_t> (POLLIN));
 
-    auto out = IoOperation::makePollMulti (9, POLLOUT, nullptr);
+    auto out = IoOperation::makePollMulti (other, POLLOUT, nullptr);
 
     ASSERT_EQ (out.code, static_cast<uint8_t> (IoOperation::Opcode::Poll));
     ASSERT_TRUE (out.multishot);
     ASSERT_EQ (out.handler, nullptr);
-    ASSERT_EQ (out.fd, 9);
+    ASSERT_EQ (out.descriptor, &other);
     ASSERT_EQ (out.data.poll.events, static_cast<uint32_t> (POLLOUT));
 }
 
@@ -152,15 +162,17 @@ TEST (IoOperation, makePollMulti)
  */
 TEST (IoOperation, makeAccept)
 {
+    IoDescriptor descriptor (8);
+
     sockaddr_storage addr = {};
     socklen_t addrlen = sizeof (addr);
 
-    auto op = IoOperation::makeAccept (8, reinterpret_cast<sockaddr*> (&addr), &addrlen, SOCK_NONBLOCK | SOCK_CLOEXEC,
-                                       nullptr);
+    auto op = IoOperation::makeAccept (descriptor, reinterpret_cast<sockaddr*> (&addr), &addrlen,
+                                       SOCK_NONBLOCK | SOCK_CLOEXEC, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Accept));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.accept.addr, reinterpret_cast<sockaddr*> (&addr));
     ASSERT_EQ (op.data.accept.addrlen, &addrlen);
     ASSERT_EQ (op.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
@@ -171,12 +183,14 @@ TEST (IoOperation, makeAccept)
  */
 TEST (IoOperation, makeAcceptMulti)
 {
-    auto op = IoOperation::makeAcceptMulti (8, SOCK_NONBLOCK | SOCK_CLOEXEC, nullptr);
+    IoDescriptor descriptor (8);
+
+    auto op = IoOperation::makeAcceptMulti (descriptor, SOCK_NONBLOCK | SOCK_CLOEXEC, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Accept));
     ASSERT_TRUE (op.multishot);
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.accept.addr, nullptr);
     ASSERT_EQ (op.data.accept.addrlen, nullptr);
     ASSERT_EQ (op.flags, SOCK_NONBLOCK | SOCK_CLOEXEC);
@@ -187,13 +201,15 @@ TEST (IoOperation, makeAcceptMulti)
  */
 TEST (IoOperation, makeConnect)
 {
+    IoDescriptor descriptor (8);
+
     Tcp::Endpoint endpoint{host, port};
 
-    auto op = IoOperation::makeConnect (8, endpoint.addr (), endpoint.length (), nullptr);
+    auto op = IoOperation::makeConnect (descriptor, endpoint.addr (), endpoint.length (), nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Connect));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.connect.addr, endpoint.addr ());
     ASSERT_EQ (op.data.connect.addrlen, endpoint.length ());
 }
@@ -203,11 +219,13 @@ TEST (IoOperation, makeConnect)
  */
 TEST (IoOperation, makeRead)
 {
-    auto op = IoOperation::makeRead (8, buffer, sizeof (buffer), nullptr);
+    IoDescriptor descriptor (8);
+
+    auto op = IoOperation::makeRead (descriptor, buffer, sizeof (buffer), nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Read));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.rw.buf, buffer);
     ASSERT_EQ (op.data.rw.len, sizeof (buffer));
 }
@@ -217,11 +235,13 @@ TEST (IoOperation, makeRead)
  */
 TEST (IoOperation, makeWrite)
 {
-    auto op = IoOperation::makeWrite (8, buffer, sizeof (buffer), nullptr);
+    IoDescriptor descriptor (8);
+
+    auto op = IoOperation::makeWrite (descriptor, buffer, sizeof (buffer), nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Write));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.rw.buf, buffer);
     ASSERT_EQ (op.data.rw.len, sizeof (buffer));
 }
@@ -231,16 +251,18 @@ TEST (IoOperation, makeWrite)
  */
 TEST (IoOperation, makeRecvmsg)
 {
+    IoDescriptor descriptor (8);
+
     iovec iov = {};
     msghdr msg = {};
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
-    auto op = IoOperation::makeRecvmsg (8, &msg, MSG_DONTWAIT, nullptr);
+    auto op = IoOperation::makeRecvmsg (descriptor, &msg, MSG_DONTWAIT, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::RecvMsg));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.msg.msg, &msg);
     ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
@@ -250,17 +272,19 @@ TEST (IoOperation, makeRecvmsg)
  */
 TEST (IoOperation, makeRecvmsgMulti)
 {
+    IoDescriptor descriptor (8);
+
     msghdr msg = {};
     msg.msg_namelen = sizeof (struct sockaddr_storage);
     msg.msg_controllen = CMSG_SPACE (sizeof (int));
 
-    auto op = IoOperation::makeRecvmsgMulti (8, 3, &msg, MSG_DONTWAIT, nullptr);
+    auto op = IoOperation::makeRecvmsgMulti (descriptor, 3, &msg, MSG_DONTWAIT, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::RecvMsg));
     ASSERT_TRUE (op.multishot);
     ASSERT_EQ (op.data.msg.group, 3);
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.msg.msg, &msg);
     ASSERT_EQ (op.flags, MSG_DONTWAIT);
     ASSERT_EQ (op.data.msg.namelen, sizeof (struct sockaddr_storage));
@@ -272,17 +296,19 @@ TEST (IoOperation, makeRecvmsgMulti)
  */
 TEST (IoOperation, makeSendmsg)
 {
+    IoDescriptor descriptor (8);
+
     const char* payload = "makeSendmsg";
     iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
     msghdr msg = {};
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
-    auto op = IoOperation::makeSendmsg (8, &msg, MSG_DONTWAIT, nullptr);
+    auto op = IoOperation::makeSendmsg (descriptor, &msg, MSG_DONTWAIT, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendMsg));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.msg.msg, &msg);
     ASSERT_EQ (op.flags, MSG_DONTWAIT);
 }
@@ -292,22 +318,24 @@ TEST (IoOperation, makeSendmsg)
  */
 TEST (IoOperation, makeSendmsgZc)
 {
+    IoDescriptor descriptor (8);
+
     const char* payload = "makeSendmsgZc";
     iovec iov = {.iov_base = const_cast<char*> (payload), .iov_len = strlen (payload)};
     msghdr msg = {};
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 
-    auto op = IoOperation::makeSendmsgZc (8, &msg, MSG_NOSIGNAL, nullptr);
+    auto op = IoOperation::makeSendmsgZc (descriptor, &msg, MSG_NOSIGNAL, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendMsgZc));
     ASSERT_EQ (op.handler, nullptr);
     ASSERT_FALSE (op.linked);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.msg.msg, &msg);
     ASSERT_EQ (op.flags, MSG_NOSIGNAL);
 
-    op = IoOperation::makeSendmsgZc (8, &msg, MSG_NOSIGNAL, nullptr, true);
+    op = IoOperation::makeSendmsgZc (descriptor, &msg, MSG_NOSIGNAL, nullptr, true);
     ASSERT_TRUE (op.linked);
 }
 
@@ -316,11 +344,13 @@ TEST (IoOperation, makeSendmsgZc)
  */
 TEST (IoOperation, makeRecv)
 {
-    auto op = IoOperation::makeRecv (8, buffer, sizeof (buffer), MSG_DONTWAIT, nullptr);
+    IoDescriptor descriptor (8);
+
+    auto op = IoOperation::makeRecv (descriptor, buffer, sizeof (buffer), MSG_DONTWAIT, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Recv));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.stream.buf, buffer);
     ASSERT_EQ (op.data.stream.len, sizeof (buffer));
     ASSERT_EQ (op.flags, MSG_DONTWAIT);
@@ -331,13 +361,15 @@ TEST (IoOperation, makeRecv)
  */
 TEST (IoOperation, makeRecvMulti)
 {
-    auto op = IoOperation::makeRecvMulti (8, 3, MSG_DONTWAIT, nullptr);
+    IoDescriptor descriptor (8);
+
+    auto op = IoOperation::makeRecvMulti (descriptor, 3, MSG_DONTWAIT, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Recv));
     ASSERT_TRUE (op.multishot);
     ASSERT_EQ (op.data.stream.group, 3);
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.stream.buf, nullptr);
     ASSERT_EQ (op.data.stream.len, 0U);
     ASSERT_EQ (op.flags, MSG_DONTWAIT);
@@ -348,13 +380,15 @@ TEST (IoOperation, makeRecvMulti)
  */
 TEST (IoOperation, makeSend)
 {
+    IoDescriptor descriptor (8);
+
     const char* payload = "makeSend";
 
-    auto op = IoOperation::makeSend (8, payload, strlen (payload), MSG_DONTWAIT, nullptr);
+    auto op = IoOperation::makeSend (descriptor, payload, strlen (payload), MSG_DONTWAIT, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::Send));
     ASSERT_EQ (op.handler, nullptr);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.stream.buf, payload);
     ASSERT_EQ (op.data.stream.len, strlen (payload));
     ASSERT_EQ (op.flags, MSG_DONTWAIT);
@@ -365,19 +399,21 @@ TEST (IoOperation, makeSend)
  */
 TEST (IoOperation, makeSendZc)
 {
+    IoDescriptor descriptor (8);
+
     const char* payload = "makeSendZc";
 
-    auto op = IoOperation::makeSendZc (8, payload, strlen (payload), MSG_NOSIGNAL, nullptr);
+    auto op = IoOperation::makeSendZc (descriptor, payload, strlen (payload), MSG_NOSIGNAL, nullptr);
 
     ASSERT_EQ (op.code, static_cast<uint8_t> (IoOperation::Opcode::SendZc));
     ASSERT_EQ (op.handler, nullptr);
     ASSERT_FALSE (op.linked);
-    ASSERT_EQ (op.fd, 8);
+    ASSERT_EQ (op.descriptor, &descriptor);
     ASSERT_EQ (op.data.stream.buf, payload);
     ASSERT_EQ (op.data.stream.len, strlen (payload));
     ASSERT_EQ (op.flags, MSG_NOSIGNAL);
 
-    op = IoOperation::makeSendZc (8, payload, strlen (payload), MSG_NOSIGNAL, nullptr, true);
+    op = IoOperation::makeSendZc (descriptor, payload, strlen (payload), MSG_NOSIGNAL, nullptr, true);
     ASSERT_TRUE (op.linked);
 }
 

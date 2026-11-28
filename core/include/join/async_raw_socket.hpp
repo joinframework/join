@@ -284,7 +284,7 @@ namespace join
             read->msg.msg_control = nullptr;
             read->msg.msg_controllen = 0;
             read->msg.msg_flags = 0;
-            read->op = IoOperation::makeRecvmsg (this->descriptor ().handle (), &read->msg, 0, this, link);
+            read->op = IoOperation::makeRecvmsg (this->descriptor (), &read->msg, 0, this, link);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -323,7 +323,7 @@ namespace join
             }
 
             read->readHandler = std::move (handler);
-            read->op = IoOperation::makeRecvMulti (this->descriptor ().handle (), group, 0, this);
+            read->op = IoOperation::makeRecvMulti (this->descriptor (), group, 0, this);
             read->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (read);
@@ -405,7 +405,7 @@ namespace join
             write->msg.msg_control = nullptr;
             write->msg.msg_controllen = 0;
             write->msg.msg_flags = 0;
-            write->op = IoOperation::makeSendmsg (this->descriptor ().handle (), &write->msg, MSG_NOSIGNAL, this, link);
+            write->op = IoOperation::makeSendmsg (this->descriptor (), &write->msg, MSG_NOSIGNAL, this, link);
             write->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = this->_allocator->getIndex (write);

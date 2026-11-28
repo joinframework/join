@@ -639,7 +639,7 @@ TEST_F (TcpAsyncSocket, asyncWait)
     ASSERT_EQ (client.asyncWait (nullptr, true, false), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
-    for (size_t i = 0; i < Tcp::AsyncSocket::_opCount; ++i)
+    for (size_t i = 0; i < Tcp::AsyncSocket::_slotCount; ++i)
     {
         ASSERT_EQ (client.cancel (i), 0) << join::lastError.message ();
     }
@@ -805,7 +805,7 @@ TEST_F (TcpAsyncSocket, cancel)
         Tcp::AsyncSocket client;
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
         ASSERT_EQ (client.asyncConnect (
@@ -856,7 +856,7 @@ TEST_F (TcpAsyncSocket, cancel)
         Tcp::AsyncSocket client;
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
 
         ASSERT_EQ (client.asyncConnect (
@@ -878,18 +878,16 @@ TEST_F (TcpAsyncSocket, cancel)
             ASSERT_FALSE (_code) << _code.message ();
         }
 
-        ASSERT_NE (client.asyncRead (
-                       [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size,
-                           [[maybe_unused]] bool more) {
-                           ScopedLock<Mutex> lock (_mut);
-                           _code = ec;
-                           _transferred = size;
-                           ++_completions;
-                           _cond.signal ();
-                       },
-                       _buf, sizeof (_buf)),
-                   -1)
-            << join::lastError.message ();
+        ssize_t index = client.asyncRead (
+            [] (const std::error_code& ec, [[maybe_unused]] const char* data, size_t size, [[maybe_unused]] bool more) {
+                ScopedLock<Mutex> lock (_mut);
+                _code = ec;
+                _transferred = size;
+                ++_completions;
+                _cond.signal ();
+            },
+            _buf, sizeof (_buf));
+        ASSERT_NE (index, -1) << join::lastError.message ();
 
         for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
         {
@@ -900,7 +898,7 @@ TEST_F (TcpAsyncSocket, cancel)
         ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
 
-        ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (client.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);
@@ -925,7 +923,7 @@ TEST_F (TcpAsyncSocket, cancel)
         Tcp::AsyncSocket client;
 
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
-        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_opCount), -1);
+        ASSERT_EQ (client.cancel (Tcp::AsyncSocket::_slotCount), -1);
         ASSERT_EQ (join::lastError, Errc::InvalidParam);
         ASSERT_EQ (client.open (), 0) << join::lastError.message ();
         ASSERT_EQ (client.cancel (0), 0) << join::lastError.message ();
@@ -969,7 +967,8 @@ TEST_F (TcpAsyncSocket, cancel)
 
         ASSERT_LT (filled, 4096);
 
-        ASSERT_NE (sender.asyncWrite (onWrite, _buf, sizeof (_buf)), -1) << join::lastError.message ();
+        ssize_t index = sender.asyncWrite (onWrite, _buf, sizeof (_buf));
+        ASSERT_NE (index, -1) << join::lastError.message ();
 
         for (size_t i = 1; i < Tcp::AsyncSocket::_opCount; ++i)
         {
@@ -983,7 +982,7 @@ TEST_F (TcpAsyncSocket, cancel)
         ASSERT_EQ (sender.asyncConnect (nullptr, {_host, _stallport}), -1);
         ASSERT_EQ (join::lastError, Errc::InUse);
 
-        ASSERT_EQ (sender.cancel (0), 0) << join::lastError.message ();
+        ASSERT_EQ (sender.cancel (static_cast<size_t> (index)), 0) << join::lastError.message ();
 
         {
             ScopedLock<Mutex> lock (_mut);

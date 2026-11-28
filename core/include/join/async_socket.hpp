@@ -81,8 +81,11 @@ namespace join
         using AsyncWait = BasicAsyncWait<Protocol, ProactorType>;
         using WaitHandler = typename AsyncWait::Wait;
 
+        /// number of allocator slots.
+        static constexpr size_t _slotCount = Allocator::count;
+
         /// number of operations in flight.
-        static constexpr size_t _opCount = Allocator::count;
+        static constexpr size_t _opCount = _slotCount - 1;
 
         static_assert (_opCount > 0, "a socket needs at least one operation slot");
         static_assert (Allocator::pools == 1, "the operations allocator needs a single pool");
@@ -157,6 +160,8 @@ namespace join
         {
             other.suspendAll ();
 
+            _descriptor = std::exchange (other._descriptor, nullptr);
+
             _allocator = other._allocator;
             _owner = std::exchange (other._owner, false);
 
@@ -199,6 +204,14 @@ namespace join
 
             other.suspendAll ();
 
+            if (_descriptor != nullptr)
+            {
+                _descriptor->~IoDescriptor ();
+                _allocator->deallocate (_descriptor);
+            }
+
+            _descriptor = std::exchange (other._descriptor, nullptr);
+
             if (_owner)
             {
                 delete _allocator;
@@ -228,6 +241,12 @@ namespace join
         virtual ~BasicAsyncSocket ()
         {
             close ();
+
+            if (_descriptor != nullptr)
+            {
+                _descriptor->~IoDescriptor ();
+                _allocator->deallocate (_descriptor);
+            }
 
             if (_owner)
             {
@@ -359,7 +378,7 @@ namespace join
             }
 
             wait->waitHandler = std::move (handler);
-            wait->op = IoOperation::makePoll (descriptor ().handle (), wantRead ? POLLIN : POLLOUT, this);
+            wait->op = IoOperation::makePoll (descriptor (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = _allocator->getIndex (wait);
@@ -405,7 +424,7 @@ namespace join
             }
 
             wait->waitHandler = std::move (handler);
-            wait->op = IoOperation::makePollMulti (descriptor ().handle (), wantRead ? POLLIN : POLLOUT, this);
+            wait->op = IoOperation::makePollMulti (descriptor (), wantRead ? POLLIN : POLLOUT, this);
             wait->op.state.store (IoOperation::State::Submitted, std::memory_order_release);
 
             size_t index = _allocator->getIndex (wait);
@@ -635,6 +654,17 @@ namespace join
                 return nullptr;  // LCOV_EXCL_LINE
             }
 
+            if (JOIN_UNLIKELY (_descriptor == nullptr))
+            {
+                void* slot = ops->allocate (sizeof (IoDescriptor));
+                if (JOIN_UNLIKELY (slot == nullptr))
+                {
+                    return nullptr;
+                }
+
+                _descriptor = new (slot) IoDescriptor ();
+            }
+
             void* chunk = ops->allocate (sizeof (Op));
             if (JOIN_UNLIKELY (chunk == nullptr))
             {
@@ -749,12 +779,12 @@ namespace join
          */
         IoDescriptor& descriptor () noexcept
         {
-            if (_descriptor.handle () != _socket.handle ())
+            if (_descriptor->handle () != _socket.handle ())
             {
-                _descriptor.handle (_socket.handle ());
+                _descriptor->handle (_socket.handle ());
             }
 
-            return _descriptor;
+            return *_descriptor;
         }
 
         /**
@@ -786,7 +816,7 @@ namespace join
         Socket _socket;
 
         /// socket descriptor.
-        IoDescriptor _descriptor;
+        IoDescriptor* _descriptor = nullptr;
 
         /// operations allocator.
         Allocator* _allocator = nullptr;
@@ -795,7 +825,7 @@ namespace join
         bool _owner = false;
 
         /// operations in flight.
-        std::array<std::atomic<IoOperation*>, _opCount> _ops{};
+        std::array<std::atomic<IoOperation*>, _slotCount> _ops{};
     };
 }
 
