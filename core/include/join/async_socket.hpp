@@ -632,7 +632,7 @@ namespace join
             Allocator* ops = allocator ();
             if (JOIN_UNLIKELY (ops == nullptr))
             {
-                return nullptr;
+                return nullptr;  // LCOV_EXCL_LINE
             }
 
             void* chunk = ops->allocate (sizeof (Op));
