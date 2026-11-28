@@ -592,8 +592,9 @@ private:
 
     /**
      * @brief cancel all in-flight operations.
+     * @param flush submit the cancellations if true.
      */
-    void cancelAllOperations () noexcept;
+    void cancelAllOperations (bool flush) noexcept;
 
     /**
      * @brief invoke function.
