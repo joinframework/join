@@ -84,6 +84,13 @@ namespace join
          */
         IoDescriptor& operator= (IoDescriptor&& other) = delete;
 
+#ifndef JOIN_HAS_IO_URING
+        /**
+         * @brief destroy instance.
+         */
+        ~IoDescriptor () noexcept;
+#endif
+
         /**
          * @brief set the file descriptor.
          * @param fd file descriptor, -1 if none.
@@ -104,6 +111,13 @@ namespace join
 
     private:
 #ifndef JOIN_HAS_IO_URING
+        /**
+         * @brief dispatch the descriptor events.
+         * @param fd file descriptor.
+         * @param revents events reported by the reactor.
+         */
+        void onEvent (int fd, uint32_t revents) noexcept override;
+
         /**
          * @brief get the back of the queue of an operation.
          * @param op operation.
@@ -261,6 +275,9 @@ namespace join
         int _handle = -1;
 
 #ifndef JOIN_HAS_IO_URING
+        /// serving proactor.
+        BasicProactor* _proactor = nullptr;
+
         /// read queue.
         IoOperation* _readOps = nullptr;
 

@@ -32,8 +32,6 @@
 inline join::BasicProactor::BasicProactor ()
 : _commands (_queueSize)
 , _wakeup (eventfd (0, EFD_NONBLOCK | EFD_CLOEXEC))
-, _readOps (256, nullptr)
-, _writeOps (256, nullptr)
 {
     if (_wakeup.handle () == -1)
     {
@@ -60,6 +58,7 @@ inline join::BasicProactor::~BasicProactor () noexcept
 // =========================================================================
 inline void join::BasicProactor::run ()
 {
+    _stopping = false;
     _wakeupState.store (WakeupState::Sleeping, std::memory_order_seq_cst);
     _reactor.run ();
 }
@@ -72,6 +71,7 @@ inline void join::BasicProactor::stop (bool sync) noexcept
 {
     if (isProactorThread ())
     {
+        _stopping = true;
         cancelAllOperations (true);
         _reactor.stop (false);
         return;
@@ -400,6 +400,7 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
             break;
 
         case CommandType::Stop:
+            _stopping = true;
             cancelAllOperations (cmd.flush);
             _reactor.stop (false);
             break;
@@ -425,6 +426,12 @@ inline void join::BasicProactor::processCommand (const Command& cmd) noexcept
 inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused]] bool flush,
                                                  TimePoint deadline) noexcept
 {
+    if (JOIN_UNLIKELY (_stopping))
+    {
+        lastError = std::make_error_code (std::errc::operation_canceled);
+        return -1;
+    }
+
     Backoff backoff;
     while (JOIN_UNLIKELY (op.state.load (std::memory_order_acquire) == IoOperation::State::Suspended))
     {
@@ -495,14 +502,7 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         }
     }
 
-    if (JOIN_UNLIKELY (static_cast<size_t> (fd) >= _readOps.size ()))
-    {
-        size_t newSize = static_cast<size_t> (fd) + 1;
-        _readOps.resize (newSize, nullptr);
-        _writeOps.resize (newSize, nullptr);
-    }
-
-    IoOperation*& last = isWriteOperation (op) ? _writeOps[fd] : _readOps[fd];
+    IoDescriptor& descriptor = *op.descriptor;
 
     if (JOIN_UNLIKELY (ring != nullptr))
     {
@@ -510,27 +510,22 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         ring->bind ();
     }
 
-    if (last != nullptr)
+    const bool idle = descriptor.empty ();
+
+    if (!descriptor.queue (op))
     {
-        op.next = last->next;
-        last->next = &op;
-
-        if (JOIN_LIKELY (static_cast<IoOperation::Opcode> (op.code) != IoOperation::Opcode::Connect))
-        {
-            last = &op;
-        }
-
         return 0;
     }
 
-    op.next = &op;
-    last = &op;
+    if (idle)
+    {
+        descriptor._proactor = this;
+    }
 
-    int err = _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
+    int err = _reactor.addHandler (fd, &descriptor, descriptor._readOps != nullptr, descriptor._writeOps != nullptr);
     if (JOIN_UNLIKELY (err == -1))
     {
-        op.next = nullptr;
-        last = nullptr;
+        descriptor.dequeue (op);
 
         if (JOIN_UNLIKELY (ring != nullptr))
         {
@@ -539,6 +534,12 @@ inline int join::BasicProactor::submitOperation (IoOperation& op, [[maybe_unused
         }
 
         resetOperation (op);
+        return err;
+    }
+
+    if (idle)
+    {
+        descriptor.link (_descriptors);
     }
 
     return err;
@@ -570,13 +571,9 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
         return -1;
     }
 
-    if (JOIN_UNLIKELY (static_cast<size_t> (fd) >= _readOps.size ()))
-    {
-        lastError = std::make_error_code (std::errc::bad_file_descriptor);
-        return -1;
-    }
+    IoDescriptor& descriptor = *op.descriptor;
 
-    if (JOIN_UNLIKELY (!unqueueOperation (op)))
+    if (JOIN_UNLIKELY (!descriptor.dequeue (op)))
     {
         lastError = make_error_code (Errc::InvalidParam);
         return -1;
@@ -584,13 +581,19 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
 
     int ret = 0;
 
-    if (_readOps[fd] == nullptr && _writeOps[fd] == nullptr)
+    if (descriptor.empty ())
     {
         ret = _reactor.delHandler (fd);
+        descriptor.unlink (_descriptors);
+
+        if (_dispatching != &descriptor)
+        {
+            descriptor._proactor = nullptr;
+        }
     }
-    else if ((isWriteOperation (op) ? _writeOps[fd] : _readOps[fd]) == nullptr)
+    else if (descriptor.back (op) == nullptr)
     {
-        ret = _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
+        ret = _reactor.addHandler (fd, &descriptor, descriptor._readOps != nullptr, descriptor._writeOps != nullptr);
     }
 
     dispatchOperation (op, -ECANCELED, true);
@@ -604,22 +607,23 @@ inline int join::BasicProactor::cancelOperation (IoOperation& op, [[maybe_unused
 // =========================================================================
 inline void join::BasicProactor::cancelAllOperations ([[maybe_unused]] bool flush) noexcept
 {
-    for (size_t fd = 0; fd < _readOps.size (); ++fd)
+    while (_descriptors != nullptr)
     {
-        for (auto* ops : {&_readOps, &_writeOps})
+        IoDescriptor* descriptor = _descriptors;
+        _dispatching = descriptor;
+
+        for (IoOperation** ops : {&descriptor->_readOps, &descriptor->_writeOps})
         {
-            IoOperation* last = (*ops)[fd];
-            size_t count = 0;
-
-            for (IoOperation* op = last; op != nullptr; op = (op->next != last) ? op->next : nullptr)
+            while ((_dispatching == descriptor) && (*ops != nullptr))
             {
-                ++count;
+                endOperation (*(*ops)->next, -ECANCELED, true);
             }
+        }
 
-            for (; (count > 0) && ((*ops)[fd] != nullptr); --count)
-            {
-                endOperation (*(*ops)[fd]->next, -ECANCELED, true);
-            }
+        if (_dispatching == descriptor)
+        {
+            _dispatching = nullptr;
+            descriptor->_proactor = nullptr;
         }
     }
 }
@@ -630,22 +634,26 @@ inline void join::BasicProactor::cancelAllOperations ([[maybe_unused]] bool flus
 // =========================================================================
 inline void join::BasicProactor::endOperation (IoOperation& op, int result, bool cancelled) noexcept
 {
-    const int fd = op.descriptor->handle ();
+    IoDescriptor& descriptor = *op.descriptor;
 
-    if (JOIN_UNLIKELY (fd < 0 || static_cast<size_t> (fd) >= _readOps.size ()))
+    if (descriptor.dequeue (op))
     {
-        return;  // LCOV_EXCL_LINE
-    }
+        const int fd = descriptor.handle ();
 
-    unqueueOperation (op);
+        if (descriptor.empty ())
+        {
+            _reactor.delHandler (fd);
+            descriptor.unlink (_descriptors);
 
-    if (_readOps[fd] == nullptr && _writeOps[fd] == nullptr)
-    {
-        _reactor.delHandler (fd);
-    }
-    else if ((isWriteOperation (op) ? _writeOps[fd] : _readOps[fd]) == nullptr)
-    {
-        _reactor.addHandler (fd, this, _readOps[fd] != nullptr, _writeOps[fd] != nullptr);
+            if (_dispatching != &descriptor)
+            {
+                descriptor._proactor = nullptr;
+            }
+        }
+        else if (descriptor.back (op) == nullptr)
+        {
+            _reactor.addHandler (fd, &descriptor, descriptor._readOps != nullptr, descriptor._writeOps != nullptr);
+        }
     }
 
     dispatchOperation (op, result, cancelled);
@@ -666,43 +674,18 @@ inline void join::BasicProactor::expireOperation (IoOperation& op) noexcept
 //   CLASS     : BasicProactor
 //   METHOD    : onEvent
 // =========================================================================
-inline void join::BasicProactor::onEvent (int fd, uint32_t revents) noexcept
+inline void join::BasicProactor::onEvent ([[maybe_unused]] int fd, [[maybe_unused]] uint32_t revents) noexcept
 {
-    if (JOIN_UNLIKELY (fd == _wakeup.handle ()))
-    {
-        readCommands ();
-        return;
-    }
-
-    const bool closing = (revents & (EPOLLERR | EPOLLRDHUP | EPOLLHUP)) != 0;
-
-    if (JOIN_UNLIKELY (closing && (_writeOps[fd] != nullptr) &&
-                       (_writeOps[fd]->next->code == static_cast<uint8_t> (IoOperation::Opcode::Connect))))
-    {
-        processQueue (fd, true, revents);
-        return;
-    }
-
-    const bool reading = closing && (_readOps[fd] != nullptr);
-
-    if (closing || (revents & EPOLLIN))
-    {
-        processQueue (fd, false, revents);
-    }
-
-    if (!reading && (revents & (EPOLLOUT | EPOLLERR | EPOLLHUP)))
-    {
-        processQueue (fd, true, revents);
-    }
+    readCommands ();
 }
 
 // =========================================================================
 //   CLASS     : BasicProactor
 //   METHOD    : processQueue
 // =========================================================================
-inline void join::BasicProactor::processQueue (int fd, bool write, uint32_t revents) noexcept
+inline void join::BasicProactor::processQueue (IoDescriptor& descriptor, bool write, uint32_t revents) noexcept
 {
-    IoOperation* last = write ? _writeOps[fd] : _readOps[fd];
+    IoOperation* last = write ? descriptor._writeOps : descriptor._readOps;
     if (last == nullptr)
     {
         return;
@@ -728,7 +711,12 @@ inline void join::BasicProactor::processQueue (int fd, bool write, uint32_t reve
             processOperation (*op, revents);
         }
 
-        last = write ? _writeOps[fd] : _readOps[fd];
+        if (JOIN_UNLIKELY (_dispatching != &descriptor))
+        {
+            return;
+        }
+
+        last = write ? descriptor._writeOps : descriptor._readOps;
         op = nullptr;
 
         if ((following != nullptr) && (last != nullptr))
@@ -948,66 +936,5 @@ inline int join::BasicProactor::executeOperation (IoOperation& op, uint32_t reve
             default:             // LCOV_EXCL_LINE
                 return -EINVAL;  // LCOV_EXCL_LINE
         }
-    }
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : unqueueOperation
-// =========================================================================
-inline bool join::BasicProactor::unqueueOperation (IoOperation& op) noexcept
-{
-    if (op.next == nullptr)
-    {
-        return false;
-    }
-
-    const int fd = op.descriptor->handle ();
-    IoOperation*& last = isWriteOperation (op) ? _writeOps[fd] : _readOps[fd];
-    IoOperation* prev = last;
-
-    while (prev->next != &op)
-    {
-        prev = prev->next;
-    }
-
-    if (prev == &op)
-    {
-        last = nullptr;
-    }
-    else
-    {
-        prev->next = op.next;
-
-        if (last == &op)
-        {
-            last = prev;
-        }
-    }
-
-    op.next = nullptr;
-
-    return true;
-}
-
-// =========================================================================
-//   CLASS     : BasicProactor
-//   METHOD    : isWriteOperation
-// =========================================================================
-inline bool join::BasicProactor::isWriteOperation (const IoOperation& op) noexcept
-{
-    switch (static_cast<IoOperation::Opcode> (op.code))
-    {
-        case IoOperation::Opcode::Poll:
-            return (op.data.poll.events & POLLIN) == 0;
-        case IoOperation::Opcode::Connect:
-        case IoOperation::Opcode::Write:
-        case IoOperation::Opcode::SendMsg:
-        case IoOperation::Opcode::SendMsgZc:
-        case IoOperation::Opcode::Send:
-        case IoOperation::Opcode::SendZc:
-            return true;
-        default:
-            return false;
     }
 }

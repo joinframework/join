@@ -168,6 +168,12 @@ protected:
             _handlerProactor->suspend (op);
         }
 
+        if (_deleteFromHandler != nullptr)
+        {
+            delete _deleteFromHandler;
+            _deleteFromHandler = nullptr;
+        }
+
         {
             ScopedLock<Mutex> lock (_mut);
             if ((op.ring != nullptr) && (result > 0))
@@ -323,6 +329,9 @@ protected:
     /// true to suspend the completing operation from within its own handler.
     static bool _suspendFromHandler;
 
+    /// descriptor deleted from within a handler, if any.
+    static IoDescriptor* _deleteFromHandler;
+
     /// last operation result.
     static int _result;
 
@@ -382,6 +391,7 @@ int ProactorTest::_cancelResult = 0;
 IoOperation* ProactorTest::_cancelled = nullptr;
 bool ProactorTest::_stopFromHandler = false;
 bool ProactorTest::_suspendFromHandler = false;
+IoDescriptor* ProactorTest::_deleteFromHandler = nullptr;
 int ProactorTest::_result = 0;
 int ProactorTest::_spareResult = 0;
 int ProactorTest::_cancellations = 0;
@@ -705,6 +715,26 @@ TEST_F (ProactorTest, submit)
         _result = 0;
     }
 
+    int fds[2];
+    ASSERT_EQ (::pipe2 (fds, O_NONBLOCK), 0) << strerror (errno);
+
+    _deleteFromHandler = new IoDescriptor (fds[0]);
+    _readOp = IoOperation::makeRead (*_deleteFromHandler, _buf, sizeof (_buf), this);
+    ASSERT_EQ (proactor.submit (_readOp, true, true), 0) << join::lastError.message ();
+    ASSERT_EQ (::write (fds[1], "x", 1), 1) << strerror (errno);
+    {
+        ScopedLock<Mutex> lock (_mut);
+        ASSERT_TRUE (_cond.timedWait (lock, std::chrono::milliseconds (_timeout), [&] () {
+            return _op == &_readOp && _result == 1;
+        }));
+        ASSERT_EQ (_deleteFromHandler, nullptr);
+        _op = nullptr;
+        _result = 0;
+    }
+
+    ::close (fds[0]);
+    ::close (fds[1]);
+
     _readOp = IoOperation::makeRead (_serverDescriptor, _buf, sizeof (_buf), this, true);
     ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::InvalidParam);
@@ -728,7 +758,6 @@ TEST_F (ProactorTest, submit)
     ASSERT_EQ (proactor.submit (_readOp, 10s, true, true), -1);
     ASSERT_EQ (join::lastError, Errc::OutOfMemory);
 
-#ifdef JOIN_HAS_IO_URING
     std::error_code errc;
     int result = 0;
     Proactor::InvokeHandler stopThenSubmit = [&proactor, &result, &errc] () {
@@ -740,10 +769,6 @@ TEST_F (ProactorTest, submit)
     th.join ();
     ASSERT_EQ (result, -1);
     ASSERT_EQ (errc, std::errc::operation_canceled);
-#else
-    proactor.stop ();
-    th.join ();
-#endif
 
     ASSERT_EQ (_cancelled, &_spareOp);
     ASSERT_EQ (_spareOp.timer, 0);
